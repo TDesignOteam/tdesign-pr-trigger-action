@@ -25,6 +25,7 @@ export async function run(): Promise<void> {
   await exec(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` })
   await exec(`git status`, [], { cwd: `../tdesign-vue-next` })
   await exec(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
+  await exec(`git commit -am "chore: update common"`, [], { cwd: `../tdesign-vue-next` })
   await exec(`git push origin chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
   // await exec(`ls -al`)
 //   await exec(`git submodule update --init --remote`)
