@@ -22,6 +22,8 @@ export async function run(): Promise<void> {
   await exec(`git clone ${repo_url} ../tdesign-vue-next`)
   await exec(`ls -al ../`)
   await exec(`ls -al`, [], { cwd: `../tdesign-vue-next` })
+  await exec(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` })
+  await exec(`git status`, [], { cwd: `../tdesign-vue-next` })
   // await exec(`ls -al`)
 //   await exec(`git submodule update --init --remote`)
 //   await exec(`git status`)
