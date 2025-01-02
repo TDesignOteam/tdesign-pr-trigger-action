@@ -29952,7 +29952,7 @@ function run() {
         yield (0, exec_1.exec)(`ls -al`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git status`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`git chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
+        yield (0, exec_1.exec)(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git push origin chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
         // await exec(`ls -al`)
         //   await exec(`git submodule update --init --remote`)
