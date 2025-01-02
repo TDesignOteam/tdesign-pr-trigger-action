@@ -29953,6 +29953,7 @@ function run() {
         yield (0, exec_1.exec)(`git config --global user.email "674416404@qq.com"`);
         yield (0, exec_1.exec)(`git config --global user.name "lwj"`);
         yield (0, exec_1.exec)(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` });
+        yield (0, exec_1.exec)(`git remote -v`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git status`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git commit -am "chore: update common"`, [], { cwd: `../tdesign-vue-next` });
