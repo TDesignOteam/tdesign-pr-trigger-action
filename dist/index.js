@@ -29946,10 +29946,12 @@ function run() {
         //   info('pr_data', pr_data)
         (0, node_console_1.info)('pr_data.data', pr_data.body);
         const repo_url = `https://github.com/liweijie0812/tdesign-vue-next.git`;
+        yield (0, exec_1.exec)(`ls -al`);
         yield (0, exec_1.exec)(`git clone ${repo_url} ../tdesign-vue-next`);
-        yield (0, exec_1.exec)(`cd ../tdesign-vue-next`);
-        yield (0, exec_1.exec)(`git submodule update --init --remote`);
-        yield (0, exec_1.exec)(`git status`);
+        yield (0, exec_1.exec)(`ls -al ../`);
+        //   await exec(`cd ../tdesign-vue-next`)
+        //   await exec(`git submodule update --init --remote`)
+        //   await exec(`git status`)
     });
 }
 run().catch(console.error);

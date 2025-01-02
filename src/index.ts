@@ -18,10 +18,11 @@ export async function run(): Promise<void> {
   //   info('pr_data', pr_data)
   info('pr_data.data', pr_data.body)
   const repo_url = `https://github.com/liweijie0812/tdesign-vue-next.git`
-
+  await exec(`ls -al`)
   await exec(`git clone ${repo_url} ../tdesign-vue-next`)
-  await exec(`cd ../tdesign-vue-next`)
-  await exec(`git submodule update --init --remote`)
-  await exec(`git status`)
+  await exec(`ls -al ../`)
+//   await exec(`cd ../tdesign-vue-next`)
+//   await exec(`git submodule update --init --remote`)
+//   await exec(`git status`)
 }
 run().catch(console.error)
