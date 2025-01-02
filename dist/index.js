@@ -29958,6 +29958,14 @@ function run() {
         yield (0, exec_1.exec)(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git commit -am "chore: update common"`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git push origin chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` });
+        yield octokit.rest.pulls.create({
+            owner: 'liweijie0812',
+            repo: 'tdesign-vue-next',
+            title: 'chore: update common',
+            head: `chore/update-common/pr${pr_number}`,
+            base: 'develop',
+            body: pr_data.body || '',
+        });
         // await exec(`ls -al`)
         //   await exec(`git submodule update --init --remote`)
         //   await exec(`git status`)
