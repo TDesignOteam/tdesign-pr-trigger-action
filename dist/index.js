@@ -29949,7 +29949,7 @@ function run() {
         yield (0, exec_1.exec)(`ls -al`);
         yield (0, exec_1.exec)(`git clone ${repo_url} ../tdesign-vue-next`);
         yield (0, exec_1.exec)(`ls -al ../`);
-        yield (0, exec_1.exec)(`ls -al`, [`../tdesign-vue-next`]);
+        yield (0, exec_1.exec)(`ls -al`, [], { cwd: `../tdesign-vue-next` });
         // await exec(`ls -al`)
         //   await exec(`git submodule update --init --remote`)
         //   await exec(`git status`)
