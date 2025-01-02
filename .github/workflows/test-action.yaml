@@ -1,0 +1,22 @@
+name: TEST_ACTION
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - dist/index.js
+
+jobs:
+  generator:
+    if: ${{ !startsWith(github.head_ref, 'release/') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
