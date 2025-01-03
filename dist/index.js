@@ -29950,8 +29950,8 @@ function run() {
         yield (0, exec_1.exec)(`git clone ${repo_url} ../tdesign-vue-next`);
         yield (0, exec_1.exec)(`ls -al ../`);
         yield (0, exec_1.exec)(`ls -al`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`git config --global user.email "674416404@qq.com"`);
-        yield (0, exec_1.exec)(`git config --global user.name "lwj"`);
+        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
+        yield (0, exec_1.exec)(`git config --global user.name "github-actions[bot]"`);
         yield (0, exec_1.exec)(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git remote -v`, [], { cwd: `../tdesign-vue-next` });
         yield (0, exec_1.exec)(`git status`, [], { cwd: `../tdesign-vue-next` });
