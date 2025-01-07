@@ -11,6 +11,9 @@ inputs:
   pr_number:
     description: pr_number
     required: false
+  comment:
+    description: comment
+    required: false
 
 runs:
   using: node20
