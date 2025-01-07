@@ -66,6 +66,7 @@ jobs:
           repo: tdesign-common
           pr_number: 2006
           comment: /pr-react
+
   common-pr-mobile:
     if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
