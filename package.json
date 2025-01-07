@@ -1,0 +1,55 @@
+{
+  "name": "tdesign-pr-comment-action",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.12.1",
+  "description": "",
+  "author": "tdesign",
+  "license": "MIT",
+  "homepage": "https://github.com/TDesignOteam/tdesign-pr-comment-action#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TDesignOteam/tdesign-pr-comment-action.git"
+  },
+  "bugs": {
+    "url": "https://github.com/TDesignOteam/tdesign-pr-comment-action/issues"
+  },
+  "main": "src/index.ts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "prebuild": "rimraf dist/*  ",
+    "build": "ncc build --license license.txt",
+    "lint": "eslint . ",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:update": "vitest run -u",
+    "prepare": "simple-git-hooks"
+  },
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/github": "^6.0.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.11.0",
+    "@octokit/plugin-rest-endpoint-methods": "^13.2.6",
+    "@types/node": "^22.10.0",
+    "@vercel/ncc": "^0.38.3",
+    "eslint": "^9.15.0",
+    "eslint-plugin-format": "^0.1.2",
+    "lint-staged": "^15.2.10",
+    "rimraf": "^6.0.1",
+    "simple-git-hooks": "^2.11.1",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
+  }
+}

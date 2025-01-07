@@ -1,0 +1,20 @@
+name: tdesign-pr-comment-action
+description: tdesign-pr-comment-action
+author: TDesign
+inputs:
+  owner:
+    description: owner
+    required: false
+  repo:
+    description: repo
+    required: false
+  pr_number:
+    description: pr_number
+    required: false
+  comment:
+    description: comment
+    required: false
+
+runs:
+  using: node20
+  main: dist/index.js

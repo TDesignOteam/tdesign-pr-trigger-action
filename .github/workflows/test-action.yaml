@@ -1,0 +1,132 @@
+name: TEST_ACTION
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  common-pr-pc:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-pc') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-pc
+
+  common-pr-vue:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+
+  common-pr-vue-next:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-pc
+
+  common-pr-react:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-react') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-react
+
+  common-pr-mobile:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-mobile
+
+  common-pr-mobile-vue:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-mobile-vue
+
+  common-pr-mobile-react:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-react') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /pr-mobile-react
+
+  common-preview-react:
+    if: contains(github.event.pull_request.labels.*.name, 'common:/preview-react') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2006
+          comment: /preview-react
