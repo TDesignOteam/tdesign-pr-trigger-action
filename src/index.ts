@@ -17,7 +17,7 @@ export async function run(): Promise<void> {
     repo,
     pull_number: pr_number as number,
   })
-  info('pr_data', pr_data)
+  info('pr_data', JSON.stringify(pr_data, null, 2))
   info('pr_data.data', pr_data.body)
   // info('comment', comment)
   // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`
