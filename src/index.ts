@@ -1,6 +1,5 @@
-import { info } from 'node:console'
 import process from 'node:process'
-import { getInput } from '@actions/core'
+import { debug, getInput } from '@actions/core'
 
 import { context, getOctokit } from '@actions/github'
 import useTrigger from './tdesign/trigger'
@@ -18,8 +17,7 @@ export async function run(): Promise<void> {
     repo,
     pull_number: pr_number as number,
   })
-  info('pr_data', JSON.stringify(pr_data, null, 2))
-  info('pr_data.data', pr_data.body)
+  debug(`pr_data: ${JSON.stringify(pr_data, null, 2)}`)
 
   useTrigger({
     owner,

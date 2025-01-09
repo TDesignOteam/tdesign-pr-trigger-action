@@ -29926,7 +29926,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
-const node_console_1 = __nccwpck_require__(7540);
 const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
@@ -29945,8 +29944,7 @@ function run() {
             repo,
             pull_number: pr_number,
         });
-        (0, node_console_1.info)('pr_data', JSON.stringify(pr_data, null, 2));
-        (0, node_console_1.info)('pr_data.data', pr_data.body);
+        (0, core_1.debug)(`pr_data: ${JSON.stringify(pr_data, null, 2)}`);
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30277,14 +30275,6 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("net");
-
-/***/ }),
-
-/***/ 7540:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:console");
 
 /***/ }),
 
