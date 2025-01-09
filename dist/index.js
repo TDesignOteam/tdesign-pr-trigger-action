@@ -30012,7 +30012,7 @@ function start(context) {
         (0, core_1.info)(`body:${body}`);
         const packageName = trigger_1.iconsMap[context.comment];
         (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.comment], trigger_1.repoMap[context.comment], context.token);
-        (0, utils_1.updateIcons)(packageName);
+        (0, utils_1.updateIcons)(trigger_1.repoMap[context.comment]);
         const latestVersion = yield (0, utils_1.getPkgLatestVersion)(packageName);
         const title = `chore(Icon): update to ${latestVersion}`;
         (0, core_1.info)(title);
