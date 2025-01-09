@@ -1,0 +1,20 @@
+name: test-tdesign-icons
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  pr-vue-next:
+    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130

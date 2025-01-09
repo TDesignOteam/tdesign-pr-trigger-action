@@ -29929,7 +29929,6 @@ exports.run = run;
 const node_console_1 = __nccwpck_require__(7540);
 const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
-const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
@@ -29937,26 +29936,28 @@ function run() {
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
         const token = node_process_1.default.env.GITHUB_TOKEN || (0, core_1.getInput)('token');
+        // const comment = getInput('comment') || context.payload.comment?.body || ''
         const octokit = (0, github_1.getOctokit)(token);
         const { data: pr_data } = yield octokit.rest.pulls.get({
             owner,
             repo,
             pull_number: pr_number,
         });
-        //   info('pr_data', pr_data)
+        (0, node_console_1.info)('pr_data', pr_data);
         (0, node_console_1.info)('pr_data.data', pr_data.body);
-        const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`;
-        yield (0, exec_1.exec)(`ls -al`);
-        yield (0, exec_1.exec)(`git clone ${repo_url} ../tdesign-vue-next`);
-        yield (0, exec_1.exec)(`ls -al ../`);
-        yield (0, exec_1.exec)(`ls -al`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
-        yield (0, exec_1.exec)(`git config --global user.name "github-actions[bot]"`);
-        yield (0, exec_1.exec)(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`git remote -v`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`npm install`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`npm run test:update`, [], { cwd: `../tdesign-vue-next` });
-        yield (0, exec_1.exec)(`git status`, [], { cwd: `../tdesign-vue-next` });
+        // info('comment', comment)
+        // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`
+        // await exec(`ls -al`)
+        // await exec(`git clone ${repo_url} ../tdesign-vue-next`)
+        // await exec(`ls -al ../`)
+        // await exec(`ls -al`, [], { cwd: `../tdesign-vue-next` })
+        // await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
+        // await exec(`git config --global user.name "github-actions[bot]"`)
+        // await exec(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` })
+        // await exec(`git remote -v`, [], { cwd: `../tdesign-vue-next` })
+        // await exec(`npm install`, [], { cwd: `../tdesign-vue-next` })
+        // await exec(`npm run test:update`, [], { cwd: `../tdesign-vue-next` })
+        // await exec(`git status`, [], { cwd: `../tdesign-vue-next` })
         // await exec(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
         // await exec(`git commit -am "chore: update common"`, [], { cwd: `../tdesign-vue-next` })
         // await exec(`git push origin chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
