@@ -13,8 +13,8 @@ export default async function start(context: TriggerContext) {
   const latestVersion = await getPkgLatestVersion(packageName)
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  cloneRepo(ownerMap[context.comment], repoMap[context.comment], context.token)
-  updateIcons(repoMap[context.comment])
+  await cloneRepo(ownerMap[context.comment], repoMap[context.comment], context.token)
+  await updateIcons(repoMap[context.comment])
 
   const title = `chore(Icon): update to ${latestVersion}`
   info(title)
