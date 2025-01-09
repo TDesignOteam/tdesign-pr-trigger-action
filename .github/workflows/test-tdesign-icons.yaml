@@ -16,5 +16,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
         with:
           owner: Tencent
-          repo: tdesign-icons
+          repo: tdeeign-icons
           pr_number: 130
+          comment: /pr-vue-next
