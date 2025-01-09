@@ -29930,13 +29930,15 @@ const node_console_1 = __nccwpck_require__(7540);
 const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
+const trigger_1 = __importDefault(__nccwpck_require__(9224));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a;
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
         const token = node_process_1.default.env.GITHUB_TOKEN || (0, core_1.getInput)('token');
-        // const comment = getInput('comment') || context.payload.comment?.body || ''
+        const comment = (0, core_1.getInput)('comment') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
         const octokit = (0, github_1.getOctokit)(token);
         const { data: pr_data } = yield octokit.rest.pulls.get({
             owner,
@@ -29945,6 +29947,13 @@ function run() {
         });
         (0, node_console_1.info)('pr_data', JSON.stringify(pr_data, null, 2));
         (0, node_console_1.info)('pr_data.data', pr_data.body);
+        (0, trigger_1.default)({
+            owner,
+            repo,
+            pr_number: pr_number,
+            token,
+            comment,
+        });
         // info('comment', comment)
         // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`
         // await exec(`ls -al`)
@@ -29975,6 +29984,194 @@ function run() {
     });
 }
 run().catch(console.error);
+
+
+/***/ }),
+
+/***/ 8862:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = start;
+const core_1 = __nccwpck_require__(9999);
+const utils_1 = __nccwpck_require__(6236);
+const trigger_1 = __nccwpck_require__(9224);
+function start(context) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const prData = yield (0, utils_1.getPrData)(context.owner, context.repo, context.pr_number, context.token);
+        const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
+        (0, core_1.info)(`body:${body}`);
+        const packageName = trigger_1.iconsMap[context.comment];
+        (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.comment], trigger_1.repoMap[context.comment], context.token);
+        (0, utils_1.updateIcons)(packageName);
+        const latestVersion = yield (0, utils_1.getPkgLatestVersion)(packageName);
+        const title = `chore(Icon): update to ${latestVersion}`;
+        (0, core_1.info)(title);
+    });
+}
+;
+
+
+/***/ }),
+
+/***/ 9224:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.ownerMap = exports.repoMap = exports.iconsMap = void 0;
+exports["default"] = useTrigger;
+const icons_1 = __importDefault(__nccwpck_require__(8862));
+exports.iconsMap = {
+    '/pr-vue': 'tdesign-icons-vue',
+    '/pr-vue-next': 'tdesign-icons-vue-next',
+    '/pr-react': 'tdesign-icons-react',
+};
+exports.repoMap = {
+    '/pr-vue': 'tdesign-vue',
+    '/pr-vue-next': 'tdesign-vue-next',
+    '/pr-react': 'tdesign-react',
+};
+exports.ownerMap = {
+    '/pr-vue': 'Tencent',
+    '/pr-vue-next': 'Tencent',
+    '/pr-react': 'Tencent',
+};
+function useTrigger(context) {
+    // TODO
+    switch (context.repo) {
+        case 'tdesign-icons':
+            (0, icons_1.default)(context);
+            break;
+        default:
+            throw new Error(`不支持的仓库: ${context.repo}`);
+    }
+}
+
+
+/***/ }),
+
+/***/ 6236:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.frameworkDirective = exports.CHANGELOG_REG = exports.SKIP_CHANGELOG_REG = void 0;
+exports.addContributor = addContributor;
+exports.cloneRepo = cloneRepo;
+exports.checkRepo = checkRepo;
+exports.getPrData = getPrData;
+exports.createPR = createPR;
+exports.getPkgLatestVersion = getPkgLatestVersion;
+exports.updateIcons = updateIcons;
+const core_1 = __nccwpck_require__(9999);
+const exec_1 = __nccwpck_require__(8872);
+const github_1 = __nccwpck_require__(2819);
+exports.SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
+exports.CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
+exports.frameworkDirective = {
+    'tdesign-common': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
+    'tdesign-icons': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
+};
+function addContributor(body, contributor) {
+    if (exports.SKIP_CHANGELOG_REG.test(body)) {
+        (0, core_1.info)(`不需要纳入 Changelog`);
+        return body;
+    }
+    let isSkip = true;
+    return body.split('\r\n').map((item) => {
+        if (['', '<!--', '-->'].includes(item)) {
+            return item;
+        }
+        if (!isSkip) {
+            if (item === '### ☑️ 请求合并前的自查清单') {
+                isSkip = true;
+                return item;
+            }
+            if (exports.CHANGELOG_REG.test(item)) {
+                // info(`匹配到更新日志项: ${item}`)
+                return `${item} @${contributor}`;
+            }
+        }
+        if (item === '### 📝 更新日志') {
+            isSkip = false;
+        }
+        return item;
+    }).join('\r\n');
+}
+function cloneRepo(owner, repo, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const repo_url = `https://${token}@github.com/${owner}/${repo}.git`;
+        yield (0, exec_1.exec)('git', ['clone', repo_url, `../${repo}`]);
+    });
+}
+function checkRepo(repo) {
+    const frameworks = Object.keys(exports.frameworkDirective);
+    if (!frameworks.includes(repo)) {
+        throw new Error(`不在白名单中: ${repo}`);
+    }
+}
+function getPrData(owner, repo, pr_number, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = (0, github_1.getOctokit)(token);
+        const { data: pr_data } = yield octokit.rest.pulls.get({
+            owner,
+            repo,
+            pull_number: pr_number,
+        });
+        return pr_data;
+    });
+}
+function createPR(owner, repo, pr_number, token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const octokit = (0, github_1.getOctokit)(token);
+        yield octokit.rest.pulls.create({
+            owner,
+            repo,
+            title: 'chore: update common',
+            head: `chore/update-common/pr${pr_number}`,
+            base: 'develop',
+            body: '',
+        });
+    });
+}
+function getPkgLatestVersion(packageName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const { stdout } = yield (0, exec_1.getExecOutput)('npm', ['view', packageName, 'version']);
+        return stdout.trim();
+    });
+}
+function updateIcons(repo) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
+    });
+}
 
 
 /***/ }),

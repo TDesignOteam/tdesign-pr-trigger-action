@@ -3,13 +3,14 @@ import process from 'node:process'
 import { getInput } from '@actions/core'
 
 import { context, getOctokit } from '@actions/github'
+import useTrigger from './tdesign/trigger'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
   const owner = getInput('owner') || context.repo.owner
   const pr_number = getInput('pr_number') || context.issue.number
   const token = process.env.GITHUB_TOKEN || getInput('token')
-  // const comment = getInput('comment') || context.payload.comment?.body || ''
+  const comment = getInput('comment') || context.payload.comment?.body || ''
   const octokit = getOctokit(token)
 
   const { data: pr_data } = await octokit.rest.pulls.get({
@@ -19,6 +20,14 @@ export async function run(): Promise<void> {
   })
   info('pr_data', JSON.stringify(pr_data, null, 2))
   info('pr_data.data', pr_data.body)
+
+  useTrigger({
+    owner,
+    repo,
+    pr_number: pr_number as number,
+    token,
+    comment,
+  })
   // info('comment', comment)
   // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`
   // await exec(`ls -al`)

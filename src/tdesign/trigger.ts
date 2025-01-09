@@ -23,7 +23,7 @@ export interface TriggerContext {
   token: string
   comment: string
 }
-export function useTrigger(context: TriggerContext) {
+export default function useTrigger(context: TriggerContext) {
   // TODO
   switch (context.repo) {
     case 'tdesign-icons':
