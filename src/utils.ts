@@ -1,5 +1,5 @@
 import { info } from '@actions/core'
-import { exec } from '@actions/exec'
+import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
 
 export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
@@ -68,6 +68,15 @@ export async function createPR(owner: string, repo: string, pr_number: number, t
     title: 'chore: update common',
     head: `chore/update-common/pr${pr_number}`,
     base: 'develop',
-    body: pr_data?.body || '',
+    body: '',
   })
+}
+export async function getPkgLatestVersion(packageName: string) {
+  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version'])
+  return stdout.trim()
+}
+
+export async function updateIcons(repo: string) {
+  await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` })
+  await exec('git', ['status'], { cwd: `../${repo}` })
 }

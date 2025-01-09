@@ -1,0 +1,10 @@
+{
+  "name": "fixture",
+  "private": true,
+  "devDependencies": {
+    "tdesign-icons-react": "^3.0.0",
+    "tdesign-icons-view": "^4.0.0",
+    "tdesign-icons-vue": "^1.0.0",
+    "tdesign-icons-vue-next": "^2.0.0"
+  }
+}

@@ -1,5 +1,21 @@
 import iconStart from './icons'
 
+export const iconsMap = {
+  '/pr-vue': 'tdesign-icons-vue',
+  '/pr-vue-next': 'tdesign-icons-vue-next',
+  '/pr-react': 'tdesign-icons-react',
+}
+export const repoMap = {
+  '/pr-vue': 'tdesign-vue',
+  '/pr-vue-next': 'tdesign-vue-next',
+  '/pr-react': 'tdesign-react',
+}
+export const ownerMap = {
+  '/pr-vue': 'Tencent',
+  '/pr-vue-next': 'Tencent',
+  '/pr-react': 'Tencent',
+}
+
 export interface TriggerContext {
   owner: string
   repo: string
