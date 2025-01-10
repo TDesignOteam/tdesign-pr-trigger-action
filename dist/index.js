@@ -30014,7 +30014,9 @@ function getCdnIconfontVersion() {
 }
 function miniprogramUpdateIcons(repo, version) {
     return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${repo}` });
         yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version ', version], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
     });
 }
 function start(context) {
