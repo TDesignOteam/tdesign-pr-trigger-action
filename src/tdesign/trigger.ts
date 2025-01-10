@@ -17,7 +17,7 @@ export const repoMap = {
   '/pr-miniprogram': 'tdesign-miniprogram',
 }
 export const ownerMap = {
-  '/pr-vue': 'liweijie0812',
+  '/pr-vue': 'Tencent',
   '/pr-vue-next': 'liweijie0812',
   '/pr-react': 'Tencent',
   '/pr-mobile-vue': 'Tencent',
