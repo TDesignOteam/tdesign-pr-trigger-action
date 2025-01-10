@@ -13,8 +13,8 @@ export async function getCdnIconfontVersion(): Promise<string> {
   const match = text.match(CND_ICONFONT_VERSION_REG)
   return match?.[1] || ''
 }
-async function miniprogramUpdateIcons(repo: string) {
-  await exec('node', ['./script/update-icons.js', '--version ', ''], { cwd: `../${repo}` })
+async function miniprogramUpdateIcons(repo: string, version: string) {
+  await exec('node', ['./script/update-icons.js', '--version ', version], { cwd: `../${repo}` })
 }
 export default async function start(context: TriggerContext) {
   const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
@@ -39,7 +39,7 @@ export default async function start(context: TriggerContext) {
 
   await bumpIconsVersion(repoMap[context.comment])
   if (packageName === 'cdn-iconfont') {
-    await miniprogramUpdateIcons(repoMap[context.comment])
+    await miniprogramUpdateIcons(repoMap[context.comment], latestVersion)
   }
   await gitCommit(repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`)
   await gitPush(repoMap[context.comment], branchName)

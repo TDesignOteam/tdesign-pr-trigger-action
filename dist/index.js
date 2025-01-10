@@ -30012,9 +30012,9 @@ function getCdnIconfontVersion() {
         return (match === null || match === void 0 ? void 0 : match[1]) || '';
     });
 }
-function miniprogramUpdateIcons(repo) {
+function miniprogramUpdateIcons(repo, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version ', ''], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version ', version], { cwd: `../${repo}` });
     });
 }
 function start(context) {
@@ -30039,7 +30039,7 @@ function start(context) {
         const branchName = yield (0, utils_1.createBranch)(trigger_1.repoMap[context.comment], `chore/update-${packageName}/${latestVersion}`);
         yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.comment]);
         if (packageName === 'cdn-iconfont') {
-            yield miniprogramUpdateIcons(trigger_1.repoMap[context.comment]);
+            yield miniprogramUpdateIcons(trigger_1.repoMap[context.comment], latestVersion);
         }
         yield (0, utils_1.gitCommit)(trigger_1.repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`);
         yield (0, utils_1.gitPush)(trigger_1.repoMap[context.comment], branchName);
