@@ -4,12 +4,6 @@ import { getOctokit } from '@actions/github'
 
 export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
 export const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i
-export type Repo = 'tdesign-common' | 'tdesign-icons'
-export const frameworkDirective: Record<Repo, string[]> = {
-  'tdesign-common': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
-  'tdesign-icons': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
-}
-
 export function addContributor(body: string, contributor: string): string {
   if (SKIP_CHANGELOG_REG.test(body)) {
     info(`不需要纳入 Changelog`)
@@ -43,13 +37,6 @@ export async function cloneRepo(owner: string, repo: string, token: string): Pro
   await exec('git', ['clone', repo_url, `../${repo}`])
 }
 
-export function checkRepo(repo: Repo) {
-  const frameworks = Object.keys(frameworkDirective) as Repo[]
-  if (!frameworks.includes(repo)) {
-    throw new Error(`不在白名单中: ${repo}`)
-  }
-}
-
 export async function getPrData(owner: string, repo: string, pr_number: number, token: string) {
   const octokit = getOctokit(token)
   const { data: pr_data } = await octokit.rest.pulls.get({
@@ -59,16 +46,24 @@ export async function getPrData(owner: string, repo: string, pr_number: number, 
   })
   return pr_data
 }
-
-export async function createPR(owner: string, repo: string, pr_number: number, token: string) {
-  const octokit = getOctokit(token)
+export interface CreatePRContext {
+  owner: string
+  repo: string
+  title: string
+  head: string
+  base?: string
+  body: string
+  token: string
+}
+export async function createPR(context: CreatePRContext) {
+  const octokit = getOctokit(context.token)
   await octokit.rest.pulls.create({
-    owner,
-    repo,
-    title: 'chore: update common',
-    head: `chore/update-common/pr${pr_number}`,
-    base: 'develop',
-    body: '',
+    owner: context.owner,
+    repo: context.repo,
+    title: context.title,
+    head: context.head,
+    base: context?.base || 'develop',
+    body: context.body,
   })
 }
 export async function getPkgLatestVersion(packageName: string) {
@@ -76,7 +71,25 @@ export async function getPkgLatestVersion(packageName: string) {
   return stdout.trim()
 }
 
-export async function updateIcons(repo: string) {
+export async function bumpIconsVersion(repo: string) {
   await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` })
   await exec('git', ['status'], { cwd: `../${repo}` })
+}
+
+export async function setGitConfig() {
+  await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
+  await exec(`git config --global user.name "github-actions[bot]"`)
+}
+
+export async function createBranch(repo: string, branch: string) {
+  await exec(`git checkout -b ${branch}`, [], { cwd: `../${repo}` })
+  return branch
+}
+
+export async function gitCommit(repo: string, message: string) {
+  await exec(`git commit -am "${message}"`, [], { cwd: `../${repo}` })
+}
+
+export async function gitPush(repo: string, branch: string) {
+  await exec(`git push origin ${branch}`, [], { cwd: `../${repo}` })
 }

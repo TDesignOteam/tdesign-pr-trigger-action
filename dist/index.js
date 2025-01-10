@@ -29930,6 +29930,7 @@ const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
 const trigger_1 = __importDefault(__nccwpck_require__(9224));
+const utils_1 = __nccwpck_require__(6236);
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
@@ -29938,13 +29939,7 @@ function run() {
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
         const token = node_process_1.default.env.GITHUB_TOKEN || (0, core_1.getInput)('token');
         const comment = (0, core_1.getInput)('comment') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
-        const octokit = (0, github_1.getOctokit)(token);
-        const { data: pr_data } = yield octokit.rest.pulls.get({
-            owner,
-            repo,
-            pull_number: pr_number,
-        });
-        (0, core_1.debug)(`pr_data: ${JSON.stringify(pr_data, null, 2)}`);
+        yield (0, utils_1.setGitConfig)();
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30018,8 +30013,20 @@ function start(context) {
         (0, core_1.info)(`latestVersion: ${latestVersion}`);
         (0, core_1.endGroup)();
         yield (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.comment], trigger_1.repoMap[context.comment], context.token);
-        yield (0, utils_1.updateIcons)(trigger_1.repoMap[context.comment]);
-        const title = `chore(Icon): update to ${latestVersion}`;
+        const branchName = yield (0, utils_1.createBranch)(trigger_1.repoMap[context.comment], `chore/update-${packageName}/pr${context.pr_number}`);
+        yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.comment]);
+        yield (0, utils_1.gitCommit)(trigger_1.repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`);
+        yield (0, utils_1.gitPush)(trigger_1.repoMap[context.comment], branchName);
+        const title = `feat(Icon): ${packageName} update to ${latestVersion}`;
+        const prContext = {
+            owner: trigger_1.ownerMap[context.comment],
+            repo: trigger_1.repoMap[context.comment],
+            title,
+            head: `chore/update-${packageName}/pr${context.pr_number}`,
+            body,
+            token: context.token,
+        };
+        (0, utils_1.createPR)(prContext);
         (0, core_1.info)(title);
     });
 }
@@ -30044,16 +30051,22 @@ exports.iconsMap = {
     '/pr-vue': 'tdesign-icons-vue',
     '/pr-vue-next': 'tdesign-icons-vue-next',
     '/pr-react': 'tdesign-icons-react',
+    '/pr-mobile-vue': 'tdesign-icons-vue-next',
+    '/pr-mobile-react': 'tdesign-icons-react',
 };
 exports.repoMap = {
     '/pr-vue': 'tdesign-vue',
     '/pr-vue-next': 'tdesign-vue-next',
     '/pr-react': 'tdesign-react',
+    '/pr-mobile-vue': 'tdesign-mobile-vue',
+    '/pr-mobile-react': 'tdesign-mobile-react',
 };
 exports.ownerMap = {
     '/pr-vue': 'Tencent',
-    '/pr-vue-next': 'Tencent',
+    '/pr-vue-next': 'liweijie0812',
     '/pr-react': 'Tencent',
+    '/pr-mobile-vue': 'Tencent',
+    '/pr-mobile-react': 'Tencent',
 };
 function useTrigger(context) {
     // TODO
@@ -30084,23 +30097,22 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.frameworkDirective = exports.CHANGELOG_REG = exports.SKIP_CHANGELOG_REG = void 0;
+exports.CHANGELOG_REG = exports.SKIP_CHANGELOG_REG = void 0;
 exports.addContributor = addContributor;
 exports.cloneRepo = cloneRepo;
-exports.checkRepo = checkRepo;
 exports.getPrData = getPrData;
 exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
-exports.updateIcons = updateIcons;
+exports.bumpIconsVersion = bumpIconsVersion;
+exports.setGitConfig = setGitConfig;
+exports.createBranch = createBranch;
+exports.gitCommit = gitCommit;
+exports.gitPush = gitPush;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
 exports.SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
 exports.CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
-exports.frameworkDirective = {
-    'tdesign-common': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
-    'tdesign-icons': ['/pr-vue', '/pr-vue-next', '/pr-react', '/pr-mobile-vue', '/pr-mobile-react'],
-};
 function addContributor(body, contributor) {
     if (exports.SKIP_CHANGELOG_REG.test(body)) {
         (0, core_1.info)(`不需要纳入 Changelog`);
@@ -30133,12 +30145,6 @@ function cloneRepo(owner, repo, token) {
         yield (0, exec_1.exec)('git', ['clone', repo_url, `../${repo}`]);
     });
 }
-function checkRepo(repo) {
-    const frameworks = Object.keys(exports.frameworkDirective);
-    if (!frameworks.includes(repo)) {
-        throw new Error(`不在白名单中: ${repo}`);
-    }
-}
 function getPrData(owner, repo, pr_number, token) {
     return __awaiter(this, void 0, void 0, function* () {
         const octokit = (0, github_1.getOctokit)(token);
@@ -30150,16 +30156,16 @@ function getPrData(owner, repo, pr_number, token) {
         return pr_data;
     });
 }
-function createPR(owner, repo, pr_number, token) {
+function createPR(context) {
     return __awaiter(this, void 0, void 0, function* () {
-        const octokit = (0, github_1.getOctokit)(token);
+        const octokit = (0, github_1.getOctokit)(context.token);
         yield octokit.rest.pulls.create({
-            owner,
-            repo,
-            title: 'chore: update common',
-            head: `chore/update-common/pr${pr_number}`,
-            base: 'develop',
-            body: '',
+            owner: context.owner,
+            repo: context.repo,
+            title: context.title,
+            head: context.head,
+            base: (context === null || context === void 0 ? void 0 : context.base) || 'develop',
+            body: context.body,
         });
     });
 }
@@ -30169,10 +30175,32 @@ function getPkgLatestVersion(packageName) {
         return stdout.trim();
     });
 }
-function updateIcons(repo) {
+function bumpIconsVersion(repo) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
+    });
+}
+function setGitConfig() {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
+        yield (0, exec_1.exec)(`git config --global user.name "github-actions[bot]"`);
+    });
+}
+function createBranch(repo, branch) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git checkout -b ${branch}`, [], { cwd: `../${repo}` });
+        return branch;
+    });
+}
+function gitCommit(repo, message) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git commit -am "${message}"`, [], { cwd: `../${repo}` });
+    });
+}
+function gitPush(repo, branch) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`git push origin ${branch}`, [], { cwd: `../${repo}` });
     });
 }
 

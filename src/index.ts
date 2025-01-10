@@ -1,8 +1,9 @@
 import process from 'node:process'
-import { debug, getInput } from '@actions/core'
+import { getInput } from '@actions/core'
 
-import { context, getOctokit } from '@actions/github'
+import { context } from '@actions/github'
 import useTrigger from './tdesign/trigger'
+import { setGitConfig } from './utils'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
@@ -10,14 +11,8 @@ export async function run(): Promise<void> {
   const pr_number = getInput('pr_number') || context.issue.number
   const token = process.env.GITHUB_TOKEN || getInput('token')
   const comment = getInput('comment') || context.payload.comment?.body || ''
-  const octokit = getOctokit(token)
 
-  const { data: pr_data } = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: pr_number as number,
-  })
-  debug(`pr_data: ${JSON.stringify(pr_data, null, 2)}`)
+  await setGitConfig()
 
   useTrigger({
     owner,
