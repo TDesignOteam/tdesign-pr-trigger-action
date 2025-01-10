@@ -87,7 +87,7 @@ export async function createBranch(repo: string, branch: string) {
 }
 
 export async function gitCommit(repo: string, message: string) {
-  await exec(`git commit -am "${message}"`, [], { cwd: `../${repo}` })
+  await exec(`git commit -am "${message}" --no-verify`, [], { cwd: `../${repo}` })
 }
 
 export async function gitPush(repo: string, branch: string) {

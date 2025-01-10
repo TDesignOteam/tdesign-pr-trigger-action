@@ -30226,7 +30226,7 @@ function createBranch(repo, branch) {
 }
 function gitCommit(repo, message) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git commit -am "${message}"`, [], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)(`git commit -am "${message}" --no-verify`, [], { cwd: `../${repo}` });
     });
 }
 function gitPush(repo, branch) {
