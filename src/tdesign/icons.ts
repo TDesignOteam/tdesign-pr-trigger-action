@@ -35,7 +35,7 @@ export default async function start(context: TriggerContext) {
   info(`latestVersion: ${latestVersion}`)
   endGroup()
   await cloneRepo(ownerMap[context.comment], repoMap[context.comment], context.token)
-  const branchName = await createBranch(repoMap[context.comment], `chore/update-${packageName}/${latestVersion}}`)
+  const branchName = await createBranch(repoMap[context.comment], `chore/update-${packageName}/${latestVersion}`)
 
   await bumpIconsVersion(repoMap[context.comment])
   if (packageName === 'cdn-iconfont') {
@@ -49,7 +49,7 @@ export default async function start(context: TriggerContext) {
     owner: ownerMap[context.comment],
     repo: repoMap[context.comment],
     title,
-    head: `chore/update-${packageName}/${latestVersion}`,
+    head: branchName,
     body,
     token: context.token,
   }

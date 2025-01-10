@@ -30036,7 +30036,7 @@ function start(context) {
         (0, core_1.info)(`latestVersion: ${latestVersion}`);
         (0, core_1.endGroup)();
         yield (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.comment], trigger_1.repoMap[context.comment], context.token);
-        const branchName = yield (0, utils_1.createBranch)(trigger_1.repoMap[context.comment], `chore/update-${packageName}/${latestVersion}}`);
+        const branchName = yield (0, utils_1.createBranch)(trigger_1.repoMap[context.comment], `chore/update-${packageName}/${latestVersion}`);
         yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.comment]);
         if (packageName === 'cdn-iconfont') {
             yield miniprogramUpdateIcons(trigger_1.repoMap[context.comment]);
@@ -30048,7 +30048,7 @@ function start(context) {
             owner: trigger_1.ownerMap[context.comment],
             repo: trigger_1.repoMap[context.comment],
             title,
-            head: `chore/update-${packageName}/${latestVersion}`,
+            head: branchName,
             body,
             token: context.token,
         };
