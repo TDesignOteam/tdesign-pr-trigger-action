@@ -1,5 +1,5 @@
 {
-  "name": "tdesign-pr-comment-action",
+  "name": "tdesign-pr-trigger-action",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@9.12.1",
@@ -19,7 +19,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "prebuild": "rimraf dist/*  ",
+    "prebuild": "rimraf dist/*",
     "build": "ncc build --license license.txt",
     "lint": "eslint . ",
     "lint:fix": "eslint . --fix",
@@ -34,7 +34,7 @@
     "@actions/github": "^6.0.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^3.12.2",
+    "@antfu/eslint-config": "^3.13.0",
     "@octokit/plugin-rest-endpoint-methods": "^13.3.0",
     "@types/node": "^22.10.5",
     "@vercel/ncc": "^0.38.3",

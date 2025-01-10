@@ -1,5 +1,5 @@
-name: tdesign-pr-comment-action
-description: tdesign-pr-comment-action
+name: tdesign-pr-trigger-action
+description: tdesign-pr-trigger-action
 author: TDesign
 inputs:
   owner:
@@ -13,6 +13,9 @@ inputs:
     required: false
   comment:
     description: comment
+    required: false
+  token:
+    description: token
     required: false
 
 runs:
