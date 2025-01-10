@@ -6,6 +6,7 @@ export const iconsMap = {
   '/pr-react': 'tdesign-icons-react',
   '/pr-mobile-vue': 'tdesign-icons-vue-next',
   '/pr-mobile-react': 'tdesign-icons-react',
+  '/pr-miniprogram': 'cdn-iconfont',
 }
 export const repoMap = {
   '/pr-vue': 'tdesign-vue',
@@ -13,6 +14,7 @@ export const repoMap = {
   '/pr-react': 'tdesign-react',
   '/pr-mobile-vue': 'tdesign-mobile-vue',
   '/pr-mobile-react': 'tdesign-mobile-react',
+  '/pr-miniprogram': 'tdesign-miniprogram',
 }
 export const ownerMap = {
   '/pr-vue': 'Tencent',
@@ -20,6 +22,7 @@ export const ownerMap = {
   '/pr-react': 'Tencent',
   '/pr-mobile-vue': 'Tencent',
   '/pr-mobile-react': 'Tencent',
+  '/pr-miniprogram': 'Tencent',
 }
 
 export interface TriggerContext {
