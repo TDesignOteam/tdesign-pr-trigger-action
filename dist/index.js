@@ -30095,7 +30095,7 @@ exports.ownerMap = {
     '/pr-react': 'Tencent',
     '/pr-mobile-vue': 'Tencent',
     '/pr-mobile-react': 'Tencent',
-    '/pr-miniprogram': 'Tencent',
+    '/pr-miniprogram': 'liweijie0812',
 };
 function useTrigger(context) {
     // TODO

@@ -20,7 +20,7 @@ jobs:
           pr_number: 130
           comment: /pr-vue-next
   pr-vue:
-    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,3 +34,18 @@ jobs:
           repo: tdesign-icons
           pr_number: 130
           comment: /pr-vue
+  pr-miniprogram:
+    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130
+          comment: /pr-miniprogram
