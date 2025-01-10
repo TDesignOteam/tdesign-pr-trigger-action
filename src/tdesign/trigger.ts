@@ -18,11 +18,11 @@ export const repoMap = {
 }
 export const ownerMap = {
   '/pr-vue': 'Tencent',
-  '/pr-vue-next': 'liweijie0812',
+  '/pr-vue-next': 'Tencent',
   '/pr-react': 'Tencent',
   '/pr-mobile-vue': 'Tencent',
   '/pr-mobile-react': 'Tencent',
-  '/pr-miniprogram': 'liweijie0812',
+  '/pr-miniprogram': 'Tencent',
 }
 
 export interface TriggerContext {

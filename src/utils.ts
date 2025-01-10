@@ -77,8 +77,10 @@ export async function bumpIconsVersion(repo: string) {
 }
 
 export async function setGitConfig() {
-  await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
-  await exec(`git config --global user.name "github-actions[bot]"`)
+  // await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
+  // await exec(`git config --global user.name "github-actions[bot]"`)
+  await exec(`git config --global user.email "674416404@qq.com"`)
+  await exec(`git config --global user.name "liweijie0812"`)
 }
 
 export async function createBranch(repo: string, branch: string) {

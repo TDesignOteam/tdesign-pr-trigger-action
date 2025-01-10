@@ -30093,11 +30093,11 @@ exports.repoMap = {
 };
 exports.ownerMap = {
     '/pr-vue': 'Tencent',
-    '/pr-vue-next': 'liweijie0812',
+    '/pr-vue-next': 'Tencent',
     '/pr-react': 'Tencent',
     '/pr-mobile-vue': 'Tencent',
     '/pr-mobile-react': 'Tencent',
-    '/pr-miniprogram': 'liweijie0812',
+    '/pr-miniprogram': 'Tencent',
 };
 function useTrigger(context) {
     // TODO
@@ -30214,8 +30214,10 @@ function bumpIconsVersion(repo) {
 }
 function setGitConfig() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
-        yield (0, exec_1.exec)(`git config --global user.name "github-actions[bot]"`);
+        // await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
+        // await exec(`git config --global user.name "github-actions[bot]"`)
+        yield (0, exec_1.exec)(`git config --global user.email "674416404@qq.com"`);
+        yield (0, exec_1.exec)(`git config --global user.name "liweijie0812"`);
     });
 }
 function createBranch(repo, branch) {
