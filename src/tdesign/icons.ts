@@ -38,7 +38,9 @@ export default async function start(context: TriggerContext) {
   const branchName = await createBranch(repoMap[context.comment], `chore/update-${packageName}/${latestVersion}}`)
 
   await bumpIconsVersion(repoMap[context.comment])
-  await miniprogramUpdateIcons(repoMap[context.comment])
+  if (packageName === 'cdn-iconfont') {
+    await miniprogramUpdateIcons(repoMap[context.comment])
+  }
   await gitCommit(repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`)
   await gitPush(repoMap[context.comment], branchName)
 

@@ -30038,7 +30038,9 @@ function start(context) {
         yield (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.comment], trigger_1.repoMap[context.comment], context.token);
         const branchName = yield (0, utils_1.createBranch)(trigger_1.repoMap[context.comment], `chore/update-${packageName}/${latestVersion}}`);
         yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.comment]);
-        yield miniprogramUpdateIcons(trigger_1.repoMap[context.comment]);
+        if (packageName === 'cdn-iconfont') {
+            yield miniprogramUpdateIcons(trigger_1.repoMap[context.comment]);
+        }
         yield (0, utils_1.gitCommit)(trigger_1.repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`);
         yield (0, utils_1.gitPush)(trigger_1.repoMap[context.comment], branchName);
         const title = `feat(Icon): ${packageName} update to ${latestVersion}`;
