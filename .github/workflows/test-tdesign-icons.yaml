@@ -5,7 +5,7 @@ on:
 
 jobs:
   pr-vue-next:
-    if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue-next') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -13,12 +13,13 @@ jobs:
         uses: ./
         id: test
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
         with:
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
           comment: /pr-vue-next
+
   pr-vue:
     if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
