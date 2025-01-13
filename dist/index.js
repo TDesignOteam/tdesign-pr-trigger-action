@@ -30214,10 +30214,8 @@ function bumpIconsVersion(repo) {
 }
 function setGitConfig() {
     return __awaiter(this, void 0, void 0, function* () {
-        // await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
-        // await exec(`git config --global user.name "github-actions[bot]"`)
-        yield (0, exec_1.exec)(`git config --global user.email "674416404@qq.com"`);
-        yield (0, exec_1.exec)(`git config --global user.name "liweijie0812"`);
+        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
+        yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
     });
 }
 function createBranch(repo, branch) {
