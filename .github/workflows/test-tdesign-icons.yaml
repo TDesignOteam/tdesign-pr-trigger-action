@@ -79,7 +79,7 @@ jobs:
         uses: ./
         id: test
         env:
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
         with:
           owner: Tencent
           repo: tdesign-icons
