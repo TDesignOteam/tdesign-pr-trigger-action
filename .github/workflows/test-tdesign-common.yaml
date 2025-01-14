@@ -84,7 +84,7 @@ jobs:
           trigger: /pr-mobile
 
   common-pr-mobile-vue:
-    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    # if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
