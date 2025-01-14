@@ -30214,7 +30214,7 @@ function bumpIconsVersion(repo) {
 }
 function setGitConfig() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`);
+        yield (0, exec_1.exec)(`git config --global user.email "tdesign-bot@tencent.com"`);
         yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
     });
 }
