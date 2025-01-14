@@ -1,4 +1,4 @@
-import iconStart from './icons'
+import iconStart from '../tdesign/icons'
 
 export const iconsMap = {
   '/pr-vue': 'tdesign-icons-vue',

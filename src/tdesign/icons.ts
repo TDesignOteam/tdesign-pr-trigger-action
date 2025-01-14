@@ -2,7 +2,7 @@ import type { CreatePRContext } from '../utils'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import { addContributor, bumpIconsVersion, cloneRepo, createBranch, createPR, getPkgLatestVersion, getPrData, gitCommit, gitPush } from '../utils'
-import { iconsMap, ownerMap, repoMap, type TriggerContext } from './trigger'
+import { iconsMap, ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
@@ -37,7 +37,8 @@ export default async function start(context: TriggerContext) {
   info(`latestVersion: ${latestVersion}`)
   endGroup()
   await cloneRepo(ownerMap[context.comment], repoMap[context.comment], context.token)
-  const branchName = await createBranch(repoMap[context.comment], `chore/update-${packageName}/${latestVersion}`)
+  const branchName = `chore/update-${packageName}/${latestVersion}`
+  await createBranch(repoMap[context.comment], branchName)
 
   await bumpIconsVersion(repoMap[context.comment])
   if (packageName === 'cdn-iconfont') {
