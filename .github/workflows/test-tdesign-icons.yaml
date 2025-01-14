@@ -50,6 +50,23 @@ jobs:
           repo: tdesign-icons
           pr_number: 130
           comment: /pr-react
+
+  pr-mobile-react:
+    if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-mobile-react') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130
+          comment: /pr-mobile-react
+
   pr-miniprogram:
     if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-miniprogram') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
     runs-on: ubuntu-latest
