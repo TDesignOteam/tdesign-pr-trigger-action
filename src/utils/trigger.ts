@@ -1,3 +1,4 @@
+import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
 
 export const iconsMap = {
@@ -30,13 +31,16 @@ export interface TriggerContext {
   repo: string
   pr_number: number
   token: string
-  comment: string
+  trigger: string
 }
 export default function useTrigger(context: TriggerContext) {
   // TODO
   switch (context.repo) {
     case 'tdesign-icons':
       iconStart(context)
+      break
+    case 'tdesign-common':
+      commonStart(context)
       break
     default:
       throw new Error(`不支持的仓库: ${context.repo}`)
