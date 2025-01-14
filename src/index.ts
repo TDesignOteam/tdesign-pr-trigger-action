@@ -1,5 +1,5 @@
 import process from 'node:process'
-import { getInput } from '@actions/core'
+import { getInput, info } from '@actions/core'
 
 import { context } from '@actions/github'
 import { setGitConfig } from './utils'
@@ -12,6 +12,10 @@ export async function run(): Promise<void> {
   const token = process.env.GITHUB_TOKEN || getInput('token')
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
 
+  if (context.eventName === 'issue_comment' && context.payload.pull_request) {
+    info('pr comment trigger')
+    // TODO 需要白名单的人才能触发
+  }
   await setGitConfig()
 
   useTrigger({
