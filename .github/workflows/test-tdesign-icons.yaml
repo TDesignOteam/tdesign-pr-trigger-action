@@ -52,7 +52,7 @@ jobs:
           comment: /pr-react
 
   pr-mobile-react:
-    if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-mobile-react') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
+    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-mobile-react') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
