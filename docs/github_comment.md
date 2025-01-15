@@ -2,7 +2,7 @@
 
 ## 在哪里配置
 
-[配置地址](https://github.com/settings/replies）
+[配置地址](https://github.com/settings/replies)
 
 <img width="876" alt="image" src="https://github.com/user-attachments/assets/5d351851-3881-483b-97ae-05e86d4aa7d5" />
 
