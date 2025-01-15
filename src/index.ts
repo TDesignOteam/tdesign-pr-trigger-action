@@ -1,17 +1,21 @@
 import process from 'node:process'
-import { getInput } from '@actions/core'
+import { getInput, info } from '@actions/core'
 
 import { context } from '@actions/github'
-import useTrigger from './tdesign/trigger'
 import { setGitConfig } from './utils'
+import useTrigger from './utils/trigger'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
   const owner = getInput('owner') || context.repo.owner
   const pr_number = getInput('pr_number') || context.issue.number
   const token = process.env.GITHUB_TOKEN || getInput('token')
-  const comment = getInput('comment') || context.payload.comment?.body || ''
+  const trigger = getInput('trigger') || context.payload.comment?.body || ''
 
+  if (context.eventName === 'issue_comment' && context.payload.pull_request) {
+    info('pr comment trigger')
+    // TODO 需要白名单的人才能触发
+  }
   await setGitConfig()
 
   useTrigger({
@@ -19,7 +23,7 @@ export async function run(): Promise<void> {
     repo,
     pr_number: pr_number as number,
     token,
-    comment,
+    trigger,
   })
   // info('comment', comment)
   // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`

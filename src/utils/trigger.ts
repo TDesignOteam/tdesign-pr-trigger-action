@@ -1,4 +1,5 @@
-import iconStart from './icons'
+import commonStart from '../tdesign/common'
+import iconStart from '../tdesign/icons'
 
 export const iconsMap = {
   '/pr-vue': 'tdesign-icons-vue',
@@ -15,6 +16,7 @@ export const repoMap = {
   '/pr-mobile-vue': 'tdesign-mobile-vue',
   '/pr-mobile-react': 'tdesign-mobile-react',
   '/pr-miniprogram': 'tdesign-miniprogram',
+  '/pr-flutter': 'tdesign-flutter',
 }
 export const ownerMap = {
   '/pr-vue': 'Tencent',
@@ -23,6 +25,7 @@ export const ownerMap = {
   '/pr-mobile-vue': 'Tencent',
   '/pr-mobile-react': 'Tencent',
   '/pr-miniprogram': 'Tencent',
+  '/pr-flutter': 'Tencent',
 }
 
 export interface TriggerContext {
@@ -30,13 +33,16 @@ export interface TriggerContext {
   repo: string
   pr_number: number
   token: string
-  comment: string
+  trigger: string
 }
 export default function useTrigger(context: TriggerContext) {
   // TODO
   switch (context.repo) {
     case 'tdesign-icons':
       iconStart(context)
+      break
+    case 'tdesign-common':
+      commonStart(context)
       break
     default:
       throw new Error(`不支持的仓库: ${context.repo}`)

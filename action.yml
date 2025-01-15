@@ -11,8 +11,8 @@ inputs:
   pr_number:
     description: pr_number
     required: false
-  comment:
-    description: comment
+  trigger:
+    description: trigger
     required: false
   token:
     description: token

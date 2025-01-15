@@ -2,7 +2,7 @@ import type { CreatePRContext } from '../utils'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import { addContributor, bumpIconsVersion, cloneRepo, createBranch, createPR, getPkgLatestVersion, getPrData, gitCommit, gitPush } from '../utils'
-import { iconsMap, ownerMap, repoMap, type TriggerContext } from './trigger'
+import { iconsMap, ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
@@ -24,7 +24,7 @@ export default async function start(context: TriggerContext) {
   startGroup('body')
   info(`${body}`)
   endGroup()
-  const packageName = iconsMap[context.comment]
+  const packageName = iconsMap[context.trigger]
   startGroup(packageName)
   let latestVersion = ''
   if (packageName === 'cdn-iconfont') {
@@ -36,20 +36,21 @@ export default async function start(context: TriggerContext) {
 
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  await cloneRepo(ownerMap[context.comment], repoMap[context.comment], context.token)
-  const branchName = await createBranch(repoMap[context.comment], `chore/update-${packageName}/${latestVersion}`)
+  await cloneRepo(ownerMap[context.trigger], repoMap[context.trigger], context.token)
+  const branchName = `chore/update-${packageName}/${latestVersion}`
+  await createBranch(repoMap[context.trigger], branchName)
 
-  await bumpIconsVersion(repoMap[context.comment])
+  await bumpIconsVersion(repoMap[context.trigger])
   if (packageName === 'cdn-iconfont') {
-    await miniprogramUpdateIcons(repoMap[context.comment], latestVersion)
+    await miniprogramUpdateIcons(repoMap[context.trigger], latestVersion)
   }
-  await gitCommit(repoMap[context.comment], `chore: update ${packageName} to ${latestVersion}`)
-  await gitPush(repoMap[context.comment], branchName)
+  await gitCommit(repoMap[context.trigger], `chore: update ${packageName} to ${latestVersion}`)
+  await gitPush(repoMap[context.trigger], branchName)
 
   const title = `feat(Icon): ${packageName} update to ${latestVersion}`
   const prContext: CreatePRContext = {
-    owner: ownerMap[context.comment],
-    repo: repoMap[context.comment],
+    owner: ownerMap[context.trigger],
+    repo: repoMap[context.trigger],
     title,
     head: branchName,
     body,

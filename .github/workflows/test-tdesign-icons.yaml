@@ -18,10 +18,10 @@ jobs:
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
-          comment: /pr-vue-next
+          trigger: /pr-vue-next
 
   pr-vue:
-    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
+    if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-vue') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
-          comment: /pr-vue
+          trigger: /pr-vue
   pr-react:
     if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-react') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
     runs-on: ubuntu-latest
@@ -49,24 +49,7 @@ jobs:
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
-          comment: /pr-react
-
-  pr-mobile-react:
-    # if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-mobile-react') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: test
-        uses: ./
-        id: test
-        env:
-          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
-        with:
-          owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
-          comment: /pr-mobile-react
-
+          trigger: /pr-react
   pr-miniprogram:
     if: contains(github.event.pull_request.labels.*.name, 'icons:/pr-miniprogram') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
     runs-on: ubuntu-latest
@@ -84,4 +67,4 @@ jobs:
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
-          comment: /pr-miniprogram
+          trigger: /pr-miniprogram
