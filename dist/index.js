@@ -30023,7 +30023,7 @@ function start(context) {
         yield updateSubmodule();
         const branchName = `chore/update-common/pr/${context.pr_number}`;
         yield createBranch(branchName);
-        const title = `chore(submodule): update common`;
+        const title = `chore(submodule): update _common`;
         if (!(yield isNeedCommit())) {
             (0, core_1.info)('nothing to commit');
             return true; // nothing to commit
@@ -30222,7 +30222,7 @@ function bumpIconsVersion(repo) {
 }
 function setGitConfig() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git config --global user.email "tdesign-bot@tencent.com"`);
+        yield (0, exec_1.exec)(`git config --global user.email "tdesign@tencent.com"`);
         yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
     });
 }
@@ -30265,9 +30265,9 @@ exports["default"] = useGit;
 const exec_1 = __nccwpck_require__(8872);
 function useGit(context) {
     function cloneRepo() {
-        return __awaiter(this, void 0, void 0, function* () {
+        return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
             const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`;
-            yield (0, exec_1.exec)('git', ['clone', repo_url, `../${context.repo}`]);
+            yield (0, exec_1.exec)('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`]);
         });
     }
     function createBranch(branch) {
@@ -30393,6 +30393,7 @@ exports.repoMap = {
     '/pr-mobile-vue': 'tdesign-mobile-vue',
     '/pr-mobile-react': 'tdesign-mobile-react',
     '/pr-miniprogram': 'tdesign-miniprogram',
+    '/pr-flutter': 'tdesign-flutter',
 };
 exports.ownerMap = {
     '/pr-vue': 'Tencent',
@@ -30401,6 +30402,7 @@ exports.ownerMap = {
     '/pr-mobile-vue': 'Tencent',
     '/pr-mobile-react': 'Tencent',
     '/pr-miniprogram': 'Tencent',
+    '/pr-flutter': 'Tencent',
 };
 function useTrigger(context) {
     // TODO
