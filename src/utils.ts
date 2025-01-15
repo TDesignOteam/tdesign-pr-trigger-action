@@ -77,7 +77,7 @@ export async function bumpIconsVersion(repo: string) {
 }
 
 export async function setGitConfig() {
-  await exec(`git config --global user.email "tdesign-bot@tencent.com"`)
+  await exec(`git config --global user.email "tdesign@tencent.com"`)
   await exec(`git config --global user.name "tdesign-bot"`)
 }
 
