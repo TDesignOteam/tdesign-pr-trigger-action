@@ -19,7 +19,7 @@ export default async function start(context: TriggerContext) {
 
   const branchName = `chore/update-common/pr/${context.pr_number}`
   await createBranch(branchName)
-  const title = `chore(submodule): update common`
+  const title = `chore(submodule): update _common`
   if (!await isNeedCommit()) {
     info('nothing to commit')
     return true// nothing to commit

@@ -4,22 +4,6 @@ on:
     branches: [develop]
 
 jobs:
-  common-pr-pc:
-    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-pc') || contains(github.event.pull_request.labels.*.name, 'test-action')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: test
-        uses: ./
-        id: test
-        env:
-          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
-        with:
-          owner: Tencent
-          repo: tdesign-common
-          pr_number: 2006
-          trigger: /pr-pc
-
   common-pr-vue:
     if: contains(github.event.pull_request.labels.*.name, 'common:/pr-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
@@ -84,7 +68,7 @@ jobs:
           trigger: /pr-mobile
 
   common-pr-mobile-vue:
-    # if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    if: contains(github.event.pull_request.labels.*.name, 'common:/pr-mobile-vue') || contains(github.event.pull_request.labels.*.name, 'test-action')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -114,6 +98,22 @@ jobs:
           repo: tdesign-common
           pr_number: 2006
           trigger: /pr-mobile-react
+
+  common-pr-flutter:
+    # if: contains(github.event.pull_request.labels.*.name, 'common:/pr-flutter') || contains(github.event.pull_request.labels.*.name, 'test-action')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        env:
+          GITHUB_TOKEN: ${{ secrets.TDESIGN_BOT_TOKEN }}
+        with:
+          owner: Tencent
+          repo: tdesign-common
+          pr_number: 2018
+          trigger: /pr-flutter
 
   common-preview-react:
     if: contains(github.event.pull_request.labels.*.name, 'common:/preview-react') || contains(github.event.pull_request.labels.*.name, 'test-action')

@@ -16,6 +16,7 @@ export const repoMap = {
   '/pr-mobile-vue': 'tdesign-mobile-vue',
   '/pr-mobile-react': 'tdesign-mobile-react',
   '/pr-miniprogram': 'tdesign-miniprogram',
+  '/pr-flutter': 'tdesign-flutter',
 }
 export const ownerMap = {
   '/pr-vue': 'Tencent',
@@ -24,6 +25,7 @@ export const ownerMap = {
   '/pr-mobile-vue': 'Tencent',
   '/pr-mobile-react': 'Tencent',
   '/pr-miniprogram': 'Tencent',
+  '/pr-flutter': 'Tencent',
 }
 
 export interface TriggerContext {
