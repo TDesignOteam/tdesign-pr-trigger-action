@@ -1,12 +1,12 @@
 import { info } from '@actions/core'
-import { addContributor, getPrData } from '../utils'
+import { addContributor } from '../utils'
 import useGit from '../utils/git'
 import useGithub from '../utils/github'
 import { ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
-  const { createPR, addComment } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
-  const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
+  const { createPR, addComment, getPrData } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
+  const prData = await getPrData(context.pr_number)
   if (!prData.merged) {
     info('pr has been merged')
     addComment(context.pr_number, 'PR 还没合并，无法触发')
@@ -34,5 +34,6 @@ export default async function start(context: TriggerContext) {
   await gitCommit(title)
   await gitPush(branchName)
 
-  await createPR(title, branchName, body)
+  const newPrData = await createPR(title, branchName, body)
+  addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`)
 }

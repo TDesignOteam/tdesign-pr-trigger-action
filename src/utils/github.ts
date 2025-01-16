@@ -9,16 +9,16 @@ export default function useGithub(context: GithubContext) {
   const octokit = getOctokit(context.token)
 
   async function getPrData(pr_number: number) {
-    const { data: pr_data } = await octokit.rest.pulls.get({
+    const { data } = await octokit.rest.pulls.get({
       owner: context.owner,
       repo: context.repo,
       pull_number: pr_number,
     })
-    return pr_data
+    return data
   }
 
   async function createPR(title: string, head: string, body: string, base?: string) {
-    await octokit.rest.pulls.create({
+    const { data } = await octokit.rest.pulls.create({
       owner: context.owner,
       repo: context.repo,
       title,
@@ -26,14 +26,16 @@ export default function useGithub(context: GithubContext) {
       base: base || 'develop',
       body,
     })
+    return data
   }
   async function addComment(pr_number: number, body: string) {
-    await octokit.rest.issues.createComment({
+    const { data } = await octokit.rest.issues.createComment({
       owner: context.owner,
       repo: context.repo,
       issue_number: pr_number,
       body,
     })
+    return data
   }
 
   return {
