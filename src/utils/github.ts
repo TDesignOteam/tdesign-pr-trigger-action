@@ -27,9 +27,18 @@ export default function useGithub(context: GithubContext) {
       body,
     })
   }
+  async function addComment(pr_number: number, body: string) {
+    await octokit.rest.issues.createComment({
+      owner: context.owner,
+      repo: context.repo,
+      issue_number: pr_number,
+      body,
+    })
+  }
 
   return {
     getPrData,
     createPR,
+    addComment,
   }
 }
