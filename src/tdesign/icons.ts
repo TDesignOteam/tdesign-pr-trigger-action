@@ -53,7 +53,7 @@ export default async function start(context: TriggerContext) {
   if (!await isNeedCommit()) {
     return true
   }
-  const title = `feat(Icon): ${packageName} update to ${latestVersion}`
+  const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitCommit(title)
 
   await exec('npm', ['run', 'test:update'], { cwd: `../${repoMap[context.trigger]}` })
