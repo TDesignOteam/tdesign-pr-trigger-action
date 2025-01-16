@@ -1,7 +1,8 @@
-import type { CreatePRContext } from '../utils'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
-import { addContributor, bumpIconsVersion, cloneRepo, createBranch, createPR, getPkgLatestVersion, getPrData, gitCommit, gitPush } from '../utils'
+import useGit from 'src/utils/git'
+import useGithub from 'src/utils/github'
+import { addContributor, bumpIconsVersion, getPkgLatestVersion, getPrData } from '../utils'
 import { iconsMap, ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -36,27 +37,36 @@ export default async function start(context: TriggerContext) {
 
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  await cloneRepo(ownerMap[context.trigger], repoMap[context.trigger], context.token)
-  const branchName = `chore/update-${packageName}/${latestVersion}`
-  await createBranch(repoMap[context.trigger], branchName)
+  const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush } = useGit({
+    repo: repoMap[context.trigger],
+    owner: ownerMap[context.trigger],
+    token: context.token,
+  })
+  await cloneRepo()
+  const branchName = `chore/icon/${packageName}/${latestVersion}`
+  await createBranch(branchName)
 
   await bumpIconsVersion(repoMap[context.trigger])
   if (packageName === 'cdn-iconfont') {
     await miniprogramUpdateIcons(repoMap[context.trigger], latestVersion)
   }
-  await gitCommit(repoMap[context.trigger], `chore: update ${packageName} to ${latestVersion}`)
-  await gitPush(repoMap[context.trigger], branchName)
-
-  const title = `feat(Icon): ${packageName} update to ${latestVersion}`
-  const prContext: CreatePRContext = {
-    owner: ownerMap[context.trigger],
-    repo: repoMap[context.trigger],
-    title,
-    head: branchName,
-    body,
-    token: context.token,
+  if (!await isNeedCommit()) {
+    return true
   }
-  createPR(prContext)
+  const title = `feat(Icon): ${packageName} update to ${latestVersion}`
+  await gitCommit(title)
 
-  info(title)
+  await exec('npm', ['run', 'test:update'], { cwd: `../${repoMap[context.trigger]}` })
+  if (await isNeedCommit()) {
+    await gitCommit('chore: update snapshot')
+  }
+  await gitPush(branchName)
+
+  const { createPR } = useGithub({
+    repo: repoMap[context.trigger],
+    owner: ownerMap[context.trigger],
+    token: context.token,
+  })
+
+  await createPR(title, branchName, body)
 };
