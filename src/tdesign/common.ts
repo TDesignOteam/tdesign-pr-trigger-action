@@ -42,7 +42,7 @@ export default async function start(context: TriggerContext) {
   await gitCommit(title)
   await gitPush(branchName)
 
-  const { createPR, addComment } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
+  const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
   const newPrData = await createPR(title, branchName, body)
-  addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`)
+  commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
 }

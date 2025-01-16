@@ -30032,9 +30032,9 @@ function start(context) {
         }
         yield gitCommit(title);
         yield gitPush(branchName);
-        const { createPR, addComment } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
+        const { createPR } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
         const newPrData = yield createPR(title, branchName, body);
-        addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`);
+        commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`);
     });
 }
 
