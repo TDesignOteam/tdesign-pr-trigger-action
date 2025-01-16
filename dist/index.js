@@ -29926,6 +29926,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
+const node_fs_1 = __nccwpck_require__(3024);
+const node_path_1 = __nccwpck_require__(6760);
 const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
@@ -29933,15 +29935,28 @@ const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __importDefault(__nccwpck_require__(6671));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a;
+        var _a, _b;
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
-        const token = node_process_1.default.env.GITHUB_TOKEN || (0, core_1.getInput)('token');
+        const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
         if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
             (0, core_1.info)('pr comment trigger');
+            const whitelist = (0, node_fs_1.readFileSync)((0, node_path_1.resolve)(__dirname, '../.comment-trigger-whitelist'), 'utf-8');
             // TODO 需要白名单的人才能触发
+            let isWhitelist = false;
+            whitelist.split('\n').forEach((item) => {
+                var _a;
+                if (item.trim() === ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.user.login)) {
+                    (0, core_1.info)('comment whitelist trigger');
+                    isWhitelist = true;
+                }
+            });
+            if (!isWhitelist) {
+                (0, core_1.info)(`${(_b = github_1.context.payload.comment) === null || _b === void 0 ? void 0 : _b.user.login}不在白名单内，不触发`);
+                return;
+            }
         }
         yield (0, utils_1.setGitConfig)();
         (0, trigger_1.default)({
@@ -29949,35 +29964,8 @@ function run() {
             repo,
             pr_number: pr_number,
             token,
-            trigger,
+            trigger: trigger.trim(),
         });
-        // info('comment', comment)
-        // const repo_url = `https://${token}@github.com/liweijie0812/tdesign-vue-next.git`
-        // await exec(`ls -al`)
-        // await exec(`git clone ${repo_url} ../tdesign-vue-next`)
-        // await exec(`ls -al ../`)
-        // await exec(`ls -al`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git config --global user.email "github-actions[bot]@users.noreply.github.com""`)
-        // await exec(`git config --global user.name "github-actions[bot]"`)
-        // await exec(`git submodule update --init --remote`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git remote -v`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`npm install`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`npm run test:update`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git status`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git checkout -b chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git commit -am "chore: update common"`, [], { cwd: `../tdesign-vue-next` })
-        // await exec(`git push origin chore/update-common/pr${pr_number}`, [], { cwd: `../tdesign-vue-next` })
-        // await octokit.rest.pulls.create({
-        //   owner: 'liweijie0812',
-        //   repo: 'tdesign-vue-next',
-        //   title: 'chore: update common',
-        //   head: `chore/update-common/pr${pr_number}`,
-        //   base: 'develop',
-        //   body: pr_data.body || '',
-        // })
-        // await exec(`ls -al`)
-        //   await exec(`git submodule update --init --remote`)
-        //   await exec(`git status`)
     });
 }
 run().catch(console.error);
@@ -30011,7 +29999,17 @@ const github_1 = __importDefault(__nccwpck_require__(9764));
 const trigger_1 = __nccwpck_require__(6671);
 function start(context) {
     return __awaiter(this, void 0, void 0, function* () {
-        const prData = yield (0, utils_1.getPrData)(context.owner, context.repo, context.pr_number, context.token);
+        if (!Reflect.has(trigger_1.repoMap, context.trigger)) {
+            (0, core_1.info)(`错误的trigger: ${context.trigger}`);
+            return;
+        }
+        const { createPR, addComment, getPrData } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
+        const prData = yield getPrData(context.pr_number);
+        if (!prData.merged) {
+            (0, core_1.info)('pr has been merged');
+            addComment(context.pr_number, 'PR 还没合并，无法触发');
+            return;
+        }
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
         const { cloneRepo, initSubmodule, updateSubmodule, createBranch, isNeedCommit, gitCommit, gitPush } = (0, git_1.default)({
             repo: trigger_1.repoMap[context.trigger],
@@ -30030,8 +30028,8 @@ function start(context) {
         }
         yield gitCommit(title);
         yield gitPush(branchName);
-        const { createPR } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
-        yield createPR(title, branchName, body);
+        const newPrData = yield createPR(title, branchName, body);
+        addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`);
     });
 }
 
@@ -30052,12 +30050,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CND_ICONFONT_VERSION_REG = void 0;
 exports.getCdnIconfontVersion = getCdnIconfontVersion;
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
+const git_1 = __importDefault(__nccwpck_require__(8511));
+const github_1 = __importDefault(__nccwpck_require__(9764));
 const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __nccwpck_require__(6671);
 exports.CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
@@ -30071,13 +30074,16 @@ function getCdnIconfontVersion() {
 }
 function miniprogramUpdateIcons(repo, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${repo}` });
         yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version', version], { cwd: `../${repo}` });
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
     });
 }
 function start(context) {
     return __awaiter(this, void 0, void 0, function* () {
+        if (!Reflect.has(trigger_1.repoMap, context.trigger)) {
+            (0, core_1.info)(`错误的trigger: ${context.trigger}`);
+            return;
+        }
         const prData = yield (0, utils_1.getPrData)(context.owner, context.repo, context.pr_number, context.token);
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
         (0, core_1.startGroup)('body');
@@ -30094,26 +30100,35 @@ function start(context) {
         }
         (0, core_1.info)(`latestVersion: ${latestVersion}`);
         (0, core_1.endGroup)();
-        yield (0, utils_1.cloneRepo)(trigger_1.ownerMap[context.trigger], trigger_1.repoMap[context.trigger], context.token);
-        const branchName = `chore/update-${packageName}/${latestVersion}`;
-        yield (0, utils_1.createBranch)(trigger_1.repoMap[context.trigger], branchName);
+        const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush } = (0, git_1.default)({
+            repo: trigger_1.repoMap[context.trigger],
+            owner: trigger_1.ownerMap[context.trigger],
+            token: context.token,
+        });
+        yield cloneRepo();
+        yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
+        const branchName = `chore/icon/${packageName}/${latestVersion}`;
+        yield createBranch(branchName);
         yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.trigger]);
         if (packageName === 'cdn-iconfont') {
             yield miniprogramUpdateIcons(trigger_1.repoMap[context.trigger], latestVersion);
         }
-        yield (0, utils_1.gitCommit)(trigger_1.repoMap[context.trigger], `chore: update ${packageName} to ${latestVersion}`);
-        yield (0, utils_1.gitPush)(trigger_1.repoMap[context.trigger], branchName);
-        const title = `feat(Icon): ${packageName} update to ${latestVersion}`;
-        const prContext = {
-            owner: trigger_1.ownerMap[context.trigger],
+        if (!(yield isNeedCommit())) {
+            return true;
+        }
+        const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
+        yield gitCommit(title);
+        yield (0, exec_1.exec)('npm', ['run', 'test:update'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
+        if (yield isNeedCommit()) {
+            yield gitCommit('chore: update snapshot');
+        }
+        yield gitPush(branchName);
+        const { createPR } = (0, github_1.default)({
             repo: trigger_1.repoMap[context.trigger],
-            title,
-            head: branchName,
-            body,
+            owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
-        };
-        (0, utils_1.createPR)(prContext);
-        (0, core_1.info)(title);
+        });
+        yield createPR(title, branchName, body);
     });
 }
 ;
@@ -30336,17 +30351,17 @@ function useGithub(context) {
     const octokit = (0, github_1.getOctokit)(context.token);
     function getPrData(pr_number) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { data: pr_data } = yield octokit.rest.pulls.get({
+            const { data } = yield octokit.rest.pulls.get({
                 owner: context.owner,
                 repo: context.repo,
                 pull_number: pr_number,
             });
-            return pr_data;
+            return data;
         });
     }
     function createPR(title, head, body, base) {
         return __awaiter(this, void 0, void 0, function* () {
-            yield octokit.rest.pulls.create({
+            const { data } = yield octokit.rest.pulls.create({
                 owner: context.owner,
                 repo: context.repo,
                 title,
@@ -30354,11 +30369,24 @@ function useGithub(context) {
                 base: base || 'develop',
                 body,
             });
+            return data;
+        });
+    }
+    function addComment(pr_number, body) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const { data } = yield octokit.rest.issues.createComment({
+                owner: context.owner,
+                repo: context.repo,
+                issue_number: pr_number,
+                body,
+            });
+            return data;
         });
     }
     return {
         getPrData,
         createPR,
+        addComment,
     };
 }
 
@@ -30530,6 +30558,22 @@ module.exports = require("net");
 
 "use strict";
 module.exports = require("node:events");
+
+/***/ }),
+
+/***/ 3024:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:fs");
+
+/***/ }),
+
+/***/ 6760:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:path");
 
 /***/ }),
 

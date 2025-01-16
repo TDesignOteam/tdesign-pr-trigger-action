@@ -38,7 +38,7 @@ export async function run(): Promise<void> {
     repo,
     pr_number: pr_number as number,
     token,
-    trigger,
+    trigger: trigger.trim(),
   })
 }
 run().catch(console.error)
