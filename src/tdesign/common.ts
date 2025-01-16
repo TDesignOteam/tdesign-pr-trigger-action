@@ -9,11 +9,15 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-  const { createPR, addComment, getPrData } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
-  const prData = await getPrData(context.pr_number)
+  const { getPrData: getCommonPrData, addComment: commentAddComment } = useGithub({
+    repo: context.repo,
+    owner: context.owner,
+    token: context.token,
+  })
+  const prData = await getCommonPrData(context.pr_number)
   if (!prData.merged) {
     info('pr has been merged')
-    addComment(context.pr_number, 'PR 还没合并，无法触发')
+    commentAddComment(context.pr_number, 'PR 还没合并，无法触发')
     return
   }
   const body = addContributor(prData.body || '', prData.user.login)
@@ -38,6 +42,7 @@ export default async function start(context: TriggerContext) {
   await gitCommit(title)
   await gitPush(branchName)
 
+  const { createPR, addComment } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
   const newPrData = await createPR(title, branchName, body)
   addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`)
 }

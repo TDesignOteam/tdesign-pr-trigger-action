@@ -30003,11 +30003,15 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const { createPR, addComment, getPrData } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
-        const prData = yield getPrData(context.pr_number);
+        const { getPrData: getCommonPrData, addComment: commentAddComment } = (0, github_1.default)({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+        });
+        const prData = yield getCommonPrData(context.pr_number);
         if (!prData.merged) {
             (0, core_1.info)('pr has been merged');
-            addComment(context.pr_number, 'PR 还没合并，无法触发');
+            commentAddComment(context.pr_number, 'PR 还没合并，无法触发');
             return;
         }
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
@@ -30028,6 +30032,7 @@ function start(context) {
         }
         yield gitCommit(title);
         yield gitPush(branchName);
+        const { createPR, addComment } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
         const newPrData = yield createPR(title, branchName, body);
         addComment(context.pr_number, `> ${context.trigger}\r\n 已创建 PR: ${newPrData.html_url}`);
     });
