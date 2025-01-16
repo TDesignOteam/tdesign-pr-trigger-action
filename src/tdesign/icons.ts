@@ -19,6 +19,10 @@ async function miniprogramUpdateIcons(repo: string, version: string) {
   await exec('git', ['status'], { cwd: `../${repo}` })
 }
 export default async function start(context: TriggerContext) {
+  if (!Reflect.has(repoMap, context.trigger)) {
+    info(`错误的trigger: ${context.trigger}`)
+    return
+  }
   const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
   const body = addContributor(prData.body || '', prData.user.login)
   startGroup('body')

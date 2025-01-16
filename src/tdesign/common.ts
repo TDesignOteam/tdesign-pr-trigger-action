@@ -5,6 +5,10 @@ import useGithub from '../utils/github'
 import { ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
+  if (!Reflect.has(repoMap, context.trigger)) {
+    info(`错误的trigger: ${context.trigger}`)
+    return
+  }
   const { createPR, addComment, getPrData } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
   const prData = await getPrData(context.pr_number)
   if (!prData.merged) {
