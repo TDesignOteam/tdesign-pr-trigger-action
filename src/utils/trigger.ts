@@ -39,9 +39,9 @@ export interface TriggerContext {
 }
 export default function useTrigger(context: TriggerContext) {
   const triggerRun = {
-    'tdesign-icons': () => icons(context),
-    'tdesign-common': () => common(context),
-    'tdesign-vue': () => vue(context),
+    'tdesign-icons': async () => await icons(context),
+    'tdesign-common': async () => await common(context),
+    'tdesign-vue': async () => await vue(context),
   }
   if (!Reflect.has(triggerRun, context.repo)) {
     error(`${context.repo} 未适配`)

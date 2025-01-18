@@ -29928,7 +29928,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
-const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
 const utils_1 = __nccwpck_require__(6236);
@@ -29939,7 +29938,7 @@ function run() {
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
-        const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
+        const token = (0, core_1.getInput)('token') || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
         (0, core_1.info)(`context:${JSON.stringify(github_1.context, null, 2)}`);
         if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
@@ -30439,6 +30438,15 @@ function useGithub(context) {
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30477,9 +30485,9 @@ exports.ownerMap = {
 };
 function useTrigger(context) {
     const triggerRun = {
-        'tdesign-icons': () => (0, icons_1.default)(context),
-        'tdesign-common': () => (0, common_1.default)(context),
-        'tdesign-vue': () => (0, vue_1.default)(context),
+        'tdesign-icons': () => __awaiter(this, void 0, void 0, function* () { return yield (0, icons_1.default)(context); }),
+        'tdesign-common': () => __awaiter(this, void 0, void 0, function* () { return yield (0, common_1.default)(context); }),
+        'tdesign-vue': () => __awaiter(this, void 0, void 0, function* () { return yield (0, vue_1.default)(context); }),
     };
     if (!Reflect.has(triggerRun, context.repo)) {
         (0, core_1.error)(`${context.repo} 未适配`);
@@ -30615,14 +30623,6 @@ module.exports = require("node:fs");
 
 "use strict";
 module.exports = require("node:path");
-
-/***/ }),
-
-/***/ 1708:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:process");
 
 /***/ }),
 
