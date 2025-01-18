@@ -29941,6 +29941,7 @@ function run() {
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
         const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
+        (0, core_1.info)(`context:${JSON.stringify(github_1.context, null, 2)}`);
         if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
             (0, core_1.info)('pr comment trigger');
             const whitelist = (0, node_fs_1.readFileSync)((0, node_path_1.resolve)(__dirname, '../.comment-trigger-whitelist'), 'utf-8');
@@ -30137,6 +30138,41 @@ function start(context) {
     });
 }
 ;
+
+
+/***/ }),
+
+/***/ 5412:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = run;
+const node_console_1 = __nccwpck_require__(7540);
+const github_1 = __importDefault(__nccwpck_require__(9764));
+const supportTrigger = ['/update-common', '/update-snapshot'];
+function run(context) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!supportTrigger.includes(context.trigger)) {
+            (0, node_console_1.error)(`${context.repo} 不支持 ${context.trigger} `);
+        }
+        const { getPrData } = (0, github_1.default)({ repo: context.repo, owner: context.owner, token: context.token });
+        (0, node_console_1.info)(`getPrData:${JSON.stringify(getPrData(context.pr_number), null, 2)}`);
+    });
+}
 
 
 /***/ }),
@@ -30409,8 +30445,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ownerMap = exports.repoMap = exports.iconsMap = void 0;
 exports["default"] = useTrigger;
+const core_1 = __nccwpck_require__(9999);
 const common_1 = __importDefault(__nccwpck_require__(5327));
 const icons_1 = __importDefault(__nccwpck_require__(8862));
+const vue_1 = __importDefault(__nccwpck_require__(5412));
 exports.iconsMap = {
     '/pr-vue': 'tdesign-icons-vue',
     '/pr-vue-next': 'tdesign-icons-vue-next',
@@ -30438,17 +30476,15 @@ exports.ownerMap = {
     '/pr-flutter': 'Tencent',
 };
 function useTrigger(context) {
-    // TODO
-    switch (context.repo) {
-        case 'tdesign-icons':
-            (0, icons_1.default)(context);
-            break;
-        case 'tdesign-common':
-            (0, common_1.default)(context);
-            break;
-        default:
-            throw new Error(`不支持的仓库: ${context.repo}`);
+    const triggerRun = {
+        'tdesign-icons': (0, icons_1.default)(context),
+        'tdesign-common': (0, common_1.default)(context),
+        'tdesign-vue': (0, vue_1.default)(context),
+    };
+    if (!Reflect.has(triggerRun, context.repo)) {
+        (0, core_1.error)(`${context.repo} 未适配`);
     }
+    triggerRun[context.trigger]();
 }
 
 
@@ -30555,6 +30591,14 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("net");
+
+/***/ }),
+
+/***/ 7540:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:console");
 
 /***/ }),
 
