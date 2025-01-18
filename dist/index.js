@@ -30477,9 +30477,9 @@ exports.ownerMap = {
 };
 function useTrigger(context) {
     const triggerRun = {
-        'tdesign-icons': (0, icons_1.default)(context),
-        'tdesign-common': (0, common_1.default)(context),
-        'tdesign-vue': (0, vue_1.default)(context),
+        'tdesign-icons': () => (0, icons_1.default)(context),
+        'tdesign-common': () => (0, common_1.default)(context),
+        'tdesign-vue': () => (0, vue_1.default)(context),
     };
     if (!Reflect.has(triggerRun, context.repo)) {
         (0, core_1.error)(`${context.repo} 未适配`);
