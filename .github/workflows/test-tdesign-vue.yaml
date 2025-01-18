@@ -17,3 +17,4 @@ jobs:
           repo: tdesign-vue
           pr_number: 3473
           trigger: /update-snapshot
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
