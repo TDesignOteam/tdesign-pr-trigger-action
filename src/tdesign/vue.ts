@@ -1,5 +1,5 @@
 import type { TriggerContext } from '../utils/trigger'
-import { error, info } from 'node:console'
+import { error, info } from '@actions/core'
 
 import useGithub from 'src/utils/github'
 

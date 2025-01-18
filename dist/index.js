@@ -30161,16 +30161,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = run;
-const node_console_1 = __nccwpck_require__(7540);
+const core_1 = __nccwpck_require__(9999);
 const github_1 = __importDefault(__nccwpck_require__(9764));
 const supportTrigger = ['/update-common', '/update-snapshot'];
 function run(context) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!supportTrigger.includes(context.trigger)) {
-            (0, node_console_1.error)(`${context.repo} 不支持 ${context.trigger} `);
+            (0, core_1.error)(`${context.repo} 不支持 ${context.trigger} `);
         }
         const { getPrData } = (0, github_1.default)({ repo: context.repo, owner: context.owner, token: context.token });
-        (0, node_console_1.info)(`getPrData:${JSON.stringify(getPrData(context.pr_number), null, 2)}`);
+        (0, core_1.info)(`getPrData:${JSON.stringify(getPrData(context.pr_number), null, 2)}`);
     });
 }
 
@@ -30591,14 +30591,6 @@ module.exports = require("https");
 
 "use strict";
 module.exports = require("net");
-
-/***/ }),
-
-/***/ 7540:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:console");
 
 /***/ }),
 
