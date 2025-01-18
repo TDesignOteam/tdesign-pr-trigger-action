@@ -15,8 +15,8 @@ inputs:
     description: trigger
     required: false
   token:
-    description: token
-    required: false
+    description: personal access token
+    required: true
 
 runs:
   using: node20

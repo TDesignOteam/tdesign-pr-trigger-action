@@ -1,0 +1,19 @@
+name: test-tdesign-vue
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  update-snapshot:
+    # if: contains(github.event.pull_request.labels.*.name, 'vue:/update-snapshot') || contains(github.event.pull_request.labels.*.name, 'test-tdesign-icons')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        id: test
+        with:
+          owner: Tencent
+          repo: tdesign-vue
+          pr_number: 3473
+          trigger: /update-snapshot

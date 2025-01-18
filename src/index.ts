@@ -12,7 +12,7 @@ export async function run(): Promise<void> {
   const pr_number = getInput('pr_number') || context.issue.number
   const token = getInput('token') || process.env.GITHUB_TOKEN || ''
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
-
+  info(`context:${JSON.stringify(context, null, 2)}`)
   if (context.eventName === 'issue_comment' && context.payload.pull_request) {
     info('pr comment trigger')
     const whitelist = readFileSync(resolve(__dirname, '../.comment-trigger-whitelist'), 'utf-8')
