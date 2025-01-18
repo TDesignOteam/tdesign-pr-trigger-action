@@ -30169,7 +30169,8 @@ function run(context) {
             (0, core_1.error)(`${context.repo} 不支持 ${context.trigger} `);
         }
         const { getPrData } = (0, github_1.default)({ repo: context.repo, owner: context.owner, token: context.token });
-        (0, core_1.info)(`getPrData:${JSON.stringify(getPrData(context.pr_number), null, 2)}`);
+        const prData = yield getPrData(context.pr_number);
+        (0, core_1.info)(`getPrData:${JSON.stringify(prData, null, 2)}`);
     });
 }
 

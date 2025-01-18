@@ -9,5 +9,6 @@ export default async function run(context: TriggerContext) {
     error(`${context.repo} 不支持 ${context.trigger} `)
   }
   const { getPrData } = useGithub({ repo: context.repo, owner: context.owner, token: context.token })
-  info(`getPrData:${JSON.stringify(getPrData(context.pr_number), null, 2)}`)
+  const prData = await getPrData(context.pr_number)
+  info(`getPrData:${JSON.stringify(prData, null, 2)}`)
 }
