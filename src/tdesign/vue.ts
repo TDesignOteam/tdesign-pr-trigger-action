@@ -11,4 +11,7 @@ export default async function run(context: TriggerContext) {
   const { getPrData } = useGithub({ repo: context.repo, owner: context.owner, token: context.token })
   const prData = await getPrData(context.pr_number)
   info(`getPrData:${JSON.stringify(prData, null, 2)}`)
+  if (!prData.maintainer_can_modify) {
+    error(`pr:${context.pr_number} 不允许维护者修改`)
+  }
 }

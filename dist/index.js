@@ -30171,6 +30171,9 @@ function run(context) {
         const { getPrData } = (0, github_1.default)({ repo: context.repo, owner: context.owner, token: context.token });
         const prData = yield getPrData(context.pr_number);
         (0, core_1.info)(`getPrData:${JSON.stringify(prData, null, 2)}`);
+        if (!prData.maintainer_can_modify) {
+            (0, core_1.error)(`pr:${context.pr_number} 不允许维护者修改`);
+        }
     });
 }
 
