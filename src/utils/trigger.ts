@@ -38,14 +38,14 @@ export interface TriggerContext {
   trigger: string
 }
 export default function useTrigger(context: TriggerContext) {
-  const triggerRun = {
-    'tdesign-icons': async () => await icons(context),
-    'tdesign-common': async () => await common(context),
-    'tdesign-vue': async () => await vue(context),
+  switch (context.repo) {
+    case 'tdesign-icons':
+      return common(context)
+    case 'tdesign-common':
+      return icons(context)
+    case 'tdesign-vue':
+      return vue(context)
+    default:
+      error(`${context.repo} 未适配`)
   }
-  if (!Reflect.has(triggerRun, context.repo)) {
-    error(`${context.repo} 未适配`)
-  }
-
-  triggerRun[context.trigger]()
 }

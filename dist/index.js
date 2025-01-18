@@ -30438,15 +30438,6 @@ function useGithub(context) {
 
 "use strict";
 
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -30484,15 +30475,16 @@ exports.ownerMap = {
     '/pr-flutter': 'Tencent',
 };
 function useTrigger(context) {
-    const triggerRun = {
-        'tdesign-icons': () => __awaiter(this, void 0, void 0, function* () { return yield (0, icons_1.default)(context); }),
-        'tdesign-common': () => __awaiter(this, void 0, void 0, function* () { return yield (0, common_1.default)(context); }),
-        'tdesign-vue': () => __awaiter(this, void 0, void 0, function* () { return yield (0, vue_1.default)(context); }),
-    };
-    if (!Reflect.has(triggerRun, context.repo)) {
-        (0, core_1.error)(`${context.repo} 未适配`);
+    switch (context.repo) {
+        case 'tdesign-icons':
+            return (0, common_1.default)(context);
+        case 'tdesign-common':
+            return (0, icons_1.default)(context);
+        case 'tdesign-vue':
+            return (0, vue_1.default)(context);
+        default:
+            (0, core_1.error)(`${context.repo} 未适配`);
     }
-    triggerRun[context.trigger]();
 }
 
 
