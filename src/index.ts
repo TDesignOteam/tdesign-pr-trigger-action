@@ -9,7 +9,7 @@ export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
   const owner = getInput('owner') || context.repo.owner
   const pr_number = getInput('pr_number') || context.issue.number
-  const token = getInput('token') || ''
+  const token = getInput('token', { required: true })
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
   info(`context:${JSON.stringify(context, null, 2)}`)
   if (context.eventName === 'issue_comment' && context.payload.pull_request) {

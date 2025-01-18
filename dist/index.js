@@ -29938,7 +29938,7 @@ function run() {
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
-        const token = (0, core_1.getInput)('token') || '';
+        const token = (0, core_1.getInput)('token', { required: true });
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
         (0, core_1.info)(`context:${JSON.stringify(github_1.context, null, 2)}`);
         if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
