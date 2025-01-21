@@ -29929,6 +29929,7 @@ exports.run = run;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
 const core_1 = __nccwpck_require__(9999);
+const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
 const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __importDefault(__nccwpck_require__(6671));
@@ -29959,6 +29960,8 @@ function run() {
             }
         }
         yield (0, utils_1.setGitConfig)();
+        // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
+        yield (0, exec_1.exec)('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/']);
         (0, trigger_1.default)({
             owner,
             repo,
