@@ -30161,6 +30161,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = run;
 const core_1 = __nccwpck_require__(9999);
+const exec_1 = __nccwpck_require__(8872);
+const git_1 = __importDefault(__nccwpck_require__(8511));
 const github_1 = __importDefault(__nccwpck_require__(9764));
 const supportTrigger = ['/update-common', '/update-snapshot'];
 function run(context) {
@@ -30174,6 +30176,38 @@ function run(context) {
         if (!prData.maintainer_can_modify) {
             (0, core_1.error)(`pr:${context.pr_number} 不允许维护者修改`);
         }
+        if (prData.state !== 'open') {
+            (0, core_1.error)(`pr:${context.pr_number} 不是 open 状态`);
+        }
+        let isForkPr = false;
+        if (prData.head.user.login !== context.owner) {
+            isForkPr = true;
+            (0, core_1.info)(`pr:${context.pr_number} 是 fork pr`);
+        }
+        const branchName = prData.head.ref;
+        const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote } = (0, git_1.default)({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+        });
+        yield cloneRepo();
+        if (isForkPr) {
+            yield addRemote('pr', prData.base.repo.clone_url);
+            yield checkoutPr(context.pr_number);
+            yield (0, exec_1.exec)('git', [
+                'branch',
+                '--set-upstream-to',
+                `refs/remotes/pr/${prData.head.ref}`,
+                `pr-${context.pr_number}`,
+            ], { cwd: `../${context.repo}` });
+        }
+        else {
+            yield checkoutBranch(branchName);
+        }
+        yield initSubmodule();
+        yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${context.repo}` });
+        yield (0, exec_1.exec)('npm', ['run', 'test:update'], { cwd: `../${context.repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${context.repo}` });
     });
 }
 
@@ -30334,6 +30368,17 @@ function useGit(context) {
             yield (0, exec_1.exec)('git', ['checkout', '-b', branch], { cwd: `../${context.repo}` });
         });
     }
+    function checkoutBranch(branch) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['checkout', branch], { cwd: `../${context.repo}` });
+        });
+    }
+    function checkoutPr(pr_number) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['fetch', 'origin', `pull/${pr_number}/head:pr-${pr_number}`], { cwd: `../${context.repo}` });
+            yield (0, exec_1.exec)('git', ['checkout', `pr-${pr_number}`], { cwd: `../${context.repo}` });
+        });
+    }
     function gitCommit(message) {
         return __awaiter(this, void 0, void 0, function* () {
             yield (0, exec_1.exec)(`git commit -am "${message}" --no-verify`, [], { cwd: `../${context.repo}` });
@@ -30360,7 +30405,13 @@ function useGit(context) {
             return !stdout.includes('nothing to commit, working tree clean');
         });
     }
+    function addRemote(origin, gitUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['remote', 'add', origin, gitUrl], { cwd: `../${context.repo}` });
+        });
+    }
     return {
+        checkoutPr,
         cloneRepo,
         createBranch,
         gitCommit,
@@ -30368,6 +30419,8 @@ function useGit(context) {
         initSubmodule,
         updateSubmodule,
         isNeedCommit,
+        checkoutBranch,
+        addRemote,
     };
 }
 

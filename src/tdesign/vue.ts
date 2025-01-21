@@ -35,12 +35,20 @@ export default async function run(context: TriggerContext) {
   await cloneRepo()
 
   if (isForkPr) {
-    await checkoutPr(context.pr_number)
     await addRemote('pr', prData.base.repo.clone_url)
-    await exec('git', ['fetch', 'pr'], { cwd: `../${context.repo}` })
+    await checkoutPr(context.pr_number)
+    await exec('git', [
+      'branch',
+      '--set-upstream-to',
+      `refs/remotes/pr/${prData.head.ref}`,
+      `pr-${context.pr_number}`,
+    ], { cwd: `../${context.repo}` })
   }
   else {
     await checkoutBranch(branchName)
   }
   await initSubmodule()
+  await exec('npm', ['install'], { cwd: `../${context.repo}` })
+  await exec('npm', ['run', 'test:update'], { cwd: `../${context.repo}` })
+  await exec('git', ['status'], { cwd: `../${context.repo}` })
 }
