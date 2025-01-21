@@ -35,12 +35,12 @@ export default async function run(context: TriggerContext) {
   await cloneRepo()
 
   if (isForkPr) {
-    await addRemote('pr', prData.head?.repo?.clone_url || '')
+    await addRemote(prData.head.user.login, prData.head?.repo?.clone_url || '')
     await checkoutPr(context.pr_number)
     await exec('git', [
       'branch',
       '--set-upstream-to',
-      `refs/remotes/pr/${prData.head.ref}`,
+      `refs/remotes/${prData.head.user.login}/${prData.head.ref}`,
       `pr-${context.pr_number}`,
     ], { cwd: `../${context.repo}` })
   }

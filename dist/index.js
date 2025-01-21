@@ -30193,12 +30193,12 @@ function run(context) {
         });
         yield cloneRepo();
         if (isForkPr) {
-            yield addRemote('pr', ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
+            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
             yield checkoutPr(context.pr_number);
             yield (0, exec_1.exec)('git', [
                 'branch',
                 '--set-upstream-to',
-                `refs/remotes/pr/${prData.head.ref}`,
+                `refs/remotes/${prData.head.user.login}/${prData.head.ref}`,
                 `pr-${context.pr_number}`,
             ], { cwd: `../${context.repo}` });
         }
