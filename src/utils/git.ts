@@ -42,6 +42,7 @@ export default function useGit(context: GitContext) {
   }
   async function addRemote(origin: string, gitUrl: string) {
     await exec('git', ['remote', 'add', origin, gitUrl], { cwd: `../${context.repo}` })
+    await exec('git', ['fetch', origin], { cwd: `../${context.repo}` })
   }
 
   return {

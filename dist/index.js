@@ -30409,6 +30409,7 @@ function useGit(context) {
     function addRemote(origin, gitUrl) {
         return __awaiter(this, void 0, void 0, function* () {
             yield (0, exec_1.exec)('git', ['remote', 'add', origin, gitUrl], { cwd: `../${context.repo}` });
+            yield (0, exec_1.exec)('git', ['fetch', origin], { cwd: `../${context.repo}` });
         });
     }
     return {
