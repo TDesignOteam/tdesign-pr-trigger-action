@@ -30167,6 +30167,7 @@ const github_1 = __importDefault(__nccwpck_require__(9764));
 const supportTrigger = ['/update-common', '/update-snapshot'];
 function run(context) {
     return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
         if (!supportTrigger.includes(context.trigger)) {
             (0, core_1.error)(`${context.repo} 不支持 ${context.trigger} `);
         }
@@ -30192,7 +30193,7 @@ function run(context) {
         });
         yield cloneRepo();
         if (isForkPr) {
-            yield addRemote('pr', prData.base.repo.clone_url);
+            yield addRemote('pr', ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
             yield checkoutPr(context.pr_number);
             yield (0, exec_1.exec)('git', [
                 'branch',
