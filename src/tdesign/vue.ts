@@ -55,7 +55,7 @@ export default async function run(context: TriggerContext) {
     info('无需提交')
     return true
   }
-  await exec('git', ['-am', 'chore: update snapshot'], { cwd: `../${context.repo}` })
+  await exec('git', ['commit', '-am', 'chore: update snapshot'], { cwd: `../${context.repo}` })
   if (isForkPr) {
     await exec('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` })
   }

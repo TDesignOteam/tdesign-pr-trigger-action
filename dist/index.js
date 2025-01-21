@@ -30213,7 +30213,7 @@ function run(context) {
             (0, core_1.info)('无需提交');
             return true;
         }
-        yield (0, exec_1.exec)('git', ['-am', 'chore: update snapshot'], { cwd: `../${context.repo}` });
+        yield (0, exec_1.exec)('git', ['commit', '-am', 'chore: update snapshot'], { cwd: `../${context.repo}` });
         if (isForkPr) {
             yield (0, exec_1.exec)('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` });
         }
