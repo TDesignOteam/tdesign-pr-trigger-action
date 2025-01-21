@@ -27,7 +27,7 @@ export default async function run(context: TriggerContext) {
   }
   const branchName = prData.head.ref
 
-  const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote } = useGit({
+  const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote, isNeedCommit } = useGit({
     repo: context.repo,
     owner: context.owner,
     token: context.token,
@@ -51,4 +51,15 @@ export default async function run(context: TriggerContext) {
   await exec('npm', ['install'], { cwd: `../${context.repo}` })
   await exec('npm', ['run', 'test:update'], { cwd: `../${context.repo}` })
   await exec('git', ['status'], { cwd: `../${context.repo}` })
+  if (!await isNeedCommit()) {
+    info('无需提交')
+    return true
+  }
+  await exec('git', ['-am', 'chore: update snapshot'], { cwd: `../${context.repo}` })
+  if (isForkPr) {
+    await exec('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` })
+  }
+  else {
+    await exec('git', ['push', 'origin', branchName], { cwd: `../${context.repo}` })
+  }
 }

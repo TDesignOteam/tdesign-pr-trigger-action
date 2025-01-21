@@ -30186,7 +30186,7 @@ function run(context) {
             (0, core_1.info)(`pr:${context.pr_number} 是 fork pr`);
         }
         const branchName = prData.head.ref;
-        const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote } = (0, git_1.default)({
+        const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote, isNeedCommit } = (0, git_1.default)({
             repo: context.repo,
             owner: context.owner,
             token: context.token,
@@ -30209,6 +30209,17 @@ function run(context) {
         yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${context.repo}` });
         yield (0, exec_1.exec)('npm', ['run', 'test:update'], { cwd: `../${context.repo}` });
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${context.repo}` });
+        if (!(yield isNeedCommit())) {
+            (0, core_1.info)('无需提交');
+            return true;
+        }
+        yield (0, exec_1.exec)('git', ['-am', 'chore: update snapshot'], { cwd: `../${context.repo}` });
+        if (isForkPr) {
+            yield (0, exec_1.exec)('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` });
+        }
+        else {
+            yield (0, exec_1.exec)('git', ['push', 'origin', branchName], { cwd: `../${context.repo}` });
+        }
     });
 }
 
