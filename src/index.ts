@@ -33,7 +33,7 @@ export async function run(): Promise<void> {
   await setGitConfig()
   // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
   // await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
-  sshConfig(token)
+  await sshConfig(token)
 
   useTrigger({
     owner,

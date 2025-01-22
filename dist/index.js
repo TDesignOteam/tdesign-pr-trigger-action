@@ -29961,7 +29961,7 @@ function run() {
         yield (0, utils_1.setGitConfig)();
         // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
         // await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
-        (0, utils_1.sshConfig)(token);
+        yield (0, utils_1.sshConfig)(token);
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30365,7 +30365,7 @@ function sshConfig(token) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
         yield (0, exec_1.exec)(`echo "${token}" > ~/.ssh/id_rsa`);
-        // await exec(`chmod 600 ~/.ssh/id_rsa`)
+        yield (0, exec_1.exec)(`chmod 600 ~/.ssh/id_rsa`);
     });
 }
 
