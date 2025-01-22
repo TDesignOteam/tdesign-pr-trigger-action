@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { env } from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
@@ -95,9 +97,10 @@ export async function gitPush(repo: string, branch: string) {
 }
 
 export async function sshConfig(token: string) {
-  await exec(`mkdir -p ~/.ssh`)
-  await exec(`echo "${token}" > ~/.ssh/id_rsa`)
-  await exec('ls -al ~/.ssh')
-  // await exec(`chmod 600 ~/.ssh/id_rsa`)
+  const homePath = env.HOME || '/home/runner'
+  const sshPath = `${homePath}/.ssh`
+  mkdirSync(`${sshPath}`, { mode: 0o700 })
+  writeFileSync(`${sshPath}/id_rsa`, token, { mode: 0o600 })
+  await exec('ls', ['-al', sshPath])
   await exec(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`)
 }
