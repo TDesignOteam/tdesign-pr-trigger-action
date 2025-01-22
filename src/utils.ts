@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+import { env } from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
@@ -95,8 +97,12 @@ export async function gitPush(repo: string, branch: string) {
 }
 
 export async function sshConfig(token: string) {
-  await exec(`mkdir -p ~/.ssh`)
-  await exec(`echo "${token}" > ~/.ssh/id_rsa`)
-  await exec(`chmod 600 ~/.ssh/id_rsa`)
-  await exec(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`)
+  const homeDir = env.HOME || env.USERPROFILE || ''
+  const sshDir = join(homeDir, '.ssh')
+  const idRsaPath = join(sshDir, 'id_rsa')
+
+  await exec(`mkdir -p ${sshDir}`)
+  await exec(`echo "${token}" > ${idRsaPath}`)
+  await exec(`chmod 600 ${idRsaPath}`)
+  await exec(`ssh-keyscan -t rsa github.com >> ${join(sshDir, 'known_hosts')}`)
 }
