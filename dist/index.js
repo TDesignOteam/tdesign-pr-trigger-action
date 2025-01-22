@@ -30363,9 +30363,10 @@ function gitPush(repo, branch) {
 }
 function sshConfig(token) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
+        yield (0, exec_1.exec)(`mkdir -p ~/.ssh`);
         yield (0, exec_1.exec)(`echo "${token}" > ~/.ssh/id_rsa`);
         yield (0, exec_1.exec)(`chmod 600 ~/.ssh/id_rsa`);
+        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
     });
 }
 
