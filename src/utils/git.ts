@@ -7,7 +7,8 @@ export interface GitContext {
 }
 export default function useGit(context: GitContext) {
   async function cloneRepo(branchName = 'develop') {
-    const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+    // const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+    const repo_url = `git@github.com:${context.owner}}/${context.repo}.git`
     await exec('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`])
   }
   async function createBranch(branch: string) {

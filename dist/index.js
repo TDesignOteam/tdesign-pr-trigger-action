@@ -29929,7 +29929,6 @@ exports.run = run;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
 const core_1 = __nccwpck_require__(9999);
-const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
 const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __importDefault(__nccwpck_require__(6671));
@@ -29961,7 +29960,8 @@ function run() {
         }
         yield (0, utils_1.setGitConfig)();
         // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
-        yield (0, exec_1.exec)('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/']);
+        // await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
+        (0, utils_1.sshConfig)(token);
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30196,7 +30196,17 @@ function run(context) {
         });
         yield cloneRepo();
         if (isForkPr) {
-            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
+            // 检出PR分支
+            //    git fetch origin pull/<PR ID>/head:<自定义分支名>
+            //    git fetch origin pull/7/head:pr-7
+            // 设置PR 仓库源
+            //    git add remote <PR 仓库源> <PR 仓库地址>
+            //    git add remote liweijie812 https://github.com/liweijie0812/tdesign-vue
+            //    git fetch liweijie812
+            // PR分支与远程分支建立关联
+            //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
+            //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
+            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.ssh_url) || '');
             yield checkoutPr(context.pr_number);
             yield (0, exec_1.exec)('git', [
                 'branch',
@@ -30255,6 +30265,7 @@ exports.setGitConfig = setGitConfig;
 exports.createBranch = createBranch;
 exports.gitCommit = gitCommit;
 exports.gitPush = gitPush;
+exports.sshConfig = sshConfig;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
@@ -30350,6 +30361,13 @@ function gitPush(repo, branch) {
         yield (0, exec_1.exec)(`git push origin ${branch}`, [], { cwd: `../${repo}` });
     });
 }
+function sshConfig(token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
+        yield (0, exec_1.exec)(`echo "${token}" > ~/.ssh/id_rsa`);
+        yield (0, exec_1.exec)(`chmod 600 ~/.ssh/id_rsa`);
+    });
+}
 
 
 /***/ }),
@@ -30374,7 +30392,8 @@ const exec_1 = __nccwpck_require__(8872);
 function useGit(context) {
     function cloneRepo() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
-            const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`;
+            // const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+            const repo_url = `git@github.com:${context.owner}}/${context.repo}.git`;
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`]);
         });
     }

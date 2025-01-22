@@ -35,7 +35,17 @@ export default async function run(context: TriggerContext) {
   await cloneRepo()
 
   if (isForkPr) {
-    await addRemote(prData.head.user.login, prData.head?.repo?.clone_url || '')
+    // 检出PR分支
+    //    git fetch origin pull/<PR ID>/head:<自定义分支名>
+    //    git fetch origin pull/7/head:pr-7
+    // 设置PR 仓库源
+    //    git add remote <PR 仓库源> <PR 仓库地址>
+    //    git add remote liweijie812 https://github.com/liweijie0812/tdesign-vue
+    //    git fetch liweijie812
+    // PR分支与远程分支建立关联
+    //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
+    //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
+    await addRemote(prData.head.user.login, prData.head?.repo?.ssh_url || '')
     await checkoutPr(context.pr_number)
     await exec('git', [
       'branch',

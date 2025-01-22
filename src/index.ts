@@ -1,9 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { getInput, info } from '@actions/core'
-import { exec } from '@actions/exec'
 import { context } from '@actions/github'
-import { setGitConfig } from './utils'
+import { setGitConfig, sshConfig } from './utils'
 import useTrigger from './utils/trigger'
 
 export async function run(): Promise<void> {
@@ -33,7 +32,9 @@ export async function run(): Promise<void> {
 
   await setGitConfig()
   // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
-  await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
+  // await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
+  sshConfig(token)
+
   useTrigger({
     owner,
     repo,
