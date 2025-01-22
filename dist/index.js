@@ -30266,8 +30266,6 @@ exports.createBranch = createBranch;
 exports.gitCommit = gitCommit;
 exports.gitPush = gitPush;
 exports.sshConfig = sshConfig;
-const node_path_1 = __nccwpck_require__(6760);
-const node_process_1 = __nccwpck_require__(1708);
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
@@ -30365,13 +30363,10 @@ function gitPush(repo, branch) {
 }
 function sshConfig(token) {
     return __awaiter(this, void 0, void 0, function* () {
-        const homeDir = node_process_1.env.HOME || node_process_1.env.USERPROFILE || '';
-        const sshDir = (0, node_path_1.join)(homeDir, '.ssh');
-        const idRsaPath = (0, node_path_1.join)(sshDir, 'id_rsa');
-        yield (0, exec_1.exec)(`mkdir -p ${sshDir}`);
-        yield (0, exec_1.exec)(`echo "${token}" > ${idRsaPath}`);
-        yield (0, exec_1.exec)(`chmod 600 ${idRsaPath}`);
-        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ${(0, node_path_1.join)(sshDir, 'known_hosts')}`);
+        yield (0, exec_1.exec)(`mkdir -p ~/.ssh`);
+        yield (0, exec_1.exec)(`echo "${token}" > ~/.ssh/id_rsa`);
+        yield (0, exec_1.exec)(`chmod 600 ~/.ssh/id_rsa`);
+        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
     });
 }
 
@@ -30713,14 +30708,6 @@ module.exports = require("node:fs");
 
 "use strict";
 module.exports = require("node:path");
-
-/***/ }),
-
-/***/ 1708:
-/***/ ((module) => {
-
-"use strict";
-module.exports = require("node:process");
 
 /***/ }),
 
