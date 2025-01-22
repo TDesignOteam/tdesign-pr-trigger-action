@@ -97,6 +97,7 @@ export async function gitPush(repo: string, branch: string) {
 export async function sshConfig(token: string) {
   await exec(`mkdir -p ~/.ssh`)
   await exec(`echo "${token}" > ~/.ssh/id_rsa`)
-  await exec(`chmod 600 ~/.ssh/id_rsa`)
+  await exec('ls -al ~/.ssh')
+  // await exec(`chmod 600 ~/.ssh/id_rsa`)
   await exec(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`)
 }
