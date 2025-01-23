@@ -29958,10 +29958,7 @@ function run() {
                 return;
             }
         }
-        yield (0, utils_1.setGitConfig)();
-        // git config --global url.https://${{ secrets.MY_PAT }}@github.com/.insteadOf https://github.com/
-        // await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
-        yield (0, utils_1.sshConfig)(token);
+        yield (0, utils_1.setGitGlobalConfig)(token);
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30206,7 +30203,7 @@ function run(context) {
             // PR分支与远程分支建立关联
             //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
             //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
-            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.ssh_url) || '');
+            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
             yield checkoutPr(context.pr_number);
             yield (0, exec_1.exec)('git', [
                 'branch',
@@ -30261,7 +30258,7 @@ exports.getPrData = getPrData;
 exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
 exports.bumpIconsVersion = bumpIconsVersion;
-exports.setGitConfig = setGitConfig;
+exports.setGitGlobalConfig = setGitGlobalConfig;
 exports.createBranch = createBranch;
 exports.gitCommit = gitCommit;
 exports.gitPush = gitPush;
@@ -30341,10 +30338,11 @@ function bumpIconsVersion(repo) {
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
     });
 }
-function setGitConfig() {
+function setGitGlobalConfig(token) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`git config --global user.email "tdesign@tencent.com"`);
         yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
+        yield (0, exec_1.exec)('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/']);
     });
 }
 function createBranch(repo, branch) {
@@ -30398,7 +30396,7 @@ function useGit(context) {
     function cloneRepo() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
             // const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
-            const repo_url = `git@github.com:${context.owner}/${context.repo}.git`;
+            const repo_url = `https://github.com/${context.owner}/${context.repo}.git`;
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`]);
         });
     }

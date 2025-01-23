@@ -78,9 +78,10 @@ export async function bumpIconsVersion(repo: string) {
   await exec('git', ['status'], { cwd: `../${repo}` })
 }
 
-export async function setGitConfig() {
+export async function setGitGlobalConfig(token: string) {
   await exec(`git config --global user.email "tdesign@tencent.com"`)
   await exec(`git config --global user.name "tdesign-bot"`)
+  await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
 }
 
 export async function createBranch(repo: string, branch: string) {

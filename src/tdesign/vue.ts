@@ -45,7 +45,7 @@ export default async function run(context: TriggerContext) {
     // PR分支与远程分支建立关联
     //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
     //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
-    await addRemote(prData.head.user.login, prData.head?.repo?.ssh_url || '')
+    await addRemote(prData.head.user.login, prData.head?.repo?.clone_url || '')
     await checkoutPr(context.pr_number)
     await exec('git', [
       'branch',
