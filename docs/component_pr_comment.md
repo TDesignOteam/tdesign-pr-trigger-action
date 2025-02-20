@@ -52,5 +52,4 @@
 
 指令太长不想记和手打怎么办
 
-
-偷懒小技巧在这 [传送门](./github_comment.md)
+偷懒小技巧在这里[传送门](./github_comment.md)
