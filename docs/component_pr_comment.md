@@ -2,14 +2,9 @@
 
 ## 背景
 
-维护组件库时，经常会遇到 PR 需要更新 common 子仓，更新快照，处理 common 子仓冲突 ，处理快照冲突。此时就要在 PR
-留言让贡献者处理问题，还可能需要跟 PR 贡献者进行 N 轮评论沟通才能处理好问题。
+维护组件库时，经常会遇到 PR 需要更新 common 子仓，更新快照，处理 common 子仓冲突 ，处理快照冲突。此时就要在 PR 留言通知贡献者处理问题，还可能需要跟 PR 贡献者进行 N 轮评论沟通才能处理好问题。
 
-## 白名单
-
-需要github id 在[白名单](https://github.com/Tencent/tdesign/blob/main/.github/.pr-comment-ci-whitelist)才可以使用。
-
-`/resolve-conflict` [白名单](https://github.com/TDesignOteam/tdesign-api/blob/main/.github/CODEOWNERS)单独存在
+简化处理这一系列反复繁琐的事情，通过在 PR 评论关键词触发 CI 进行自动化处理诞生了
 
 ## 评论指令
 
@@ -52,3 +47,9 @@
 指令太长不想记和手打怎么办
 
 偷懒小技巧在这里[传送门](./github_comment.md)
+
+## 白名单
+
+需要github id 在[白名单](https://github.com/Tencent/tdesign/blob/main/.github/.pr-comment-ci-whitelist)才可以使用。
+
+`/resolve-conflict` [白名单](https://github.com/TDesignOteam/tdesign-api/blob/main/.github/CODEOWNERS)单独存在
