@@ -5,7 +5,6 @@
 维护组件库时，经常会遇到 PR 需要更新 common 子仓，更新快照，处理 common 子仓冲突 ，处理快照冲突。此时就要在 PR
 留言让贡献者处理问题，还可能需要跟 PR 贡献者进行 N 轮评论沟通才能处理好问题。
 
-
 ## 白名单
 
 需要github id 在[白名单](https://github.com/Tencent/tdesign/blob/main/.github/.pr-comment-ci-whitelist)才可以使用。
@@ -24,7 +23,7 @@
 2. 检查 `common`子仓是否有冲突，如果有使用 `develop` 分支 `commit id` 指向
 3. 提交变更，推送到 PR
 
-#### /update-snapshot
+### /update-snapshot
 
 更新 PR 测试快照，部分快照更新 `node` 版本大于 `18` 会出现差异
 
