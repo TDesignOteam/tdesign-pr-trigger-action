@@ -13,10 +13,10 @@
 更新 PR common 子仓库的 `commit id` 到 最新
 
 #### 自动运行了哪些
-
-1. 合并 `develop` 分支
-2. 检查 `common`子仓是否有冲突，如果有使用 `develop` 分支 `commit id` 指向
-3. 提交变更，推送到 PR
+1. 更新 `common` 子仓 `commit id`
+2. 合并 `develop` 分支
+3. 检查 `common`子仓是否有冲突，如果有使用 `PR` 分支 `commit id` 指向
+4. 提交变更，推送到 PR
 
 ### /update-snapshot
 
