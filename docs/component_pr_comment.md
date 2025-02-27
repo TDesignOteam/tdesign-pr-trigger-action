@@ -13,6 +13,7 @@
 更新 PR common 子仓库的 `commit id` 到 最新
 
 #### 自动运行了哪些
+
 1. 更新 `common` 子仓 `commit id`
 2. 合并 `develop` 分支
 3. 检查 `common`子仓是否有冲突，如果有使用 `PR` 分支 `commit id` 指向
