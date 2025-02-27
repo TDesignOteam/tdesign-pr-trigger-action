@@ -1,5 +1,7 @@
-import commonStart from '../tdesign/common'
-import iconStart from '../tdesign/icons'
+import { error } from '@actions/core'
+import common from '../tdesign/common'
+import icons from '../tdesign/icons'
+import vue from '../tdesign/vue'
 
 export const iconsMap = {
   '/pr-vue': 'tdesign-icons-vue',
@@ -36,15 +38,14 @@ export interface TriggerContext {
   trigger: string
 }
 export default function useTrigger(context: TriggerContext) {
-  // TODO
   switch (context.repo) {
     case 'tdesign-icons':
-      iconStart(context)
-      break
+      return common(context)
     case 'tdesign-common':
-      commonStart(context)
-      break
+      return icons(context)
+    case 'tdesign-vue':
+      return vue(context)
     default:
-      throw new Error(`不支持的仓库: ${context.repo}`)
+      error(`${context.repo} 未适配`)
   }
 }

@@ -29928,7 +29928,6 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.run = run;
 const node_fs_1 = __nccwpck_require__(3024);
 const node_path_1 = __nccwpck_require__(6760);
-const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(2819);
 const utils_1 = __nccwpck_require__(6236);
@@ -29939,8 +29938,9 @@ function run() {
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
-        const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
+        const token = (0, core_1.getInput)('token', { required: true });
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
+        (0, core_1.info)(`context:${JSON.stringify(github_1.context, null, 2)}`);
         if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
             (0, core_1.info)('pr comment trigger');
             const whitelist = (0, node_fs_1.readFileSync)((0, node_path_1.resolve)(__dirname, '../.comment-trigger-whitelist'), 'utf-8');
@@ -29958,7 +29958,7 @@ function run() {
                 return;
             }
         }
-        yield (0, utils_1.setGitConfig)();
+        yield (0, utils_1.setGitGlobalConfig)(token);
         (0, trigger_1.default)({
             owner,
             repo,
@@ -30141,6 +30141,101 @@ function start(context) {
 
 /***/ }),
 
+/***/ 5412:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports["default"] = run;
+const core_1 = __nccwpck_require__(9999);
+const exec_1 = __nccwpck_require__(8872);
+const git_1 = __importDefault(__nccwpck_require__(8511));
+const github_1 = __importDefault(__nccwpck_require__(9764));
+const supportTrigger = ['/update-common', '/update-snapshot'];
+function run(context) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b;
+        if (!supportTrigger.includes(context.trigger)) {
+            (0, core_1.error)(`${context.repo} 不支持 ${context.trigger} `);
+        }
+        const { getPrData } = (0, github_1.default)({ repo: context.repo, owner: context.owner, token: context.token });
+        const prData = yield getPrData(context.pr_number);
+        (0, core_1.info)(`getPrData:${JSON.stringify(prData, null, 2)}`);
+        if (!prData.maintainer_can_modify) {
+            (0, core_1.error)(`pr:${context.pr_number} 不允许维护者修改`);
+        }
+        if (prData.state !== 'open') {
+            (0, core_1.error)(`pr:${context.pr_number} 不是 open 状态`);
+        }
+        let isForkPr = false;
+        if (prData.head.user.login !== context.owner) {
+            isForkPr = true;
+            (0, core_1.info)(`pr:${context.pr_number} 是 fork pr`);
+        }
+        const branchName = prData.head.ref;
+        const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote, isNeedCommit } = (0, git_1.default)({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+        });
+        yield cloneRepo();
+        if (isForkPr) {
+            // 检出PR分支
+            //    git fetch origin pull/<PR ID>/head:<自定义分支名>
+            //    git fetch origin pull/7/head:pr-7
+            // 设置PR 仓库源
+            //    git add remote <PR 仓库源> <PR 仓库地址>
+            //    git add remote liweijie812 https://github.com/liweijie0812/tdesign-vue
+            //    git fetch liweijie812
+            // PR分支与远程分支建立关联
+            //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
+            //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
+            yield addRemote(prData.head.user.login, ((_b = (_a = prData.head) === null || _a === void 0 ? void 0 : _a.repo) === null || _b === void 0 ? void 0 : _b.clone_url) || '');
+            yield checkoutPr(context.pr_number);
+            yield (0, exec_1.exec)('git', [
+                'branch',
+                '--set-upstream-to',
+                `refs/remotes/${prData.head.user.login}/${prData.head.ref}`,
+                `pr-${context.pr_number}`,
+            ], { cwd: `../${context.repo}` });
+        }
+        else {
+            yield checkoutBranch(branchName);
+        }
+        yield initSubmodule();
+        yield (0, exec_1.exec)('npm', ['install'], { cwd: `../${context.repo}` });
+        yield (0, exec_1.exec)('npm', ['run', 'test:update'], { cwd: `../${context.repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${context.repo}` });
+        if (!(yield isNeedCommit())) {
+            (0, core_1.info)('无需提交');
+            return true;
+        }
+        yield (0, exec_1.exec)('git', ['commit', '-am', 'chore: update snapshot'], { cwd: `../${context.repo}` });
+        if (isForkPr) {
+            yield (0, exec_1.exec)('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` });
+        }
+        else {
+            yield (0, exec_1.exec)('git', ['push', 'origin', branchName], { cwd: `../${context.repo}` });
+        }
+    });
+}
+
+
+/***/ }),
+
 /***/ 6236:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -30163,10 +30258,13 @@ exports.getPrData = getPrData;
 exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
 exports.bumpIconsVersion = bumpIconsVersion;
-exports.setGitConfig = setGitConfig;
+exports.setGitGlobalConfig = setGitGlobalConfig;
 exports.createBranch = createBranch;
 exports.gitCommit = gitCommit;
 exports.gitPush = gitPush;
+exports.sshConfig = sshConfig;
+const node_fs_1 = __nccwpck_require__(3024);
+const node_process_1 = __nccwpck_require__(1708);
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(2819);
@@ -30240,10 +30338,11 @@ function bumpIconsVersion(repo) {
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
     });
 }
-function setGitConfig() {
+function setGitGlobalConfig(token) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`git config --global user.email "tdesign@tencent.com"`);
         yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
+        yield (0, exec_1.exec)('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/']);
     });
 }
 function createBranch(repo, branch) {
@@ -30260,6 +30359,16 @@ function gitCommit(repo, message) {
 function gitPush(repo, branch) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)(`git push origin ${branch}`, [], { cwd: `../${repo}` });
+    });
+}
+function sshConfig(token) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const homePath = node_process_1.env.HOME || '/home/runner';
+        const sshPath = `${homePath}/.ssh`;
+        (0, node_fs_1.mkdirSync)(`${sshPath}`, { mode: 0o700 });
+        (0, node_fs_1.writeFileSync)(`${sshPath}/id_rsa`, token, { mode: 0o600 });
+        yield (0, exec_1.exec)('ls', ['-al', sshPath]);
+        yield (0, exec_1.exec)(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`);
     });
 }
 
@@ -30286,13 +30395,25 @@ const exec_1 = __nccwpck_require__(8872);
 function useGit(context) {
     function cloneRepo() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
-            const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`;
+            // const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+            const repo_url = `https://github.com/${context.owner}/${context.repo}.git`;
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`]);
         });
     }
     function createBranch(branch) {
         return __awaiter(this, void 0, void 0, function* () {
             yield (0, exec_1.exec)('git', ['checkout', '-b', branch], { cwd: `../${context.repo}` });
+        });
+    }
+    function checkoutBranch(branch) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['checkout', branch], { cwd: `../${context.repo}` });
+        });
+    }
+    function checkoutPr(pr_number) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['fetch', 'origin', `pull/${pr_number}/head:pr-${pr_number}`], { cwd: `../${context.repo}` });
+            yield (0, exec_1.exec)('git', ['checkout', `pr-${pr_number}`], { cwd: `../${context.repo}` });
         });
     }
     function gitCommit(message) {
@@ -30321,7 +30442,14 @@ function useGit(context) {
             return !stdout.includes('nothing to commit, working tree clean');
         });
     }
+    function addRemote(origin, gitUrl) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['remote', 'add', origin, gitUrl], { cwd: `../${context.repo}` });
+            yield (0, exec_1.exec)('git', ['fetch', origin], { cwd: `../${context.repo}` });
+        });
+    }
     return {
+        checkoutPr,
         cloneRepo,
         createBranch,
         gitCommit,
@@ -30329,6 +30457,8 @@ function useGit(context) {
         initSubmodule,
         updateSubmodule,
         isNeedCommit,
+        checkoutBranch,
+        addRemote,
     };
 }
 
@@ -30409,8 +30539,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ownerMap = exports.repoMap = exports.iconsMap = void 0;
 exports["default"] = useTrigger;
+const core_1 = __nccwpck_require__(9999);
 const common_1 = __importDefault(__nccwpck_require__(5327));
 const icons_1 = __importDefault(__nccwpck_require__(8862));
+const vue_1 = __importDefault(__nccwpck_require__(5412));
 exports.iconsMap = {
     '/pr-vue': 'tdesign-icons-vue',
     '/pr-vue-next': 'tdesign-icons-vue-next',
@@ -30438,16 +30570,15 @@ exports.ownerMap = {
     '/pr-flutter': 'Tencent',
 };
 function useTrigger(context) {
-    // TODO
     switch (context.repo) {
         case 'tdesign-icons':
-            (0, icons_1.default)(context);
-            break;
+            return (0, common_1.default)(context);
         case 'tdesign-common':
-            (0, common_1.default)(context);
-            break;
+            return (0, icons_1.default)(context);
+        case 'tdesign-vue':
+            return (0, vue_1.default)(context);
         default:
-            throw new Error(`不支持的仓库: ${context.repo}`);
+            (0, core_1.error)(`${context.repo} 未适配`);
     }
 }
 

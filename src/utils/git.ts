@@ -7,11 +7,20 @@ export interface GitContext {
 }
 export default function useGit(context: GitContext) {
   async function cloneRepo(branchName = 'develop') {
-    const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+    // const repo_url = `https://${context.token}@github.com/${context.owner}/${context.repo}.git`
+    const repo_url = `https://github.com/${context.owner}/${context.repo}.git`
     await exec('git', ['clone', '-b', branchName, repo_url, `../${context.repo}`])
   }
   async function createBranch(branch: string) {
     await exec('git', ['checkout', '-b', branch], { cwd: `../${context.repo}` })
+  }
+
+  async function checkoutBranch(branch: string) {
+    await exec('git', ['checkout', branch], { cwd: `../${context.repo}` })
+  }
+  async function checkoutPr(pr_number: number) {
+    await exec('git', ['fetch', 'origin', `pull/${pr_number}/head:pr-${pr_number}`], { cwd: `../${context.repo}` })
+    await exec('git', ['checkout', `pr-${pr_number}`], { cwd: `../${context.repo}` })
   }
   async function gitCommit(message: string) {
     await exec(`git commit -am "${message}" --no-verify`, [], { cwd: `../${context.repo}` })
@@ -32,8 +41,13 @@ export default function useGit(context: GitContext) {
     const { stdout } = await getExecOutput('git', ['status'], { cwd: `../${context.repo}` })
     return !stdout.includes('nothing to commit, working tree clean')
   }
+  async function addRemote(origin: string, gitUrl: string) {
+    await exec('git', ['remote', 'add', origin, gitUrl], { cwd: `../${context.repo}` })
+    await exec('git', ['fetch', origin], { cwd: `../${context.repo}` })
+  }
 
   return {
+    checkoutPr,
     cloneRepo,
     createBranch,
     gitCommit,
@@ -41,5 +55,7 @@ export default function useGit(context: GitContext) {
     initSubmodule,
     updateSubmodule,
     isNeedCommit,
+    checkoutBranch,
+    addRemote,
   }
 }

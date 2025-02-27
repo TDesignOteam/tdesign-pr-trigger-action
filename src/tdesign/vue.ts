@@ -1,0 +1,75 @@
+import type { TriggerContext } from '../utils/trigger'
+import { error, info } from '@actions/core'
+import { exec } from '@actions/exec'
+import useGit from 'src/utils/git'
+
+import useGithub from 'src/utils/github'
+
+const supportTrigger = ['/update-common', '/update-snapshot']
+export default async function run(context: TriggerContext) {
+  if (!supportTrigger.includes(context.trigger)) {
+    error(`${context.repo} 不支持 ${context.trigger} `)
+  }
+  const { getPrData } = useGithub({ repo: context.repo, owner: context.owner, token: context.token })
+  const prData = await getPrData(context.pr_number)
+  info(`getPrData:${JSON.stringify(prData, null, 2)}`)
+  if (!prData.maintainer_can_modify) {
+    error(`pr:${context.pr_number} 不允许维护者修改`)
+  }
+  if (prData.state !== 'open') {
+    error(`pr:${context.pr_number} 不是 open 状态`)
+  }
+
+  let isForkPr = false
+  if (prData.head.user.login !== context.owner) {
+    isForkPr = true
+    info(`pr:${context.pr_number} 是 fork pr`)
+  }
+  const branchName = prData.head.ref
+
+  const { cloneRepo, initSubmodule, checkoutBranch, checkoutPr, addRemote, isNeedCommit } = useGit({
+    repo: context.repo,
+    owner: context.owner,
+    token: context.token,
+  })
+  await cloneRepo()
+
+  if (isForkPr) {
+    // 检出PR分支
+    //    git fetch origin pull/<PR ID>/head:<自定义分支名>
+    //    git fetch origin pull/7/head:pr-7
+    // 设置PR 仓库源
+    //    git add remote <PR 仓库源> <PR 仓库地址>
+    //    git add remote liweijie812 https://github.com/liweijie0812/tdesign-vue
+    //    git fetch liweijie812
+    // PR分支与远程分支建立关联
+    //    git branch --set-upstream-to <PR 仓库源>/<PR 分支名> <本地分支名>
+    //    git branch --set-upstream-to refs/remotes/liweijie812/feat/new pr-7
+    await addRemote(prData.head.user.login, prData.head?.repo?.clone_url || '')
+    await checkoutPr(context.pr_number)
+    await exec('git', [
+      'branch',
+      '--set-upstream-to',
+      `refs/remotes/${prData.head.user.login}/${prData.head.ref}`,
+      `pr-${context.pr_number}`,
+    ], { cwd: `../${context.repo}` })
+  }
+  else {
+    await checkoutBranch(branchName)
+  }
+  await initSubmodule()
+  await exec('npm', ['install'], { cwd: `../${context.repo}` })
+  await exec('npm', ['run', 'test:update'], { cwd: `../${context.repo}` })
+  await exec('git', ['status'], { cwd: `../${context.repo}` })
+  if (!await isNeedCommit()) {
+    info('无需提交')
+    return true
+  }
+  await exec('git', ['commit', '-am', 'chore: update snapshot'], { cwd: `../${context.repo}` })
+  if (isForkPr) {
+    await exec('git', ['push', prData.head.user.login, `HEAD:${prData.head.ref}`], { cwd: `../${context.repo}` })
+  }
+  else {
+    await exec('git', ['push', 'origin', branchName], { cwd: `../${context.repo}` })
+  }
+}

@@ -1,3 +1,5 @@
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { env } from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
@@ -76,9 +78,10 @@ export async function bumpIconsVersion(repo: string) {
   await exec('git', ['status'], { cwd: `../${repo}` })
 }
 
-export async function setGitConfig() {
+export async function setGitGlobalConfig(token: string) {
   await exec(`git config --global user.email "tdesign@tencent.com"`)
   await exec(`git config --global user.name "tdesign-bot"`)
+  await exec('git', ['config', '--global', `url.https://${token}@github.com/.insteadOf`, 'https://github.com/'])
 }
 
 export async function createBranch(repo: string, branch: string) {
@@ -92,4 +95,13 @@ export async function gitCommit(repo: string, message: string) {
 
 export async function gitPush(repo: string, branch: string) {
   await exec(`git push origin ${branch}`, [], { cwd: `../${repo}` })
+}
+
+export async function sshConfig(token: string) {
+  const homePath = env.HOME || '/home/runner'
+  const sshPath = `${homePath}/.ssh`
+  mkdirSync(`${sshPath}`, { mode: 0o700 })
+  writeFileSync(`${sshPath}/id_rsa`, token, { mode: 0o600 })
+  await exec('ls', ['-al', sshPath])
+  await exec(`ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts`)
 }
