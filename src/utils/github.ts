@@ -38,9 +38,31 @@ export default function useGithub(context: GithubContext) {
     return data
   }
 
+  async function getReviewers(pr_number: number) {
+    const { data } = await octokit.rest.pulls.listRequestedReviewers({
+      owner: context.owner,
+      repo: context.repo,
+      pull_number: pr_number,
+    })
+    return { users: data.users.map(item => item.login), teams: data.teams.map(item => item.slug) }
+  }
+
+  async function addReviewers(pr_number: number, reviewers: string[], team_reviewers: string[]) {
+    const { users, teams } = await getReviewers(pr_number)
+    const { data } = await octokit.rest.pulls.requestReviewers({
+      owner: context.owner,
+      repo: context.repo,
+      pull_number: pr_number,
+      reviewers: users.concat(reviewers),
+      team_reviewers: teams.concat(team_reviewers),
+    })
+    return data
+  }
+
   return {
     getPrData,
     createPR,
     addComment,
+    addReviewers,
   }
 }

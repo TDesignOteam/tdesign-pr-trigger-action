@@ -1,5 +1,6 @@
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
+import useGithub from './github'
 
 export const iconsMap = {
   '/pr-vue': 'tdesign-icons-vue',
@@ -44,7 +45,18 @@ export default function useTrigger(context: TriggerContext) {
     case 'tdesign-common':
       commonStart(context)
       break
+    case 'tdesign-pr-trigger-action':
+      usingCopilotCodeReview(context)
+      break
     default:
       throw new Error(`不支持的仓库: ${context.repo}`)
   }
+}
+
+function usingCopilotCodeReview(context: TriggerContext) {
+  if (context.trigger !== '/copilot-code-review') {
+    return
+  }
+  const { addReviewers } = useGithub(context)
+  addReviewers(context.pr_number, ['Copilot'], [])
 }

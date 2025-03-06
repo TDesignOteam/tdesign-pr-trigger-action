@@ -1,0 +1,14 @@
+name: copilot-code-review
+on:
+  pull_request:
+    branches: [develop]
+jobs:
+  request-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: review
+        uses: ./
+        with:
+          trigger: /copilot-code-review
+          token: ${{ secrets.PERSONAL_TOKEN }}
