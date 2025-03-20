@@ -40,12 +40,13 @@ export default async function start(context: TriggerContext) {
 
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush } = useGit({
+  const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush, initSubmodule } = useGit({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
   })
   await cloneRepo()
+  await initSubmodule()
   const packageManager = packageManagerMap[repoMap[context.trigger]]
   await exec(packageManager, ['install'], { cwd: `../${repoMap[context.trigger]}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`

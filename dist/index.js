@@ -30112,12 +30112,13 @@ function start(context) {
         }
         (0, core_1.info)(`latestVersion: ${latestVersion}`);
         (0, core_1.endGroup)();
-        const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush } = (0, git_1.default)({
+        const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush, initSubmodule } = (0, git_1.default)({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
         });
         yield cloneRepo();
+        yield initSubmodule();
         const packageManager = trigger_1.packageManagerMap[trigger_1.repoMap[context.trigger]];
         yield (0, exec_1.exec)(packageManager, ['install'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
         const branchName = `chore/icon/${packageName}/${latestVersion}`;
