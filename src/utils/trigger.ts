@@ -28,6 +28,15 @@ export const ownerMap = {
   '/pr-flutter': 'Tencent',
 }
 
+export const packageManagerMap = {
+  'tdesign-vue': 'npm',
+  'tdesign-vue-next': 'pnpm',
+  'tdesign-react': 'pnpm',
+  'tdesign-mobile-vue': 'npm',
+  'tdesign-mobile-react': 'npm',
+  'tdesign-miniprogram': 'npm',
+}
+
 export interface TriggerContext {
   owner: string
   repo: string

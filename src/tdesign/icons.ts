@@ -3,7 +3,7 @@ import { exec } from '@actions/exec'
 import useGit from 'src/utils/git'
 import useGithub from 'src/utils/github'
 import { addContributor, bumpIconsVersion, getPkgLatestVersion, getPrData } from '../utils'
-import { iconsMap, ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
+import { iconsMap, ownerMap, packageManagerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
@@ -46,7 +46,8 @@ export default async function start(context: TriggerContext) {
     token: context.token,
   })
   await cloneRepo()
-  await exec('npm', ['install'], { cwd: `../${repoMap[context.trigger]}` })
+  const packageManager = packageManagerMap[repoMap[context.trigger]]
+  await exec(packageManager, ['install'], { cwd: `../${repoMap[context.trigger]}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`
   await createBranch(branchName)
 
@@ -60,7 +61,7 @@ export default async function start(context: TriggerContext) {
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitCommit(title)
 
-  await exec('npm', ['run', 'test:update'], { cwd: `../${repoMap[context.trigger]}` })
+  await exec(packageManager, ['run', 'test:update'], { cwd: `../${repoMap[context.trigger]}` })
   if (await isNeedCommit()) {
     await gitCommit('chore: update snapshot')
   }
