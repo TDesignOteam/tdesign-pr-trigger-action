@@ -30120,6 +30120,9 @@ function start(context) {
         yield cloneRepo();
         yield initSubmodule();
         const packageManager = trigger_1.packageManagerMap[trigger_1.repoMap[context.trigger]];
+        if (packageManager === 'pnpm') {
+            yield (0, utils_1.corepackEnable)();
+        }
         yield (0, exec_1.exec)(packageManager, ['install'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
         const branchName = `chore/icon/${packageName}/${latestVersion}`;
         yield createBranch(branchName);
@@ -30172,6 +30175,7 @@ exports.getPrData = getPrData;
 exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
 exports.bumpIconsVersion = bumpIconsVersion;
+exports.corepackEnable = corepackEnable;
 exports.setGitConfig = setGitConfig;
 exports.createBranch = createBranch;
 exports.gitCommit = gitCommit;
@@ -30247,6 +30251,11 @@ function bumpIconsVersion(repo) {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
+    });
+}
+function corepackEnable() {
+    return __awaiter(this, void 0, void 0, function* () {
+        yield (0, exec_1.exec)('corepack', ['enable']);
     });
 }
 function setGitConfig() {

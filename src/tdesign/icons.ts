@@ -2,7 +2,7 @@ import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import useGit from 'src/utils/git'
 import useGithub from 'src/utils/github'
-import { addContributor, bumpIconsVersion, getPkgLatestVersion, getPrData } from '../utils'
+import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
 import { iconsMap, ownerMap, packageManagerMap, repoMap, type TriggerContext } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -48,6 +48,9 @@ export default async function start(context: TriggerContext) {
   await cloneRepo()
   await initSubmodule()
   const packageManager = packageManagerMap[repoMap[context.trigger]]
+  if (packageManager === 'pnpm') {
+    await corepackEnable()
+  }
   await exec(packageManager, ['install'], { cwd: `../${repoMap[context.trigger]}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`
   await createBranch(branchName)

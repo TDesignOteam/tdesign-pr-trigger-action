@@ -76,6 +76,10 @@ export async function bumpIconsVersion(repo: string) {
   await exec('git', ['status'], { cwd: `../${repo}` })
 }
 
+export async function corepackEnable() {
+  await exec('corepack', ['enable'])
+}
+
 export async function setGitConfig() {
   await exec(`git config --global user.email "tdesign@tencent.com"`)
   await exec(`git config --global user.name "tdesign-bot"`)
