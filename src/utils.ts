@@ -71,8 +71,14 @@ export async function getPkgLatestVersion(packageName: string) {
   return stdout.trim()
 }
 
-export async function bumpIconsVersion(repo: string) {
-  await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` })
+export async function bumpIconsVersion(packageManager: string, repo: string) {
+  if (packageManager === 'pnpm') {
+    await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `../${repo}` })
+  }
+  else {
+    await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` })
+  }
+
   await exec('git', ['status'], { cwd: `../${repo}` })
 }
 

@@ -30126,7 +30126,7 @@ function start(context) {
         yield (0, exec_1.exec)(packageManager, ['install'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
         const branchName = `chore/icon/${packageName}/${latestVersion}`;
         yield createBranch(branchName);
-        yield (0, utils_1.bumpIconsVersion)(trigger_1.repoMap[context.trigger]);
+        yield (0, utils_1.bumpIconsVersion)(packageManager, trigger_1.repoMap[context.trigger]);
         if (packageName === 'cdn-iconfont') {
             yield miniprogramUpdateIcons(trigger_1.repoMap[context.trigger], latestVersion);
         }
@@ -30247,9 +30247,14 @@ function getPkgLatestVersion(packageName) {
         return stdout.trim();
     });
 }
-function bumpIconsVersion(repo) {
+function bumpIconsVersion(packageManager, repo) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
+        if (packageManager === 'pnpm') {
+            yield (0, exec_1.exec)('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `../${repo}` });
+        }
+        else {
+            yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
+        }
         yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
     });
 }

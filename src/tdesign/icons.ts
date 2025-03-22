@@ -55,7 +55,7 @@ export default async function start(context: TriggerContext) {
   const branchName = `chore/icon/${packageName}/${latestVersion}`
   await createBranch(branchName)
 
-  await bumpIconsVersion(repoMap[context.trigger])
+  await bumpIconsVersion(packageManager, repoMap[context.trigger])
   if (packageName === 'cdn-iconfont') {
     await miniprogramUpdateIcons(repoMap[context.trigger], latestVersion)
   }
