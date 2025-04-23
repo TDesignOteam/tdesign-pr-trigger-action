@@ -65,7 +65,9 @@ export default async function start(context: TriggerContext) {
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitCommit(title)
 
-  await exec(packageManager, ['run', 'test:update'], { cwd: `../${repoMap[context.trigger]}` })
+  const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
+  await exec(packageManager, ['run', updateSnapScript], { cwd: `../${repoMap[context.trigger]}` })
+
   if (await isNeedCommit()) {
     await gitCommit('chore: update snapshot')
   }

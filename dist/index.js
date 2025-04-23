@@ -30135,7 +30135,8 @@ function start(context) {
         }
         const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
         yield gitCommit(title);
-        yield (0, exec_1.exec)(packageManager, ['run', 'test:update'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
+        const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update';
+        yield (0, exec_1.exec)(packageManager, ['run', updateSnapScript], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
         if (yield isNeedCommit()) {
             yield gitCommit('chore: update snapshot');
         }
