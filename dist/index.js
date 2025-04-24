@@ -29950,7 +29950,7 @@ function run() {
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
         if (github_1.context.eventName === 'issue_comment') {
             (0, core_1.info)('pr comment trigger');
-            if ((_b = github_1.context.payload.issue) === null || _b === void 0 ? void 0 : _b.pull_request) {
+            if (!((_b = github_1.context.payload.issue) === null || _b === void 0 ? void 0 : _b.pull_request)) {
                 (0, core_1.info)('issue_comment not a pull_request comment');
                 return;
             }

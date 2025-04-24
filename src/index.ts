@@ -15,7 +15,7 @@ export async function run(): Promise<void> {
 
   if (context.eventName === 'issue_comment') {
     info('pr comment trigger')
-    if (context.payload.issue?.pull_request) {
+    if (!context.payload.issue?.pull_request) {
       info('issue_comment not a pull_request comment')
       return
     }
