@@ -13,8 +13,13 @@ export async function run(): Promise<void> {
   const token = getInput('token') || process.env.GITHUB_TOKEN || ''
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
 
-  if (context.eventName === 'issue_comment' && context.payload.pull_request) {
+  if (context.eventName === 'issue_comment') {
     info('pr comment trigger')
+    if (!context.payload.issue?.pull_request) {
+      info('issue_comment not a pull_request comment')
+      return
+    }
+
     const whitelist = readFileSync(resolve(__dirname, '../.comment-trigger-whitelist'), 'utf-8')
     // TODO 需要白名单的人才能触发
     let isWhitelist = false

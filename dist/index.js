@@ -29942,14 +29942,18 @@ const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __importDefault(__nccwpck_require__(6671));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b;
+        var _a, _b, _c;
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
         const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
         const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
-        if (github_1.context.eventName === 'issue_comment' && github_1.context.payload.pull_request) {
+        if (github_1.context.eventName === 'issue_comment') {
             (0, core_1.info)('pr comment trigger');
+            if (!((_b = github_1.context.payload.issue) === null || _b === void 0 ? void 0 : _b.pull_request)) {
+                (0, core_1.info)('issue_comment not a pull_request comment');
+                return;
+            }
             const whitelist = (0, node_fs_1.readFileSync)((0, node_path_1.resolve)(__dirname, '../.comment-trigger-whitelist'), 'utf-8');
             // TODO 需要白名单的人才能触发
             let isWhitelist = false;
@@ -29961,7 +29965,7 @@ function run() {
                 }
             });
             if (!isWhitelist) {
-                (0, core_1.info)(`${(_b = github_1.context.payload.comment) === null || _b === void 0 ? void 0 : _b.user.login}不在白名单内，不触发`);
+                (0, core_1.info)(`${(_c = github_1.context.payload.comment) === null || _c === void 0 ? void 0 : _c.user.login}不在白名单内，不触发`);
                 return;
             }
         }
