@@ -2,7 +2,7 @@
   "name": "tdesign-pr-trigger-action",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@9.12.1",
+  "packageManager": "pnpm@10.10.0",
   "description": "",
   "author": "tdesign",
   "license": "MIT",
@@ -31,20 +31,20 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.0"
+    "@actions/github": "^6.0.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.16.0",
-    "@octokit/plugin-rest-endpoint-methods": "^13.3.1",
-    "@types/node": "^22.13.5",
+    "@octokit/plugin-rest-endpoint-methods": "^13.5.0",
+    "@types/node": "^22.15.17",
     "@vercel/ncc": "^0.38.3",
-    "eslint": "^9.21.0",
+    "eslint": "^9.26.0",
     "eslint-plugin-format": "^1.0.1",
-    "lint-staged": "^15.4.3",
+    "lint-staged": "^15.5.2",
     "rimraf": "^6.0.1",
-    "simple-git-hooks": "^2.11.1",
-    "typescript": "^5.7.3",
-    "vitest": "^3.0.7"
+    "simple-git-hooks": "^2.13.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.3"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
