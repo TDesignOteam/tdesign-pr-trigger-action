@@ -1,8 +1,9 @@
+import type { TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
 import { addContributor } from '../utils'
 import useGit from '../utils/git'
 import useGithub from '../utils/github'
-import { ownerMap, repoMap, type TriggerContext } from '../utils/trigger'
+import { ownerMap, repoMap } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
   if (!Reflect.has(repoMap, context.trigger)) {

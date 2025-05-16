@@ -1,9 +1,10 @@
+import type { TriggerContext } from '../utils/trigger'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import useGit from 'src/utils/git'
 import useGithub from 'src/utils/github'
 import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
-import { iconsMap, ownerMap, packageManagerMap, repoMap, type TriggerContext } from '../utils/trigger'
+import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
