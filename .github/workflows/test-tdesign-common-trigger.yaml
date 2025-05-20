@@ -48,20 +48,6 @@ jobs:
           trigger: /pr-react
           dry-run: true
 
-  pr-mobile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: test
-        uses: ./
-        with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
-          owner: Tencent
-          repo: tdesign-common
-          pr_number: 2006
-          trigger: /pr-mobile
-          dry-run: true
-
   pr-mobile-vue:
     runs-on: ubuntu-latest
     steps:
