@@ -1,4 +1,4 @@
-import { info } from '@actions/core'
+import { endGroup, info, startGroup } from '@actions/core'
 import { getOctokit } from '@actions/github'
 
 export interface GithubContext {
@@ -29,11 +29,12 @@ export class GithubHelper {
 
   async createPR(title: string, head: string, body: string, base?: string) {
     if (this.dryRun) {
-      info('dry-run模式, 不运行createPR')
+      startGroup('dry-run模式, 不运行createPR')
       info(`title: ${title}`)
       info(`head: ${head}`)
       info(`base: ${base}`)
       info(`body: ${body}`)
+      endGroup()
       return
     }
     const { data } = await this.octokit.rest.pulls.create({
@@ -49,9 +50,10 @@ export class GithubHelper {
 
   async addComment(pr_number: number, body: string) {
     if (this.dryRun) {
-      info('dry-run模式, 不运行addComment')
+      startGroup('dry-run模式, 不运行addComment')
       info(`pr_number: ${pr_number}`)
       info(`body: ${body}`)
+      endGroup()
       return
     }
     const { data } = await this.octokit.rest.issues.createComment({

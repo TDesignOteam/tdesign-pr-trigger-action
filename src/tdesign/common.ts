@@ -1,5 +1,5 @@
 import type { TriggerContext } from '../utils/trigger'
-import { getInput, info } from '@actions/core'
+import { info } from '@actions/core'
 import { addContributor } from 'src/utils'
 import { GitHelper } from '../utils/git-helper'
 import { GithubHelper } from '../utils/github-helper'
@@ -10,8 +10,7 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-  const dryRun = getInput('dry-run')
-  info(`dryRun: ${dryRun}`)
+
   const githubHelper = new GithubHelper({
     repo: context.repo,
     owner: context.owner,

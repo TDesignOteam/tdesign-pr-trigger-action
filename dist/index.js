@@ -30013,8 +30013,6 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const dryRun = (0, core_1.getInput)('dry-run');
-        (0, core_1.info)(`dryRun: ${dryRun}`);
         const githubHelper = new github_helper_1.GithubHelper({
             repo: context.repo,
             owner: context.owner,
@@ -30426,11 +30424,12 @@ class GithubHelper {
     createPR(title, head, body, base) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.dryRun) {
-                (0, core_1.info)('dry-run模式, 不运行createPR');
+                (0, core_1.startGroup)('dry-run模式, 不运行createPR');
                 (0, core_1.info)(`title: ${title}`);
                 (0, core_1.info)(`head: ${head}`);
                 (0, core_1.info)(`base: ${base}`);
                 (0, core_1.info)(`body: ${body}`);
+                (0, core_1.endGroup)();
                 return;
             }
             const { data } = yield this.octokit.rest.pulls.create({
@@ -30447,9 +30446,10 @@ class GithubHelper {
     addComment(pr_number, body) {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.dryRun) {
-                (0, core_1.info)('dry-run模式, 不运行addComment');
+                (0, core_1.startGroup)('dry-run模式, 不运行addComment');
                 (0, core_1.info)(`pr_number: ${pr_number}`);
                 (0, core_1.info)(`body: ${body}`);
+                (0, core_1.endGroup)();
                 return;
             }
             const { data } = yield this.octokit.rest.issues.createComment({
