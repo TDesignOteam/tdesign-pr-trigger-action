@@ -9,7 +9,7 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-  const dryRun = getInput('dry_run') === 'true'
+  const dryRun = getInput('dry-run')
   info(`dryRun: ${dryRun}`)
   const { getPrData: getCommonPrData, addComment: commentAddComment } = useGithub({
     repo: context.repo,

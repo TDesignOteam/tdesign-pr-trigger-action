@@ -30014,7 +30014,7 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const dryRun = (0, core_1.getInput)('dry_run') === 'true';
+        const dryRun = (0, core_1.getInput)('dry-run');
         (0, core_1.info)(`dryRun: ${dryRun}`);
         const { getPrData: getCommonPrData, addComment: commentAddComment } = (0, github_1.default)({
             repo: context.repo,
