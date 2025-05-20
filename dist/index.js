@@ -30005,7 +30005,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
-const utils_1 = __nccwpck_require__(6236);
 const git_helper_1 = __nccwpck_require__(7688);
 const github_1 = __importDefault(__nccwpck_require__(9764));
 const trigger_1 = __nccwpck_require__(6671);
@@ -30028,7 +30027,7 @@ function start(context) {
             commentAddComment(context.pr_number, 'PR 还没合并，无法触发');
             return;
         }
-        const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
+        // const body = addContributor(prData.body || '', prData.user.login)
         const gitHelper = new git_helper_1.GitHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
