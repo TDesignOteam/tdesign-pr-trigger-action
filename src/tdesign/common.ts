@@ -1,6 +1,5 @@
 import type { TriggerContext } from '../utils/trigger'
 import { getInput, info } from '@actions/core'
-import { addContributor } from '../utils'
 import { GitHelper } from '../utils/git-helper'
 import useGithub from '../utils/github'
 import { ownerMap, repoMap } from '../utils/trigger'
@@ -11,6 +10,7 @@ export default async function start(context: TriggerContext) {
     return
   }
   const dryRun = getInput('dry_run') === 'true'
+  info(`dryRun: ${dryRun}`)
   const { getPrData: getCommonPrData, addComment: commentAddComment } = useGithub({
     repo: context.repo,
     owner: context.owner,
@@ -22,7 +22,7 @@ export default async function start(context: TriggerContext) {
     commentAddComment(context.pr_number, 'PR 还没合并，无法触发')
     return
   }
-  const body = addContributor(prData.body || '', prData.user.login)
+  // const body = addContributor(prData.body || '', prData.user.login)
   const gitHelper = new GitHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
@@ -43,16 +43,16 @@ export default async function start(context: TriggerContext) {
 
   await gitHelper.commit(title)
   if (!dryRun) {
-    await gitHelper.push(branchName)
+    // await gitHelper.push(branchName)
   }
   else {
     info('dry run, not push')
   }
 
-  const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
+  // const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
   if (!dryRun) {
-    const newPrData = await createPR(title, branchName, body)
-    commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
+    // const newPrData = await createPR(title, branchName, body)
+    // commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
   }
   else {
     info('dry run, not create pr,not add comment')

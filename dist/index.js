@@ -30016,6 +30016,7 @@ function start(context) {
             return;
         }
         const dryRun = (0, core_1.getInput)('dry_run') === 'true';
+        (0, core_1.info)(`dryRun: ${dryRun}`);
         const { getPrData: getCommonPrData, addComment: commentAddComment } = (0, github_1.default)({
             repo: context.repo,
             owner: context.owner,
@@ -30045,15 +30046,15 @@ function start(context) {
         }
         yield gitHelper.commit(title);
         if (!dryRun) {
-            yield gitHelper.push(branchName);
+            // await gitHelper.push(branchName)
         }
         else {
             (0, core_1.info)('dry run, not push');
         }
-        const { createPR } = (0, github_1.default)({ repo: trigger_1.repoMap[context.trigger], owner: trigger_1.ownerMap[context.trigger], token: context.token });
+        // const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
         if (!dryRun) {
-            const newPrData = yield createPR(title, branchName, body);
-            commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`);
+            // const newPrData = await createPR(title, branchName, body)
+            // commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
         }
         else {
             (0, core_1.info)('dry run, not create pr,not add comment');
