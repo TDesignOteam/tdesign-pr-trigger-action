@@ -19,6 +19,7 @@ jobs:
           owner: Tencent
           repo: tdesign-common
           pr_number: 2006
+          trigger: /pr-vue
           dry-run: true
 
   common-pr-vue-next:
