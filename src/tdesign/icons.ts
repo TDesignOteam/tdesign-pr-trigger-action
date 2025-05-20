@@ -1,9 +1,9 @@
 import type { TriggerContext } from '../utils/trigger'
 import { endGroup, getInput, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
-import useGithub from 'src/utils/github'
 import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
 import { GitHelper } from '../utils/git-helper'
+import { GithubHelper } from '../utils/github-helper'
 import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -46,6 +46,7 @@ export default async function start(context: TriggerContext) {
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
+    dryRun: context.dry_run,
   })
   await gitHelper.clone()
   await gitHelper.initSubmodule()
@@ -77,12 +78,11 @@ export default async function start(context: TriggerContext) {
     await gitHelper.push(branchName)
   }
 
-  const { createPR } = useGithub({
+  const githubHelper = new GithubHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
+    dryRun: context.dry_run,
   })
-  if (!dryRun) {
-    await createPR(title, branchName, body)
-  }
+  githubHelper.createPR(title, branchName, body)
 };

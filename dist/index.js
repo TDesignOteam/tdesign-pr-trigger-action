@@ -29939,16 +29939,17 @@ const node_path_1 = __nccwpck_require__(6760);
 const node_process_1 = __importDefault(__nccwpck_require__(1708));
 const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(5380);
-const utils_1 = __nccwpck_require__(6236);
 const trigger_1 = __importDefault(__nccwpck_require__(6671));
 function run() {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, _b, _c;
         const repo = (0, core_1.getInput)('repo') || github_1.context.repo.repo;
         const owner = (0, core_1.getInput)('owner') || github_1.context.repo.owner;
-        const pr_number = (0, core_1.getInput)('pr_number') || github_1.context.issue.number;
+        const prNumber = Number((0, core_1.getInput)('pr_number')) || github_1.context.issue.number;
         const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
+        const dryRun = Boolean((0, core_1.getInput)('dry-run'));
+        (0, core_1.info)(`dryRun: ${dryRun}`);
         if (github_1.context.eventName === 'issue_comment') {
             (0, core_1.info)('pr comment trigger');
             if (!((_b = github_1.context.payload.issue) === null || _b === void 0 ? void 0 : _b.pull_request)) {
@@ -29970,13 +29971,13 @@ function run() {
                 return;
             }
         }
-        yield (0, utils_1.setGitConfig)();
         (0, trigger_1.default)({
             owner,
             repo,
-            pr_number: pr_number,
+            pr_number: prNumber,
             token,
             trigger: trigger.trim(),
+            dry_run: dryRun,
         });
     });
 }
@@ -29999,14 +30000,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
+const utils_1 = __nccwpck_require__(6236);
 const git_helper_1 = __nccwpck_require__(7688);
-const github_1 = __importDefault(__nccwpck_require__(9764));
+const github_helper_1 = __nccwpck_require__(3985);
 const trigger_1 = __nccwpck_require__(6671);
 function start(context) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -30016,47 +30015,46 @@ function start(context) {
         }
         const dryRun = (0, core_1.getInput)('dry-run');
         (0, core_1.info)(`dryRun: ${dryRun}`);
-        const { getPrData: getCommonPrData, addComment: commentAddComment } = (0, github_1.default)({
+        const githubHelper = new github_helper_1.GithubHelper({
             repo: context.repo,
             owner: context.owner,
             token: context.token,
+            dryRun: context.dry_run,
         });
-        const prData = yield getCommonPrData(context.pr_number);
+        const prData = yield githubHelper.getPrData(context.pr_number);
         if (!prData.merged) {
             (0, core_1.info)('pr has been merged');
-            commentAddComment(context.pr_number, 'PR 还没合并，无法触发');
+            githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发');
             return;
         }
-        // const body = addContributor(prData.body || '', prData.user.login)
+        const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
         const gitHelper = new git_helper_1.GitHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
+            dryRun: context.dry_run,
         });
         yield gitHelper.clone();
         yield gitHelper.initSubmodule();
         yield gitHelper.updateSubmodule();
         const branchName = `chore/update-common/pr/${context.pr_number}`;
         yield gitHelper.createBranch(branchName);
-        const title = `chore(submodule): update _common`;
+        const title = `chore(submodule): update common`;
         if (!(yield gitHelper.isNeedCommit())) {
             (0, core_1.info)('nothing to commit');
             return true; // nothing to commit
         }
         yield gitHelper.commit(title);
-        if (!dryRun) {
-            // await gitHelper.push(branchName)
-        }
-        else {
-            (0, core_1.info)('dry run, not push');
-        }
-        // const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
-        if (!dryRun) {
-            // const newPrData = await createPR(title, branchName, body)
-            // commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
-        }
-        else {
-            (0, core_1.info)('dry run, not create pr,not add comment');
+        yield gitHelper.push(branchName);
+        const targetRepo = new github_helper_1.GithubHelper({
+            repo: trigger_1.repoMap[context.trigger],
+            owner: trigger_1.ownerMap[context.trigger],
+            token: context.token,
+            dryRun: context.dry_run,
+        });
+        const newPrData = yield targetRepo.createPR(title, branchName, body);
+        if (newPrData) {
+            githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`);
         }
     });
 }
@@ -30078,18 +30076,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CND_ICONFONT_VERSION_REG = void 0;
 exports.getCdnIconfontVersion = getCdnIconfontVersion;
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
-const github_1 = __importDefault(__nccwpck_require__(9764));
 const utils_1 = __nccwpck_require__(6236);
 const git_helper_1 = __nccwpck_require__(7688);
+const github_helper_1 = __nccwpck_require__(3985);
 const trigger_1 = __nccwpck_require__(6671);
 exports.CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
 function getCdnIconfontVersion() {
@@ -30133,6 +30128,7 @@ function start(context) {
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
+            dryRun: context.dry_run,
         });
         yield gitHelper.clone();
         yield gitHelper.initSubmodule();
@@ -30160,14 +30156,13 @@ function start(context) {
         if (!dryRun) {
             yield gitHelper.push(branchName);
         }
-        const { createPR } = (0, github_1.default)({
+        const githubHelper = new github_helper_1.GithubHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
+            dryRun: context.dry_run,
         });
-        if (!dryRun) {
-            yield createPR(title, branchName, body);
-        }
+        githubHelper.createPR(title, branchName, body);
     });
 }
 ;
@@ -30327,13 +30322,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.GitHelper = void 0;
+const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 class GitHelper {
     constructor(context) {
         this.token = context.token;
         this.owner = context.owner;
         this.repo = context.repo;
-        this.repoPath = `../${context.repo}`;
+        this.dryRun = context.dryRun;
+        this.repoPath = `./${context.repo}`;
         this.iniConfig();
     }
     iniConfig() {
@@ -30346,7 +30343,9 @@ class GitHelper {
     }
     clone() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
+            yield (0, exec_1.exec)('ls', ['-al']);
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath]);
+            yield (0, exec_1.exec)('ls', ['-al']);
         });
     }
     createBranch(branch) {
@@ -30361,6 +30360,10 @@ class GitHelper {
     }
     push(branch) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (this.dryRun) {
+                (0, core_1.info)('dry-run模式, 不运行git push');
+                return;
+            }
             yield (0, exec_1.exec)('git', ['push', 'origin', branch], { cwd: this.repoPath });
         });
     }
@@ -30386,7 +30389,7 @@ exports.GitHelper = GitHelper;
 
 /***/ }),
 
-/***/ 9764:
+/***/ 3985:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -30401,25 +30404,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports["default"] = useGithub;
+exports.GithubHelper = void 0;
+const core_1 = __nccwpck_require__(9999);
 const github_1 = __nccwpck_require__(5380);
-function useGithub(context) {
-    const octokit = (0, github_1.getOctokit)(context.token);
-    function getPrData(pr_number) {
+class GithubHelper {
+    constructor(context) {
+        this.context = context;
+        this.dryRun = context.dryRun;
+        this.octokit = (0, github_1.getOctokit)(context.token);
+    }
+    getPrData(pr_number) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { data } = yield octokit.rest.pulls.get({
-                owner: context.owner,
-                repo: context.repo,
+            const { data } = yield this.octokit.rest.pulls.get({
+                owner: this.context.owner,
+                repo: this.context.repo,
                 pull_number: pr_number,
             });
             return data;
         });
     }
-    function createPR(title, head, body, base) {
+    createPR(title, head, body, base) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { data } = yield octokit.rest.pulls.create({
-                owner: context.owner,
-                repo: context.repo,
+            if (this.dryRun) {
+                (0, core_1.info)('dry-run模式, 不运行createPR');
+                (0, core_1.info)(`title: ${title}`);
+                (0, core_1.info)(`head: ${head}`);
+                (0, core_1.info)(`base: ${base}`);
+                (0, core_1.info)(`body: ${body}`);
+                return;
+            }
+            const { data } = yield this.octokit.rest.pulls.create({
+                owner: this.context.owner,
+                repo: this.context.repo,
                 title,
                 head,
                 base: base || 'develop',
@@ -30428,23 +30444,25 @@ function useGithub(context) {
             return data;
         });
     }
-    function addComment(pr_number, body) {
+    addComment(pr_number, body) {
         return __awaiter(this, void 0, void 0, function* () {
-            const { data } = yield octokit.rest.issues.createComment({
-                owner: context.owner,
-                repo: context.repo,
+            if (this.dryRun) {
+                (0, core_1.info)('dry-run模式, 不运行addComment');
+                (0, core_1.info)(`pr_number: ${pr_number}`);
+                (0, core_1.info)(`body: ${body}`);
+                return;
+            }
+            const { data } = yield this.octokit.rest.issues.createComment({
+                owner: this.context.owner,
+                repo: this.context.repo,
                 issue_number: pr_number,
                 body,
             });
             return data;
         });
     }
-    return {
-        getPrData,
-        createPR,
-        addComment,
-    };
 }
+exports.GithubHelper = GithubHelper;
 
 
 /***/ }),

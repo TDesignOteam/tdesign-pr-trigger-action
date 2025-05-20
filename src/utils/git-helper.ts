@@ -1,21 +1,25 @@
+import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 
 export interface GitContext {
   owner: string
   repo: string
   token: string
+  dryRun: boolean
 }
 export class GitHelper {
   private token: string
   private owner: string
   private repo: string
   private repoPath: string
+  private dryRun: boolean
 
   constructor(context: GitContext) {
     this.token = context.token
     this.owner = context.owner
     this.repo = context.repo
-    this.repoPath = `../${context.repo}`
+    this.dryRun = context.dryRun
+    this.repoPath = `./${context.repo}`
     this.iniConfig()
   }
 
@@ -30,7 +34,9 @@ export class GitHelper {
   }
 
   async clone(branchName = 'develop') {
+    await exec('ls', ['-al'])
     await exec('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath])
+    await exec('ls', ['-al'])
   }
 
   async createBranch(branch: string) {
@@ -42,6 +48,10 @@ export class GitHelper {
   }
 
   async push(branch: string) {
+    if (this.dryRun) {
+      info('dry-run模式, 不运行git push')
+      return
+    }
     await exec('git', ['push', 'origin', branch], { cwd: this.repoPath })
   }
 
