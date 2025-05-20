@@ -17,6 +17,9 @@ inputs:
   token:
     description: token
     required: false
+  dry-run:
+    description: dry run
+    required: false
 
 runs:
   using: node20

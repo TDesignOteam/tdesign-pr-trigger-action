@@ -1,7 +1,7 @@
 import type { TriggerContext } from '../utils/trigger'
-import { info } from '@actions/core'
+import { getInput, info } from '@actions/core'
 import { addContributor } from '../utils'
-import useGit from '../utils/git'
+import { GitHelper } from '../utils/git-helper'
 import useGithub from '../utils/github'
 import { ownerMap, repoMap } from '../utils/trigger'
 
@@ -10,6 +10,7 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
+  const dryRun = getInput('dry_run') === 'true'
   const { getPrData: getCommonPrData, addComment: commentAddComment } = useGithub({
     repo: context.repo,
     owner: context.owner,
@@ -22,28 +23,38 @@ export default async function start(context: TriggerContext) {
     return
   }
   const body = addContributor(prData.body || '', prData.user.login)
-  const { cloneRepo, initSubmodule, updateSubmodule, createBranch, isNeedCommit, gitCommit, gitPush } = useGit({
+  const gitHelper = new GitHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
   })
 
-  await cloneRepo()
-  await initSubmodule()
-  await updateSubmodule()
+  await gitHelper.clone()
+  await gitHelper.initSubmodule()
+  await gitHelper.updateSubmodule()
 
   const branchName = `chore/update-common/pr/${context.pr_number}`
-  await createBranch(branchName)
+  await gitHelper.createBranch(branchName)
   const title = `chore(submodule): update _common`
-  if (!await isNeedCommit()) {
+  if (!await gitHelper.isNeedCommit()) {
     info('nothing to commit')
     return true// nothing to commit
   }
 
-  await gitCommit(title)
-  await gitPush(branchName)
+  await gitHelper.commit(title)
+  if (!dryRun) {
+    await gitHelper.push(branchName)
+  }
+  else {
+    info('dry run, not push')
+  }
 
   const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
-  const newPrData = await createPR(title, branchName, body)
-  commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
+  if (!dryRun) {
+    const newPrData = await createPR(title, branchName, body)
+    commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
+  }
+  else {
+    info('dry run, not create pr,not add comment')
+  }
 }
