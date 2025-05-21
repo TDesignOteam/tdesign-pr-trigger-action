@@ -1,6 +1,6 @@
 import type { TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
-import { addContributor, GitHelper, GithubHelper } from 'src/utils'
+import { addContributor, GitHelper, GithubHelper } from '../utils'
 import { ownerMap, repoMap } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
