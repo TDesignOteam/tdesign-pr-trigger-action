@@ -30286,7 +30286,7 @@ class GitHelper {
         this.iniConfig();
     }
     iniConfig() {
-        (0, exec_1.exec)('git', ['config', '--global', 'user.name', 'tdesign-action-bot']);
+        (0, exec_1.exec)('git', ['config', '--global', 'user.name', 'tdesign-bot']);
         (0, exec_1.exec)('git', ['config', '--global', 'user.email', 'tdesign@tencent.com']);
         (0, exec_1.exec)('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/']);
     }
