@@ -54,7 +54,7 @@ export default async function start(context: TriggerContext) {
   if (packageManager === 'pnpm') {
     await corepackEnable()
   }
-  await exec(packageManager, ['install'], { cwd: `../${repoMap[context.trigger]}` })
+  await exec(packageManager, ['install'], { cwd: `./${repoMap[context.trigger]}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`
   await gitHelper.createBranch(branchName)
 
@@ -69,7 +69,7 @@ export default async function start(context: TriggerContext) {
   await gitHelper.commit(title)
 
   const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
-  await exec(packageManager, ['run', updateSnapScript], { cwd: `../${repoMap[context.trigger]}` })
+  await exec(packageManager, ['run', updateSnapScript], { cwd: `./${repoMap[context.trigger]}` })
 
   if (await gitHelper.isNeedCommit()) {
     await gitHelper.commit('chore: update snapshot')
