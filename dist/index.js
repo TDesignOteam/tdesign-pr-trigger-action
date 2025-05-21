@@ -30003,9 +30003,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
-const utils_1 = __nccwpck_require__(6236);
-const git_helper_1 = __nccwpck_require__(7688);
-const github_helper_1 = __nccwpck_require__(3985);
+const utils_1 = __nccwpck_require__(9499);
 const trigger_1 = __nccwpck_require__(6671);
 function start(context) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -30013,7 +30011,7 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const githubHelper = new github_helper_1.GithubHelper({
+        const githubHelper = new utils_1.GithubHelper({
             repo: context.repo,
             owner: context.owner,
             token: context.token,
@@ -30026,7 +30024,7 @@ function start(context) {
             return;
         }
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
-        const gitHelper = new git_helper_1.GitHelper({
+        const gitHelper = new utils_1.GitHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
@@ -30044,7 +30042,7 @@ function start(context) {
         }
         yield gitHelper.commit(title);
         yield gitHelper.push(branchName);
-        const targetRepo = new github_helper_1.GithubHelper({
+        const targetRepo = new utils_1.GithubHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
@@ -30080,9 +30078,7 @@ exports.getCdnIconfontVersion = getCdnIconfontVersion;
 exports["default"] = start;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
-const utils_1 = __nccwpck_require__(6236);
-const git_helper_1 = __nccwpck_require__(7688);
-const github_helper_1 = __nccwpck_require__(3985);
+const utils_1 = __nccwpck_require__(9499);
 const trigger_1 = __nccwpck_require__(6671);
 exports.CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
 function getCdnIconfontVersion() {
@@ -30105,7 +30101,13 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const prData = yield (0, utils_1.getPrData)(context.owner, context.repo, context.pr_number, context.token);
+        const githubHelper = new utils_1.GithubHelper({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+            dryRun: context.dry_run,
+        });
+        const prData = yield githubHelper.getPrData(context.pr_number);
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
         (0, core_1.startGroup)('body');
         (0, core_1.info)(`${body}`);
@@ -30121,7 +30123,7 @@ function start(context) {
         }
         (0, core_1.info)(`latestVersion: ${latestVersion}`);
         (0, core_1.endGroup)();
-        const gitHelper = new git_helper_1.GitHelper({
+        const gitHelper = new utils_1.GitHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
@@ -30151,13 +30153,13 @@ function start(context) {
             yield gitHelper.commit('chore: update snapshot');
         }
         yield gitHelper.push(branchName);
-        const githubHelper = new github_helper_1.GithubHelper({
+        const targetRepo = new utils_1.GithubHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
             token: context.token,
             dryRun: context.dry_run,
         });
-        githubHelper.createPR(title, branchName, body);
+        targetRepo.createPR(title, branchName, body);
     });
 }
 ;
@@ -30165,7 +30167,7 @@ function start(context) {
 
 /***/ }),
 
-/***/ 6236:
+/***/ 3942:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
 "use strict";
@@ -30182,8 +30184,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.CHANGELOG_REG = exports.SKIP_CHANGELOG_REG = void 0;
 exports.addContributor = addContributor;
-exports.cloneRepo = cloneRepo;
-exports.getPrData = getPrData;
 exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
 exports.bumpIconsVersion = bumpIconsVersion;
@@ -30218,23 +30218,6 @@ function addContributor(body, contributor) {
         }
         return item;
     }).join('\r\n');
-}
-function cloneRepo(owner, repo, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const repo_url = `https://${token}@github.com/${owner}/${repo}.git`;
-        yield (0, exec_1.exec)('git', ['clone', repo_url, `../${repo}`]);
-    });
-}
-function getPrData(owner, repo, pr_number, token) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const octokit = (0, github_1.getOctokit)(token);
-        const { data: pr_data } = yield octokit.rest.pulls.get({
-            owner,
-            repo,
-            pull_number: pr_number,
-        });
-        return pr_data;
-    });
 }
 function createPR(context) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -30434,6 +30417,33 @@ class GithubHelper {
     }
 }
 exports.GithubHelper = GithubHelper;
+
+
+/***/ }),
+
+/***/ 9499:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __exportStar = (this && this.__exportStar) || function(m, exports) {
+    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+__exportStar(__nccwpck_require__(3942), exports);
+__exportStar(__nccwpck_require__(7688), exports);
+__exportStar(__nccwpck_require__(3985), exports);
 
 
 /***/ }),
