@@ -73,33 +73,15 @@ export async function getPkgLatestVersion(packageName: string) {
 
 export async function bumpIconsVersion(packageManager: string, repo: string) {
   if (packageManager === 'pnpm') {
-    await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `../${repo}` })
+    await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` })
   }
   else {
-    await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` })
+    await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` })
   }
 
-  await exec('git', ['status'], { cwd: `../${repo}` })
+  await exec('git', ['status'], { cwd: `./${repo}` })
 }
 
 export async function corepackEnable() {
   await exec('corepack', ['enable'])
-}
-
-export async function setGitConfig() {
-  await exec(`git config --global user.email "tdesign@tencent.com"`)
-  await exec(`git config --global user.name "tdesign-bot"`)
-}
-
-export async function createBranch(repo: string, branch: string) {
-  await exec(`git checkout -b ${branch}`, [], { cwd: `../${repo}` })
-  return branch
-}
-
-export async function gitCommit(repo: string, message: string) {
-  await exec(`git commit -am "${message}" --no-verify`, [], { cwd: `../${repo}` })
-}
-
-export async function gitPush(repo: string, branch: string) {
-  await exec(`git push origin ${branch}`, [], { cwd: `../${repo}` })
 }

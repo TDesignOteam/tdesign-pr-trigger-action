@@ -1,8 +1,8 @@
 import type { TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
-import { addContributor } from '../utils'
-import useGit from '../utils/git'
-import useGithub from '../utils/github'
+import { addContributor } from 'src/utils'
+import { GitHelper } from '../utils/git-helper'
+import { GithubHelper } from '../utils/github-helper'
 import { ownerMap, repoMap } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
@@ -10,40 +10,50 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-  const { getPrData: getCommonPrData, addComment: commentAddComment } = useGithub({
+
+  const githubHelper = new GithubHelper({
     repo: context.repo,
     owner: context.owner,
     token: context.token,
+    dryRun: context.dry_run,
   })
-  const prData = await getCommonPrData(context.pr_number)
+  const prData = await githubHelper.getPrData(context.pr_number)
   if (!prData.merged) {
     info('pr has been merged')
-    commentAddComment(context.pr_number, 'PR 还没合并，无法触发')
+    githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发')
     return
   }
   const body = addContributor(prData.body || '', prData.user.login)
-  const { cloneRepo, initSubmodule, updateSubmodule, createBranch, isNeedCommit, gitCommit, gitPush } = useGit({
+  const gitHelper = new GitHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
+    dryRun: context.dry_run,
   })
 
-  await cloneRepo()
-  await initSubmodule()
-  await updateSubmodule()
+  await gitHelper.clone()
+  await gitHelper.initSubmodule()
+  await gitHelper.updateSubmodule()
 
   const branchName = `chore/update-common/pr/${context.pr_number}`
-  await createBranch(branchName)
-  const title = `chore(submodule): update _common`
-  if (!await isNeedCommit()) {
+  await gitHelper.createBranch(branchName)
+  const title = `chore(submodule): update common`
+  if (!await gitHelper.isNeedCommit()) {
     info('nothing to commit')
     return true// nothing to commit
   }
 
-  await gitCommit(title)
-  await gitPush(branchName)
+  await gitHelper.commit(title)
+  await gitHelper.push(branchName)
 
-  const { createPR } = useGithub({ repo: repoMap[context.trigger], owner: ownerMap[context.trigger], token: context.token })
-  const newPrData = await createPR(title, branchName, body)
-  commentAddComment(context.pr_number, `> ${context.trigger}\r\n \r\n 已创建 PR: ${newPrData.html_url}`)
+  const targetRepo = new GithubHelper({
+    repo: repoMap[context.trigger],
+    owner: ownerMap[context.trigger],
+    token: context.token,
+    dryRun: context.dry_run,
+  })
+  const newPrData = await targetRepo.createPR(title, branchName, body)
+  if (newPrData) {
+    githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`)
+  }
 }

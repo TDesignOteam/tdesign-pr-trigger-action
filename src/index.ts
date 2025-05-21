@@ -3,15 +3,17 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import { getInput, info } from '@actions/core'
 import { context } from '@actions/github'
-import { setGitConfig } from './utils'
 import useTrigger from './utils/trigger'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
   const owner = getInput('owner') || context.repo.owner
-  const pr_number = getInput('pr_number') || context.issue.number
+  const prNumber = Number(getInput('pr_number')) || context.issue.number
   const token = getInput('token') || process.env.GITHUB_TOKEN || ''
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
+  const dryRun = Boolean(getInput('dry-run'))
+
+  info(`dryRun: ${dryRun}`)
 
   if (context.eventName === 'issue_comment') {
     info('pr comment trigger')
@@ -36,14 +38,13 @@ export async function run(): Promise<void> {
     }
   }
 
-  await setGitConfig()
-
   useTrigger({
     owner,
     repo,
-    pr_number: pr_number as number,
+    pr_number: prNumber,
     token,
     trigger: trigger.trim(),
+    dry_run: dryRun,
   })
 }
 run().catch(console.error)

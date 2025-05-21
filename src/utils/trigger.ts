@@ -43,6 +43,7 @@ export interface TriggerContext {
   pr_number: number
   token: string
   trigger: string
+  dry_run: boolean
 }
 export default function useTrigger(context: TriggerContext) {
   // TODO

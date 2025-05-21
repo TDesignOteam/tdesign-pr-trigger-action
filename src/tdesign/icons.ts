@@ -1,9 +1,9 @@
 import type { TriggerContext } from '../utils/trigger'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
-import useGit from 'src/utils/git'
-import useGithub from 'src/utils/github'
 import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
+import { GitHelper } from '../utils/git-helper'
+import { GithubHelper } from '../utils/github-helper'
 import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -16,14 +16,15 @@ export async function getCdnIconfontVersion(): Promise<string> {
   return match?.[1] || ''
 }
 async function miniprogramUpdateIcons(repo: string, version: string) {
-  await exec('node', ['./script/update-icons.js', '--version', version], { cwd: `../${repo}` })
-  await exec('git', ['status'], { cwd: `../${repo}` })
+  await exec('node', ['./script/update-icons.js', '--version', version], { cwd: `./${repo}` })
+  await exec('git', ['status'], { cwd: `./${repo}` })
 }
 export default async function start(context: TriggerContext) {
   if (!Reflect.has(repoMap, context.trigger)) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
+
   const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
   const body = addContributor(prData.body || '', prData.user.login)
   startGroup('body')
@@ -41,44 +42,46 @@ export default async function start(context: TriggerContext) {
 
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  const { cloneRepo, createBranch, isNeedCommit, gitCommit, gitPush, initSubmodule } = useGit({
+  const gitHelper = new GitHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
+    dryRun: context.dry_run,
   })
-  await cloneRepo()
-  await initSubmodule()
+  await gitHelper.clone()
+  await gitHelper.initSubmodule()
   const packageManager = packageManagerMap[repoMap[context.trigger]]
   if (packageManager === 'pnpm') {
     await corepackEnable()
   }
-  await exec(packageManager, ['install'], { cwd: `../${repoMap[context.trigger]}` })
+  await exec(packageManager, ['install'], { cwd: `./${repoMap[context.trigger]}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`
-  await createBranch(branchName)
+  await gitHelper.createBranch(branchName)
 
   await bumpIconsVersion(packageManager, repoMap[context.trigger])
   if (packageName === 'cdn-iconfont') {
     await miniprogramUpdateIcons(repoMap[context.trigger], latestVersion)
   }
-  if (!await isNeedCommit()) {
+  if (!await gitHelper.isNeedCommit()) {
     return true
   }
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
-  await gitCommit(title)
+  await gitHelper.commit(title)
 
   const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
-  await exec(packageManager, ['run', updateSnapScript], { cwd: `../${repoMap[context.trigger]}` })
+  await exec(packageManager, ['run', updateSnapScript], { cwd: `./${repoMap[context.trigger]}` })
 
-  if (await isNeedCommit()) {
-    await gitCommit('chore: update snapshot')
+  if (await gitHelper.isNeedCommit()) {
+    await gitHelper.commit('chore: update snapshot')
   }
-  await gitPush(branchName)
 
-  const { createPR } = useGithub({
+  await gitHelper.push(branchName)
+
+  const githubHelper = new GithubHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
+    dryRun: context.dry_run,
   })
-
-  await createPR(title, branchName, body)
+  githubHelper.createPR(title, branchName, body)
 };
