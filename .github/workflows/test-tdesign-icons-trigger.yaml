@@ -1,0 +1,91 @@
+name: test-tdesign-icons-trigger
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - dist/index.js
+
+jobs:
+  pr-vue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130
+          trigger: /pr-vue
+          dry-run: true
+
+  pr-vue-next:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130
+          trigger: /pr-vue-next
+          dry-run: true
+
+  pr-react:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 130
+          trigger: /pr-react
+          dry-run: true
+
+  pr-mobile-vue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 2018
+          trigger: /pr-mobile-vue
+          dry-run: true
+
+  pr-mobile-react:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 2018
+          trigger: /pr-mobile-react
+          dry-run: true
+
+  pr-miniprogram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign-icons
+          pr_number: 2018
+          trigger: /pr-miniprogram
+          dry-run: true

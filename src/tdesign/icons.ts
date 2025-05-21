@@ -1,5 +1,5 @@
 import type { TriggerContext } from '../utils/trigger'
-import { endGroup, getInput, info, startGroup } from '@actions/core'
+import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
 import { GitHelper } from '../utils/git-helper'
@@ -24,7 +24,7 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-  const dryRun = getInput('dry_run') === 'true'
+
   const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
   const body = addContributor(prData.body || '', prData.user.login)
   startGroup('body')
@@ -74,9 +74,8 @@ export default async function start(context: TriggerContext) {
   if (await gitHelper.isNeedCommit()) {
     await gitHelper.commit('chore: update snapshot')
   }
-  if (!dryRun) {
-    await gitHelper.push(branchName)
-  }
+
+  await gitHelper.push(branchName)
 
   const githubHelper = new GithubHelper({
     repo: repoMap[context.trigger],
