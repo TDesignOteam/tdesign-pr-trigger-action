@@ -16,8 +16,8 @@ export async function getCdnIconfontVersion(): Promise<string> {
   return match?.[1] || ''
 }
 async function miniprogramUpdateIcons(repo: string, version: string) {
-  await exec('node', ['./script/update-icons.js', '--version', version], { cwd: `../${repo}` })
-  await exec('git', ['status'], { cwd: `../${repo}` })
+  await exec('node', ['./script/update-icons.js', '--version', version], { cwd: `./${repo}` })
+  await exec('git', ['status'], { cwd: `./${repo}` })
 }
 export default async function start(context: TriggerContext) {
   if (!Reflect.has(repoMap, context.trigger)) {
