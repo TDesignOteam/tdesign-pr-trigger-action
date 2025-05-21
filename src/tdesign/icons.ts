@@ -1,9 +1,7 @@
 import type { TriggerContext } from '../utils/trigger'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
-import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, getPrData } from '../utils'
-import { GitHelper } from '../utils/git-helper'
-import { GithubHelper } from '../utils/github-helper'
+import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from 'src/utils'
 import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -24,8 +22,13 @@ export default async function start(context: TriggerContext) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
-
-  const prData = await getPrData(context.owner, context.repo, context.pr_number, context.token)
+  const githubHelper = new GithubHelper({
+    repo: context.repo,
+    owner: context.owner,
+    token: context.token,
+    dryRun: context.dry_run,
+  })
+  const prData = await githubHelper.getPrData(context.pr_number)
   const body = addContributor(prData.body || '', prData.user.login)
   startGroup('body')
   info(`${body}`)
@@ -77,11 +80,11 @@ export default async function start(context: TriggerContext) {
 
   await gitHelper.push(branchName)
 
-  const githubHelper = new GithubHelper({
+  const targetRepo = new GithubHelper({
     repo: repoMap[context.trigger],
     owner: ownerMap[context.trigger],
     token: context.token,
     dryRun: context.dry_run,
   })
-  githubHelper.createPR(title, branchName, body)
+  targetRepo.createPR(title, branchName, body)
 };
