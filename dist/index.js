@@ -30095,8 +30095,8 @@ function getCdnIconfontVersion() {
 }
 function miniprogramUpdateIcons(repo, version) {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version', version], { cwd: `../${repo}` });
-        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)('node', ['./script/update-icons.js', '--version', version], { cwd: `./${repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `./${repo}` });
     });
 }
 function start(context) {
@@ -30105,7 +30105,6 @@ function start(context) {
             (0, core_1.info)(`错误的trigger: ${context.trigger}`);
             return;
         }
-        const dryRun = (0, core_1.getInput)('dry_run') === 'true';
         const prData = yield (0, utils_1.getPrData)(context.owner, context.repo, context.pr_number, context.token);
         const body = (0, utils_1.addContributor)(prData.body || '', prData.user.login);
         (0, core_1.startGroup)('body');
@@ -30134,7 +30133,7 @@ function start(context) {
         if (packageManager === 'pnpm') {
             yield (0, utils_1.corepackEnable)();
         }
-        yield (0, exec_1.exec)(packageManager, ['install'], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
+        yield (0, exec_1.exec)(packageManager, ['install'], { cwd: `./${trigger_1.repoMap[context.trigger]}` });
         const branchName = `chore/icon/${packageName}/${latestVersion}`;
         yield gitHelper.createBranch(branchName);
         yield (0, utils_1.bumpIconsVersion)(packageManager, trigger_1.repoMap[context.trigger]);
@@ -30147,13 +30146,11 @@ function start(context) {
         const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
         yield gitHelper.commit(title);
         const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update';
-        yield (0, exec_1.exec)(packageManager, ['run', updateSnapScript], { cwd: `../${trigger_1.repoMap[context.trigger]}` });
+        yield (0, exec_1.exec)(packageManager, ['run', updateSnapScript], { cwd: `./${trigger_1.repoMap[context.trigger]}` });
         if (yield gitHelper.isNeedCommit()) {
             yield gitHelper.commit('chore: update snapshot');
         }
-        if (!dryRun) {
-            yield gitHelper.push(branchName);
-        }
+        yield gitHelper.push(branchName);
         const githubHelper = new github_helper_1.GithubHelper({
             repo: trigger_1.repoMap[context.trigger],
             owner: trigger_1.ownerMap[context.trigger],
