@@ -24,7 +24,7 @@ export class GitHelper {
   }
 
   private iniConfig() {
-    exec('git', ['config', '--global', 'user.name', 'tdesign-action-bot'])
+    exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
     exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
     exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
   }

@@ -32,20 +32,6 @@ export function addContributor(body: string, contributor: string): string {
   }).join('\r\n')
 }
 
-export async function cloneRepo(owner: string, repo: string, token: string): Promise<void> {
-  const repo_url = `https://${token}@github.com/${owner}/${repo}.git`
-  await exec('git', ['clone', repo_url, `../${repo}`])
-}
-
-export async function getPrData(owner: string, repo: string, pr_number: number, token: string) {
-  const octokit = getOctokit(token)
-  const { data: pr_data } = await octokit.rest.pulls.get({
-    owner,
-    repo,
-    pull_number: pr_number as number,
-  })
-  return pr_data
-}
 export interface CreatePRContext {
   owner: string
   repo: string
