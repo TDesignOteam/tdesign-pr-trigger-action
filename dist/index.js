@@ -30188,10 +30188,6 @@ exports.createPR = createPR;
 exports.getPkgLatestVersion = getPkgLatestVersion;
 exports.bumpIconsVersion = bumpIconsVersion;
 exports.corepackEnable = corepackEnable;
-exports.setGitConfig = setGitConfig;
-exports.createBranch = createBranch;
-exports.gitCommit = gitCommit;
-exports.gitPush = gitPush;
 const core_1 = __nccwpck_require__(9999);
 const exec_1 = __nccwpck_require__(8872);
 const github_1 = __nccwpck_require__(5380);
@@ -30262,39 +30258,17 @@ function getPkgLatestVersion(packageName) {
 function bumpIconsVersion(packageManager, repo) {
     return __awaiter(this, void 0, void 0, function* () {
         if (packageManager === 'pnpm') {
-            yield (0, exec_1.exec)('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `../${repo}` });
+            yield (0, exec_1.exec)('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` });
         }
         else {
-            yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `../${repo}` });
+            yield (0, exec_1.exec)('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` });
         }
-        yield (0, exec_1.exec)('git', ['status'], { cwd: `../${repo}` });
+        yield (0, exec_1.exec)('git', ['status'], { cwd: `./${repo}` });
     });
 }
 function corepackEnable() {
     return __awaiter(this, void 0, void 0, function* () {
         yield (0, exec_1.exec)('corepack', ['enable']);
-    });
-}
-function setGitConfig() {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git config --global user.email "tdesign@tencent.com"`);
-        yield (0, exec_1.exec)(`git config --global user.name "tdesign-bot"`);
-    });
-}
-function createBranch(repo, branch) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git checkout -b ${branch}`, [], { cwd: `../${repo}` });
-        return branch;
-    });
-}
-function gitCommit(repo, message) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git commit -am "${message}" --no-verify`, [], { cwd: `../${repo}` });
-    });
-}
-function gitPush(repo, branch) {
-    return __awaiter(this, void 0, void 0, function* () {
-        yield (0, exec_1.exec)(`git push origin ${branch}`, [], { cwd: `../${repo}` });
     });
 }
 
