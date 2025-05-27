@@ -404,29 +404,29 @@ function useTrigger(context) {
 //#endregion
 //#region src/index.ts
 async function run() {
-	const repo = __actions_core.default.getInput("repo") || __actions_github.default.context.repo.repo;
-	const owner = __actions_core.default.getInput("owner") || __actions_github.default.context.repo.owner;
-	const prNumber = Number(__actions_core.default.getInput("pr_number")) || __actions_github.default.context.issue.number;
-	const token = __actions_core.default.getInput("token") || node_process.default.env.GITHUB_TOKEN || "";
-	const trigger = __actions_core.default.getInput("trigger") || __actions_github.default.context.payload.comment?.body || "";
-	const dryRun = Boolean(__actions_core.default.getInput("dry-run"));
-	__actions_core.default.info(`dryRun: ${dryRun}`);
-	if (__actions_github.default.context.eventName === "issue_comment") {
-		__actions_core.default.info("pr comment trigger");
-		if (!__actions_github.default.context.payload.issue?.pull_request) {
-			__actions_core.default.info("issue_comment not a pull_request comment");
+	const repo = __actions_core.getInput("repo") || __actions_github.context.repo.repo;
+	const owner = __actions_core.getInput("owner") || __actions_github.context.repo.owner;
+	const prNumber = Number(__actions_core.getInput("pr_number")) || __actions_github.context.issue.number;
+	const token = __actions_core.getInput("token") || node_process.default.env.GITHUB_TOKEN || "";
+	const trigger = __actions_core.getInput("trigger") || __actions_github.context.payload.comment?.body || "";
+	const dryRun = Boolean(__actions_core.getInput("dry-run"));
+	__actions_core.info(`dryRun: ${dryRun}`);
+	if (__actions_github.context.eventName === "issue_comment") {
+		__actions_core.info("pr comment trigger");
+		if (!__actions_github.context.payload.issue?.pull_request) {
+			__actions_core.info("issue_comment not a pull_request comment");
 			return;
 		}
 		const whitelist = (0, node_fs.readFileSync)((0, node_path.resolve)(__dirname, "../.comment-trigger-whitelist"), "utf-8");
 		let isWhitelist = false;
 		whitelist.split("\n").forEach((item) => {
-			if (item.trim() === __actions_github.default.context.payload.comment?.user.login) {
-				__actions_core.default.info("comment whitelist trigger");
+			if (item.trim() === __actions_github.context.payload.comment?.user.login) {
+				__actions_core.info("comment whitelist trigger");
 				isWhitelist = true;
 			}
 		});
 		if (!isWhitelist) {
-			__actions_core.default.info(`${__actions_github.default.context.payload.comment?.user.login}不在白名单内，不触发`);
+			__actions_core.info(`${__actions_github.context.payload.comment?.user.login}不在白名单内，不触发`);
 			return;
 		}
 	}
