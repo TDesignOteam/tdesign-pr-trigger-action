@@ -1,24 +1,24 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
-import { getInput, info } from '@actions/core'
-import { context } from '@actions/github'
+import core from '@actions/core'
+import github from '@actions/github'
 import useTrigger from './utils/trigger'
 
 export async function run(): Promise<void> {
-  const repo = getInput('repo') || context.repo.repo
-  const owner = getInput('owner') || context.repo.owner
-  const prNumber = Number(getInput('pr_number')) || context.issue.number
-  const token = getInput('token') || process.env.GITHUB_TOKEN || ''
-  const trigger = getInput('trigger') || context.payload.comment?.body || ''
-  const dryRun = Boolean(getInput('dry-run'))
+  const repo = core.getInput('repo') || github.context.repo.repo
+  const owner = core.getInput('owner') || github.context.repo.owner
+  const prNumber = Number(core.getInput('pr_number')) || github.context.issue.number
+  const token = core.getInput('token') || process.env.GITHUB_TOKEN || ''
+  const trigger = core.getInput('trigger') || github.context.payload.comment?.body || ''
+  const dryRun = Boolean(core.getInput('dry-run'))
 
-  info(`dryRun: ${dryRun}`)
+  core.info(`dryRun: ${dryRun}`)
 
-  if (context.eventName === 'issue_comment') {
-    info('pr comment trigger')
-    if (!context.payload.issue?.pull_request) {
-      info('issue_comment not a pull_request comment')
+  if (github.context.eventName === 'issue_comment') {
+    core.info('pr comment trigger')
+    if (!github.context.payload.issue?.pull_request) {
+      core.info('issue_comment not a pull_request comment')
       return
     }
 
@@ -27,13 +27,13 @@ export async function run(): Promise<void> {
     let isWhitelist = false
 
     whitelist.split('\n').forEach((item) => {
-      if (item.trim() === context.payload.comment?.user.login) {
-        info('comment whitelist trigger')
+      if (item.trim() === github.context.payload.comment?.user.login) {
+        core.info('comment whitelist trigger')
         isWhitelist = true
       }
     })
     if (!isWhitelist) {
-      info(`${context.payload.comment?.user.login}不在白名单内，不触发`)
+      core.info(`${github.context.payload.comment?.user.login}不在白名单内，不触发`)
       return
     }
   }

@@ -88,12 +88,12 @@ var GitHelper = class {
 	repo;
 	repoPath;
 	dryRun;
-	constructor(context$1) {
-		this.token = context$1.token;
-		this.owner = context$1.owner;
-		this.repo = context$1.repo;
-		this.dryRun = context$1.dryRun;
-		this.repoPath = `./${context$1.repo}`;
+	constructor(context) {
+		this.token = context.token;
+		this.owner = context.owner;
+		this.repo = context.repo;
+		this.dryRun = context.dryRun;
+		this.repoPath = `./${context.repo}`;
 		this.iniConfig();
 	}
 	iniConfig() {
@@ -183,10 +183,10 @@ var GithubHelper = class {
 	octokit;
 	context;
 	dryRun;
-	constructor(context$1) {
-		this.context = context$1;
-		this.dryRun = context$1.dryRun;
-		this.octokit = (0, __actions_github.getOctokit)(context$1.token);
+	constructor(context) {
+		this.context = context;
+		this.dryRun = context.dryRun;
+		this.octokit = (0, __actions_github.getOctokit)(context.token);
 	}
 	async getPrData(pr_number) {
 		const { data } = await this.octokit.rest.pulls.get({
@@ -236,34 +236,34 @@ var GithubHelper = class {
 
 //#endregion
 //#region src/tdesign/common.ts
-async function start$1(context$1) {
-	if (!Reflect.has(repoMap, context$1.trigger)) {
-		(0, __actions_core.info)(`错误的trigger: ${context$1.trigger}`);
+async function start$1(context) {
+	if (!Reflect.has(repoMap, context.trigger)) {
+		(0, __actions_core.info)(`错误的trigger: ${context.trigger}`);
 		return;
 	}
 	const githubHelper = new GithubHelper({
-		repo: context$1.repo,
-		owner: context$1.owner,
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
 	});
-	const prData = await githubHelper.getPrData(context$1.pr_number);
+	const prData = await githubHelper.getPrData(context.pr_number);
 	if (!prData.merged) {
 		(0, __actions_core.info)("pr has been merged");
-		githubHelper.addComment(context$1.pr_number, "PR 还没合并，无法触发");
+		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
 	const body = addContributor(prData.body || "", prData.user.login);
 	const gitHelper = new GitHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: repoMap[context.trigger],
+		owner: ownerMap[context.trigger],
+		token: context.token,
+		dryRun: context.dry_run
 	});
 	await gitHelper.clone();
 	await gitHelper.initSubmodule();
 	await gitHelper.updateSubmodule();
-	const branchName = `chore/update-common/pr/${context$1.pr_number}`;
+	const branchName = `chore/update-common/pr/${context.pr_number}`;
 	await gitHelper.createBranch(branchName);
 	const title = `chore(submodule): update common`;
 	if (!await gitHelper.isNeedCommit()) {
@@ -273,13 +273,13 @@ async function start$1(context$1) {
 	await gitHelper.commit(title);
 	await gitHelper.push(branchName);
 	const targetRepo = new GithubHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: repoMap[context.trigger],
+		owner: ownerMap[context.trigger],
+		token: context.token,
+		dryRun: context.dry_run
 	});
 	const newPrData = await targetRepo.createPR(title, branchName, body);
-	if (newPrData) githubHelper.addComment(context$1.pr_number, `> ${context$1.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`);
+	if (newPrData) githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`);
 }
 
 //#endregion
@@ -299,23 +299,23 @@ async function miniprogramUpdateIcons(repo, version) {
 	], { cwd: `./${repo}` });
 	await (0, __actions_exec.exec)("git", ["status"], { cwd: `./${repo}` });
 }
-async function start(context$1) {
-	if (!Reflect.has(repoMap, context$1.trigger)) {
-		(0, __actions_core.info)(`错误的trigger: ${context$1.trigger}`);
+async function start(context) {
+	if (!Reflect.has(repoMap, context.trigger)) {
+		(0, __actions_core.info)(`错误的trigger: ${context.trigger}`);
 		return;
 	}
 	const githubHelper = new GithubHelper({
-		repo: context$1.repo,
-		owner: context$1.owner,
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
 	});
-	const prData = await githubHelper.getPrData(context$1.pr_number);
+	const prData = await githubHelper.getPrData(context.pr_number);
 	const body = addContributor(prData.body || "", prData.user.login);
 	(0, __actions_core.startGroup)("body");
 	(0, __actions_core.info)(`${body}`);
 	(0, __actions_core.endGroup)();
-	const packageName = iconsMap[context$1.trigger];
+	const packageName = iconsMap[context.trigger];
 	(0, __actions_core.startGroup)(packageName);
 	let latestVersion = "";
 	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
@@ -323,32 +323,32 @@ async function start(context$1) {
 	(0, __actions_core.info)(`latestVersion: ${latestVersion}`);
 	(0, __actions_core.endGroup)();
 	const gitHelper = new GitHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: repoMap[context.trigger],
+		owner: ownerMap[context.trigger],
+		token: context.token,
+		dryRun: context.dry_run
 	});
 	await gitHelper.clone();
 	await gitHelper.initSubmodule();
-	const packageManager = packageManagerMap[repoMap[context$1.trigger]];
+	const packageManager = packageManagerMap[repoMap[context.trigger]];
 	if (packageManager === "pnpm") await corepackEnable();
-	await (0, __actions_exec.exec)(packageManager, ["install"], { cwd: `./${repoMap[context$1.trigger]}` });
+	await (0, __actions_exec.exec)(packageManager, ["install"], { cwd: `./${repoMap[context.trigger]}` });
 	const branchName = `chore/icon/${packageName}/${latestVersion}`;
 	await gitHelper.createBranch(branchName);
-	await bumpIconsVersion(packageManager, repoMap[context$1.trigger]);
-	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[context$1.trigger], latestVersion);
+	await bumpIconsVersion(packageManager, repoMap[context.trigger]);
+	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[context.trigger], latestVersion);
 	if (!await gitHelper.isNeedCommit()) return true;
 	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
 	await gitHelper.commit(title);
 	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	await (0, __actions_exec.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[context$1.trigger]}` });
+	await (0, __actions_exec.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[context.trigger]}` });
 	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
 	await gitHelper.push(branchName);
 	const targetRepo = new GithubHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
-		token: context$1.token,
-		dryRun: context$1.dry_run
+		repo: repoMap[context.trigger],
+		owner: ownerMap[context.trigger],
+		token: context.token,
+		dryRun: context.dry_run
 	});
 	targetRepo.createPR(title, branchName, body);
 }
@@ -389,44 +389,44 @@ const packageManagerMap = {
 	"tdesign-mobile-react": "npm",
 	"tdesign-miniprogram": "npm"
 };
-function useTrigger(context$1) {
-	switch (context$1.repo) {
+function useTrigger(context) {
+	switch (context.repo) {
 		case "tdesign-icons":
-			start(context$1);
+			start(context);
 			break;
 		case "tdesign-common":
-			start$1(context$1);
+			start$1(context);
 			break;
-		default: throw new Error(`不支持的仓库: ${context$1.repo}`);
+		default: throw new Error(`不支持的仓库: ${context.repo}`);
 	}
 }
 
 //#endregion
 //#region src/index.ts
 async function run() {
-	const repo = (0, __actions_core.getInput)("repo") || __actions_github.context.repo.repo;
-	const owner = (0, __actions_core.getInput)("owner") || __actions_github.context.repo.owner;
-	const prNumber = Number((0, __actions_core.getInput)("pr_number")) || __actions_github.context.issue.number;
-	const token = (0, __actions_core.getInput)("token") || node_process.default.env.GITHUB_TOKEN || "";
-	const trigger = (0, __actions_core.getInput)("trigger") || __actions_github.context.payload.comment?.body || "";
-	const dryRun = Boolean((0, __actions_core.getInput)("dry-run"));
-	(0, __actions_core.info)(`dryRun: ${dryRun}`);
-	if (__actions_github.context.eventName === "issue_comment") {
-		(0, __actions_core.info)("pr comment trigger");
-		if (!__actions_github.context.payload.issue?.pull_request) {
-			(0, __actions_core.info)("issue_comment not a pull_request comment");
+	const repo = __actions_core.default.getInput("repo") || __actions_github.default.context.repo.repo;
+	const owner = __actions_core.default.getInput("owner") || __actions_github.default.context.repo.owner;
+	const prNumber = Number(__actions_core.default.getInput("pr_number")) || __actions_github.default.context.issue.number;
+	const token = __actions_core.default.getInput("token") || node_process.default.env.GITHUB_TOKEN || "";
+	const trigger = __actions_core.default.getInput("trigger") || __actions_github.default.context.payload.comment?.body || "";
+	const dryRun = Boolean(__actions_core.default.getInput("dry-run"));
+	__actions_core.default.info(`dryRun: ${dryRun}`);
+	if (__actions_github.default.context.eventName === "issue_comment") {
+		__actions_core.default.info("pr comment trigger");
+		if (!__actions_github.default.context.payload.issue?.pull_request) {
+			__actions_core.default.info("issue_comment not a pull_request comment");
 			return;
 		}
 		const whitelist = (0, node_fs.readFileSync)((0, node_path.resolve)(__dirname, "../.comment-trigger-whitelist"), "utf-8");
 		let isWhitelist = false;
 		whitelist.split("\n").forEach((item) => {
-			if (item.trim() === __actions_github.context.payload.comment?.user.login) {
-				(0, __actions_core.info)("comment whitelist trigger");
+			if (item.trim() === __actions_github.default.context.payload.comment?.user.login) {
+				__actions_core.default.info("comment whitelist trigger");
 				isWhitelist = true;
 			}
 		});
 		if (!isWhitelist) {
-			(0, __actions_core.info)(`${__actions_github.context.payload.comment?.user.login}不在白名单内，不触发`);
+			__actions_core.default.info(`${__actions_github.default.context.payload.comment?.user.login}不在白名单内，不触发`);
 			return;
 		}
 	}
