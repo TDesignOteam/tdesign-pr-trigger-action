@@ -1,4 +1,7 @@
 default.check-filename = true
 
 [files]
-extend-exclude = [ "dist" ]
+extend-exclude = [
+  "dist",
+  'test/fixtures'
+]
