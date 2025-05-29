@@ -30050,7 +30050,7 @@ function start(context) {
         });
         const newPrData = yield targetRepo.createPR(title, branchName, body);
         if (newPrData) {
-            githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`);
+            githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
         }
     });
 }
@@ -30283,9 +30283,9 @@ class GitHelper {
         this.repo = context.repo;
         this.dryRun = context.dryRun;
         this.repoPath = `./${context.repo}`;
-        this.iniConfig();
+        this.initConfig();
     }
-    iniConfig() {
+    initConfig() {
         (0, exec_1.exec)('git', ['config', '--global', 'user.name', 'tdesign-bot']);
         (0, exec_1.exec)('git', ['config', '--global', 'user.email', 'tdesign@tencent.com']);
         (0, exec_1.exec)('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/']);
