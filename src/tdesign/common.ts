@@ -52,6 +52,6 @@ export default async function start(context: TriggerContext) {
   })
   const newPrData = await targetRepo.createPR(title, branchName, body)
   if (newPrData) {
-    githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}。`)
+    githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
   }
 }
