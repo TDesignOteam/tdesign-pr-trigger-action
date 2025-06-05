@@ -30283,18 +30283,20 @@ class GitHelper {
         this.repo = context.repo;
         this.dryRun = context.dryRun;
         this.repoPath = `./${context.repo}`;
-        this.initConfig();
     }
     initConfig() {
-        (0, exec_1.exec)('git', ['config', '--global', 'user.name', 'tdesign-bot']);
-        (0, exec_1.exec)('git', ['config', '--global', 'user.email', 'tdesign@tencent.com']);
-        (0, exec_1.exec)('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/']);
+        return __awaiter(this, void 0, void 0, function* () {
+            yield (0, exec_1.exec)('git', ['config', '--global', 'user.name', 'tdesign-bot']);
+            yield (0, exec_1.exec)('git', ['config', '--global', 'user.email', 'tdesign@tencent.com']);
+            yield (0, exec_1.exec)('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/']);
+        });
     }
     get repoUrl() {
         return `https://github.com/${this.owner}/${this.repo}.git`;
     }
     clone() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
+            yield this.initConfig();
             (0, core_1.info)(this.repoUrl);
             yield (0, exec_1.exec)('ls', ['-al']);
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath]);

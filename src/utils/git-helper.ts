@@ -20,13 +20,12 @@ export class GitHelper {
     this.repo = context.repo
     this.dryRun = context.dryRun
     this.repoPath = `./${context.repo}`
-    this.initConfig()
   }
 
-  private initConfig() {
-    exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
-    exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
-    exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
+  private async initConfig() {
+    await exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
+    await exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
+    await exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
   }
 
   private get repoUrl() {
@@ -34,6 +33,7 @@ export class GitHelper {
   }
 
   async clone(branchName = 'develop') {
+    await this.initConfig()
     info(this.repoUrl)
     await exec('ls', ['-al'])
     await exec('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath])
