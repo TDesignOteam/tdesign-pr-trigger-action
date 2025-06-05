@@ -34,6 +34,7 @@ export class GitHelper {
   }
 
   async clone(branchName = 'develop') {
+    info(this.repoUrl)
     await exec('ls', ['-al'])
     await exec('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath])
     await exec('ls', ['-al'])

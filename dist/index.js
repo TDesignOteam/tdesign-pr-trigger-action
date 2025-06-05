@@ -30295,6 +30295,7 @@ class GitHelper {
     }
     clone() {
         return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
+            (0, core_1.info)(this.repoUrl);
             yield (0, exec_1.exec)('ls', ['-al']);
             yield (0, exec_1.exec)('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath]);
             yield (0, exec_1.exec)('ls', ['-al']);
