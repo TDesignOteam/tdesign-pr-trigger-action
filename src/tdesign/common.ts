@@ -33,7 +33,7 @@ export default async function start(context: TriggerContext) {
   await gitHelper.initSubmodule()
   await gitHelper.updateSubmodule()
 
-  const branchName = `chore/update-common/pr/${context.pr_number}`
+  const branchName = `chore/submodule/common-pr-${context.pr_number}`
   await gitHelper.createBranch(branchName)
   const title = `chore(submodule): update common`
   if (!await gitHelper.isNeedCommit()) {

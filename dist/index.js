@@ -30033,7 +30033,7 @@ function start(context) {
         yield gitHelper.clone();
         yield gitHelper.initSubmodule();
         yield gitHelper.updateSubmodule();
-        const branchName = `chore/update-common/pr/${context.pr_number}`;
+        const branchName = `chore/submodule/common-pr-${context.pr_number}`;
         yield gitHelper.createBranch(branchName);
         const title = `chore(submodule): update common`;
         if (!(yield gitHelper.isNeedCommit())) {
