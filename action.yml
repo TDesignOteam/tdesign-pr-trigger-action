@@ -20,6 +20,13 @@ inputs:
   dry-run:
     description: dry run
     required: false
+  deps:
+    description: deps
+    required: false
+  package-manager:
+    description: package manager
+    required: false
+    default: npm
 
 runs:
   using: node20

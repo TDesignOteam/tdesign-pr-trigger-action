@@ -29948,7 +29948,7 @@ function run() {
         const prNumber = Number((0, core_1.getInput)('pr_number')) || github_1.context.issue.number;
         const token = (0, core_1.getInput)('token') || node_process_1.default.env.GITHUB_TOKEN || '';
         const trigger = (0, core_1.getInput)('trigger') || ((_a = github_1.context.payload.comment) === null || _a === void 0 ? void 0 : _a.body) || '';
-        const dryRun = Boolean((0, core_1.getInput)('dry-run'));
+        const dryRun = (0, core_1.getInput)('dry-run', { trimWhitespace: true }) === 'true';
         (0, core_1.info)(`dryRun: ${dryRun}`);
         if (github_1.context.eventName === 'issue_comment') {
             (0, core_1.info)('pr comment trigger');
@@ -30030,7 +30030,7 @@ function start(context) {
             token: context.token,
             dryRun: context.dry_run,
         });
-        yield gitHelper.clone();
+        const baseBranch = yield gitHelper.clone();
         yield gitHelper.initSubmodule();
         yield gitHelper.updateSubmodule();
         const branchName = `chore/submodule/common-pr-${context.pr_number}`;
@@ -30048,7 +30048,7 @@ function start(context) {
             token: context.token,
             dryRun: context.dry_run,
         });
-        const newPrData = yield targetRepo.createPR(title, branchName, body);
+        const newPrData = yield targetRepo.createPR(title, branchName, body, baseBranch);
         if (newPrData) {
             githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
         }
@@ -30295,12 +30295,15 @@ class GitHelper {
         return `https://github.com/${this.owner}/${this.repo}.git`;
     }
     clone() {
-        return __awaiter(this, arguments, void 0, function* (branchName = 'develop') {
+        return __awaiter(this, void 0, void 0, function* () {
             yield this.initConfig();
             (0, core_1.info)(this.repoUrl);
             yield (0, exec_1.exec)('ls', ['-al']);
-            yield (0, exec_1.exec)('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath]);
+            yield (0, exec_1.exec)('git', ['clone', this.repoUrl, this.repoPath]);
             yield (0, exec_1.exec)('ls', ['-al']);
+            const { stdout } = yield (0, exec_1.getExecOutput)('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: this.repoPath });
+            (0, core_1.info)(`当前分支: ${stdout.trim()}`);
+            return stdout.trim();
         });
     }
     createBranch(branch) {
@@ -30456,14 +30459,28 @@ __exportStar(__nccwpck_require__(3985), exports);
 
 "use strict";
 
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.packageManagerMap = exports.ownerMap = exports.repoMap = exports.iconsMap = void 0;
 exports["default"] = useTrigger;
+const core_1 = __nccwpck_require__(9999);
+const exec_1 = __nccwpck_require__(8872);
 const common_1 = __importDefault(__nccwpck_require__(5327));
 const icons_1 = __importDefault(__nccwpck_require__(8862));
+const common_2 = __nccwpck_require__(3942);
+const git_helper_1 = __nccwpck_require__(7688);
+const github_helper_1 = __nccwpck_require__(3985);
 exports.iconsMap = {
     '/pr-vue': 'tdesign-icons-vue',
     '/pr-vue-next': 'tdesign-icons-vue-next',
@@ -30500,6 +30517,23 @@ exports.packageManagerMap = {
 };
 function useTrigger(context) {
     // TODO
+    switch (context.trigger) {
+        case '/pr-vue':
+        case '/pr-vue-next':
+        case '/pr-react':
+        case '/pr-mobile-vue':
+        case '/pr-mobile-react':
+        case '/pr-miniprogram':
+            autoPR(context);
+            break;
+        case '/upgrade-deps':
+            upgradeDeps(context);
+            break;
+        default:
+            throw new Error(`未支持的触发器: ${context.trigger}`);
+    }
+}
+function autoPR(context) {
     switch (context.repo) {
         case 'tdesign-icons':
             (0, icons_1.default)(context);
@@ -30508,8 +30542,48 @@ function useTrigger(context) {
             (0, common_1.default)(context);
             break;
         default:
-            throw new Error(`不支持的仓库: ${context.repo}`);
+            throw new Error(`该仓库未适配: ${context.repo}`);
     }
+}
+function upgradeDeps(context) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const deps = (0, core_1.getInput)('deps');
+        const packageManager = (0, core_1.getInput)('package-manager') || 'npm';
+        if (!deps) {
+            throw new Error('请指定需要升级的依赖');
+        }
+        if (packageManager !== 'npm') {
+            yield (0, common_2.corepackEnable)();
+        }
+        const gitHelper = new git_helper_1.GitHelper({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+            dryRun: context.dry_run,
+        });
+        const baseBranch = yield gitHelper.clone();
+        const branchName = `chore/deps/${deps}`;
+        yield gitHelper.createBranch(branchName);
+        if (packageManager === 'pnpm') {
+            yield (0, exec_1.exec)('pnpm', ['--recursive', 'update', deps, '--latest'], { cwd: `./${context.repo}` });
+        }
+        else {
+            yield (0, exec_1.exec)('npx', ['npm-check-updates', deps, '-u'], { cwd: `./${context.repo}` });
+        }
+        if (!(yield gitHelper.isNeedCommit())) {
+            return true;
+        }
+        const title = `chore(deps): upgrade ${deps}`;
+        yield gitHelper.commit(title);
+        yield gitHelper.push(branchName);
+        const githubHelper = new github_helper_1.GithubHelper({
+            repo: context.repo,
+            owner: context.owner,
+            token: context.token,
+            dryRun: context.dry_run,
+        });
+        yield githubHelper.createPR(title, branchName, title, baseBranch);
+    });
 }
 
 

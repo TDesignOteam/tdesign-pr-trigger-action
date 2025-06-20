@@ -29,7 +29,7 @@ export default async function start(context: TriggerContext) {
     dryRun: context.dry_run,
   })
 
-  await gitHelper.clone()
+  const baseBranch = await gitHelper.clone()
   await gitHelper.initSubmodule()
   await gitHelper.updateSubmodule()
 
@@ -50,7 +50,7 @@ export default async function start(context: TriggerContext) {
     token: context.token,
     dryRun: context.dry_run,
   })
-  const newPrData = await targetRepo.createPR(title, branchName, body)
+  const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch)
   if (newPrData) {
     githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
   }

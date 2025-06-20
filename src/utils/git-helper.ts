@@ -32,12 +32,15 @@ export class GitHelper {
     return `https://github.com/${this.owner}/${this.repo}.git`
   }
 
-  async clone(branchName = 'develop') {
+  async clone() {
     await this.initConfig()
     info(this.repoUrl)
     await exec('ls', ['-al'])
-    await exec('git', ['clone', '-b', branchName, this.repoUrl, this.repoPath])
+    await exec('git', ['clone', this.repoUrl, this.repoPath])
     await exec('ls', ['-al'])
+    const { stdout } = await getExecOutput('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: this.repoPath })
+    info(`当前分支: ${stdout.trim()}`)
+    return stdout.trim()
   }
 
   async createBranch(branch: string) {
