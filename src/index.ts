@@ -11,7 +11,7 @@ export async function run(): Promise<void> {
   const prNumber = Number(getInput('pr_number')) || context.issue.number
   const token = getInput('token') || process.env.GITHUB_TOKEN || ''
   const trigger = getInput('trigger') || context.payload.comment?.body || ''
-  const dryRun = Boolean(getInput('dry-run'))
+  const dryRun = getInput('dry-run', { trimWhitespace: true }) === 'true'
 
   info(`dryRun: ${dryRun}`)
 

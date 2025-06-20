@@ -1,0 +1,25 @@
+name: test-upgrade-deps-trigger
+on:
+  pull_request:
+    branches: [develop]
+    paths:
+      - dist/index.js
+
+jobs:
+  upgrade-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+
+      - name: test
+        uses: ./
+        with:
+          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          owner: Tencent
+          repo: tdesign
+          trigger: /upgrade-deps
+          deps: tdesign-site-components
+          package-manager: pnpm
+          dry-run: true
