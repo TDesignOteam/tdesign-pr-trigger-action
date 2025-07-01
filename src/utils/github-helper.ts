@@ -64,4 +64,21 @@ export class GithubHelper {
     })
     return data
   }
+
+  async addLabels(pr_number: number, labels: string[]) {
+    if (this.dryRun) {
+      startGroup('dry-run模式, 不运行addLabels')
+      info(`pr_number: ${pr_number}`)
+      info(`labels: ${labels.join(', ')}`)
+      endGroup()
+      return
+    }
+    const { data } = await this.octokit.rest.issues.addLabels({
+      owner: this.context.owner,
+      repo: this.context.repo,
+      issue_number: pr_number,
+      labels,
+    })
+    return data
+  }
 }

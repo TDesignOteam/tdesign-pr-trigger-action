@@ -30421,6 +30421,24 @@ class GithubHelper {
             return data;
         });
     }
+    addLabels(pr_number, labels) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (this.dryRun) {
+                (0, core_1.startGroup)('dry-run模式, 不运行addLabels');
+                (0, core_1.info)(`pr_number: ${pr_number}`);
+                (0, core_1.info)(`labels: ${labels.join(', ')}`);
+                (0, core_1.endGroup)();
+                return;
+            }
+            const { data } = yield this.octokit.rest.issues.addLabels({
+                owner: this.context.owner,
+                repo: this.context.repo,
+                issue_number: pr_number,
+                labels,
+            });
+            return data;
+        });
+    }
 }
 exports.GithubHelper = GithubHelper;
 
@@ -30552,6 +30570,7 @@ function upgradeDeps(context) {
         if (!deps) {
             throw new Error('请指定需要升级的依赖');
         }
+        const latestVersion = yield (0, common_2.getPkgLatestVersion)(deps);
         if (packageManager !== 'npm') {
             yield (0, common_2.corepackEnable)();
         }
@@ -30562,7 +30581,7 @@ function upgradeDeps(context) {
             dryRun: context.dry_run,
         });
         const baseBranch = yield gitHelper.clone();
-        const branchName = `chore/deps/${deps}`;
+        const branchName = `chore/deps/${deps}/${latestVersion}`;
         yield gitHelper.createBranch(branchName);
         if (packageManager === 'pnpm') {
             yield (0, exec_1.exec)('pnpm', ['--recursive', 'update', deps, '--latest'], { cwd: `./${context.repo}` });
@@ -30573,7 +30592,7 @@ function upgradeDeps(context) {
         if (!(yield gitHelper.isNeedCommit())) {
             return true;
         }
-        const title = `chore(deps): upgrade ${deps}`;
+        const title = `chore(deps): upgrade ${deps} to ${latestVersion}`;
         yield gitHelper.commit(title);
         yield gitHelper.push(branchName);
         const githubHelper = new github_helper_1.GithubHelper({
@@ -30582,7 +30601,10 @@ function upgradeDeps(context) {
             token: context.token,
             dryRun: context.dry_run,
         });
-        yield githubHelper.createPR(title, branchName, title, baseBranch);
+        const prData = yield githubHelper.createPR(title, branchName, title, baseBranch);
+        if (prData) {
+            yield githubHelper.addLabels(prData.number, ['skip-changelog']);
+        }
     });
 }
 
