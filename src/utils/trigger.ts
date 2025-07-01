@@ -2,7 +2,7 @@ import { getInput } from '@actions/core'
 import { exec } from '@actions/exec'
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
-import { corepackEnable } from './common'
+import { corepackEnable, getPkgLatestVersion } from './common'
 import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
@@ -89,6 +89,7 @@ async function upgradeDeps(context) {
   if (!deps) {
     throw new Error('请指定需要升级的依赖')
   }
+  const latestVersion = await getPkgLatestVersion(deps)
 
   if (packageManager !== 'npm') {
     await corepackEnable()
@@ -100,7 +101,7 @@ async function upgradeDeps(context) {
     dryRun: context.dry_run,
   })
   const baseBranch = await gitHelper.clone()
-  const branchName = `chore/deps/${deps}`
+  const branchName = `chore/deps/${deps}/${latestVersion}`
   await gitHelper.createBranch(branchName)
   if (packageManager === 'pnpm') {
     await exec('pnpm', ['--recursive', 'update', deps, '--latest'], { cwd: `./${context.repo}` })
@@ -113,7 +114,7 @@ async function upgradeDeps(context) {
     return true
   }
 
-  const title = `chore(deps): upgrade ${deps}`
+  const title = `chore(deps): upgrade ${deps} to ${latestVersion}`
   await gitHelper.commit(title)
   await gitHelper.push(branchName)
 
@@ -123,5 +124,8 @@ async function upgradeDeps(context) {
     token: context.token,
     dryRun: context.dry_run,
   })
-  await githubHelper.createPR(title, branchName, title, baseBranch)
+  const prData = await githubHelper.createPR(title, branchName, title, baseBranch)
+  if (prData) {
+    await githubHelper.addLabels(prData.number, ['skip-changelog'])
+  }
 }
