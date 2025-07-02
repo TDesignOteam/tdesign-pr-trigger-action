@@ -27,6 +27,9 @@ inputs:
     description: package manager
     required: false
     default: npm
+  branch:
+    description: branch name
+    required: false
 
 runs:
   using: node20
