@@ -18,8 +18,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       node-cnb:
-        specifier: npm:@liweijie0812/node-cnb@latest
-        version: '@liweijie0812/node-cnb@0.0.1'
+        specifier: ^1.15.0
+        version: 1.15.0
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^4.13.1
@@ -421,9 +421,6 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.0':
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
-
-  '@liweijie0812/node-cnb@0.0.1':
-    resolution: {integrity: sha512-9vqkfUfqceVIFIgR9QcOHvWZOmqoqMF9lBR4//AOB2QqAIvswGTzh95LRkJ5j9itX0W8MoJdfYtg2GyPnMeaTQ==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -1737,6 +1734,9 @@ packages:
     resolution: {integrity: sha512-kKHJhxwpR/Okycz4HhQKKlhWe4ASEfPgkSWNmKFHd7+ezuQlxkA5cM3+XkBPvm1gmHen3w53qsYAv+8GwRrBlg==}
     engines: {node: '>=18'}
 
+  node-cnb@1.15.0:
+    resolution: {integrity: sha512-i/n2bIqUKeSjy0wKvqfDZg7k0VStxKwlnHg0JnvfLt0++x3dQKyQDgrEmEFNQRsaqpJq0PZkTgJsCflvJ2goaQ==}
+
   node-releases@2.0.19:
     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}
 
@@ -2558,12 +2558,6 @@ snapshots:
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
   '@jridgewell/sourcemap-codec@1.5.0': {}
-
-  '@liweijie0812/node-cnb@0.0.1':
-    dependencies:
-      axios: 1.10.0
-    transitivePeerDependencies:
-      - debug
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
@@ -4110,6 +4104,12 @@ snapshots:
   natural-compare@1.4.0: {}
 
   natural-orderby@5.0.0: {}
+
+  node-cnb@1.15.0:
+    dependencies:
+      axios: 1.10.0
+    transitivePeerDependencies:
+      - debug
 
   node-releases@2.0.19: {}
 
