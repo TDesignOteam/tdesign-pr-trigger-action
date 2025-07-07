@@ -41194,7 +41194,13 @@ async function start$1(context$1) {
 	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
 	await gitHelper.commit(title);
 	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	await (0, import_exec$1.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[context$1.trigger]}` });
+	if (repoMap[context$1.trigger] === "tdesign-vue-next") await (0, import_exec$1.exec)(packageManager, [
+		"-F",
+		"@tdesign/vue-next-test",
+		"run",
+		updateSnapScript
+	], { cwd: `./${repoMap[context$1.trigger]}` });
+	else await (0, import_exec$1.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[context$1.trigger]}` });
 	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
 	await gitHelper.push(branchName);
 	const targetRepo = new GithubHelper({
