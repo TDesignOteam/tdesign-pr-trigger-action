@@ -19,8 +19,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "prebuild": "rimraf dist/*",
-    "build": "ncc build --license license.txt",
+    "build": "tsdown",
     "lint": "eslint . ",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
@@ -31,18 +30,18 @@
   "dependencies": {
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.1"
+    "@actions/github": "^6.0.1",
+    "node-cnb": "^1.15.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.13.1",
     "@octokit/plugin-rest-endpoint-methods": "^16.0.0",
     "@types/node": "^22.15.18",
-    "@vercel/ncc": "^0.38.3",
     "eslint": "^9.26.0",
     "eslint-plugin-format": "^1.0.1",
     "lint-staged": "^16.0.0",
-    "rimraf": "^6.0.1",
     "simple-git-hooks": "^2.13.0",
+    "tsdown": "^0.12.9",
     "typescript": "^5.8.3",
     "vitest": "^3.1.3"
   },

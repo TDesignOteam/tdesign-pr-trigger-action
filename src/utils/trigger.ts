@@ -1,5 +1,6 @@
-import { getInput } from '@actions/core'
+import { error, getInput } from '@actions/core'
 import { exec } from '@actions/exec'
+import { getClient } from 'node-cnb'
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
 import { corepackEnable, getPkgLatestVersion } from './common'
@@ -64,6 +65,9 @@ export default function useTrigger(context: TriggerContext) {
     case '/upgrade-deps':
       upgradeDeps(context)
       break
+    case '/delete-cnb-branch':
+      deleteCnbBranch(context)
+      break
     default:
       throw new Error(`未支持的触发器: ${context.trigger}`)
   }
@@ -127,5 +131,19 @@ async function upgradeDeps(context) {
   const prData = await githubHelper.createPR(title, branchName, title, baseBranch)
   if (prData) {
     await githubHelper.addLabels(prData.number, ['skip-changelog'])
+  }
+}
+
+async function deleteCnbBranch(context) {
+  const branch = getInput('branch', { required: true })
+  const client = getClient('https://api.cnb.cool', context.token)
+  if (!client) {
+    error('token 无效')
+  }
+  try {
+    await client.repo.git.branches.delete({ repo: context.repo, branch })
+  }
+  catch (error) {
+    error(`删除分支失败: ${error.response?.data || error.message}`)
   }
 }
