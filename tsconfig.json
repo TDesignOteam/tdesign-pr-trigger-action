@@ -3,10 +3,11 @@
     "target": "esnext",
     "lib": ["esnext"],
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "strict": true,
     "strictNullChecks": true,
+    "newLine": "lf",
     "esModuleInterop": true,
     "skipDefaultLibCheck": true,
     "skipLibCheck": true

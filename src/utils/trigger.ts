@@ -73,7 +73,7 @@ export default function useTrigger(context: TriggerContext) {
   }
 }
 
-function autoPR(context) {
+function autoPR(context: TriggerContext) {
   switch (context.repo) {
     case 'tdesign-icons':
       iconStart(context)
@@ -86,7 +86,7 @@ function autoPR(context) {
   }
 }
 
-async function upgradeDeps(context) {
+async function upgradeDeps(context: TriggerContext) {
   const deps = getInput('deps')
   const packageManager = getInput('package-manager') || 'npm'
 
@@ -134,7 +134,7 @@ async function upgradeDeps(context) {
   }
 }
 
-async function deleteCnbBranch(context) {
+async function deleteCnbBranch(context: TriggerContext) {
   const branch = getInput('branch', { required: true })
   const client = getClient('https://api.cnb.cool', context.token)
   if (!client) {
@@ -143,7 +143,7 @@ async function deleteCnbBranch(context) {
   try {
     await client.repo.git.branches.delete({ repo: context.repo, branch })
   }
-  catch (error) {
-    error(`删除分支失败: ${error.response?.data || error.message}`)
+  catch (err: any) {
+    throw new Error(`删除分支失败: ${err.response?.data || err.message}`)
   }
 }

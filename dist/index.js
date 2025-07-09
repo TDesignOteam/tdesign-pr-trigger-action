@@ -41329,8 +41329,8 @@ async function deleteCnbBranch(context$1) {
 			repo: context$1.repo,
 			branch
 		});
-	} catch (error$2) {
-		error$2(`删除分支失败: ${error$2.response?.data || error$2.message}`);
+	} catch (err) {
+		throw new Error(`删除分支失败: ${err.response?.data || err.message}`);
 	}
 }
 
