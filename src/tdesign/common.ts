@@ -1,4 +1,4 @@
-import type { TriggerContext } from '../utils/trigger'
+import type { AutoPrTrigger, TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
 import { addContributor, GitHelper, GithubHelper } from '../utils'
 import { ownerMap, repoMap } from '../utils/trigger'
@@ -22,9 +22,10 @@ export default async function start(context: TriggerContext) {
     return
   }
   const body = addContributor(prData.body || '', prData.user.login)
+  const trigger = context.trigger as AutoPrTrigger
   const gitHelper = new GitHelper({
-    repo: repoMap[context.trigger],
-    owner: ownerMap[context.trigger],
+    repo: repoMap[trigger],
+    owner: ownerMap[trigger],
     token: context.token,
     dryRun: context.dry_run,
   })
@@ -45,13 +46,13 @@ export default async function start(context: TriggerContext) {
   await gitHelper.push(branchName)
 
   const targetRepo = new GithubHelper({
-    repo: repoMap[context.trigger],
-    owner: ownerMap[context.trigger],
+    repo: repoMap[trigger],
+    owner: ownerMap[trigger],
     token: context.token,
     dryRun: context.dry_run,
   })
   const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch)
   if (newPrData) {
-    githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
+    githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
   }
 }
