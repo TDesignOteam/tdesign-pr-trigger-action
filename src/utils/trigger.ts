@@ -7,7 +7,11 @@ import { corepackEnable, getPkgLatestVersion } from './common'
 import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
-export const iconsMap = {
+export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
+export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
+export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
+
+export const iconsMap: Record<AutoPrTrigger, string> = {
   '/pr-vue': 'tdesign-icons-vue',
   '/pr-vue-next': 'tdesign-icons-vue-next',
   '/pr-react': 'tdesign-icons-react',
@@ -15,26 +19,24 @@ export const iconsMap = {
   '/pr-mobile-react': 'tdesign-icons-react',
   '/pr-miniprogram': 'cdn-iconfont',
 }
-export const repoMap = {
+export const repoMap: Record<AutoPrTrigger, string> = {
   '/pr-vue': 'tdesign-vue',
   '/pr-vue-next': 'tdesign-vue-next',
   '/pr-react': 'tdesign-react',
   '/pr-mobile-vue': 'tdesign-mobile-vue',
   '/pr-mobile-react': 'tdesign-mobile-react',
   '/pr-miniprogram': 'tdesign-miniprogram',
-  '/pr-flutter': 'tdesign-flutter',
 }
-export const ownerMap = {
+export const ownerMap: Record<AutoPrTrigger, string> = {
   '/pr-vue': 'Tencent',
   '/pr-vue-next': 'Tencent',
   '/pr-react': 'Tencent',
   '/pr-mobile-vue': 'Tencent',
   '/pr-mobile-react': 'Tencent',
   '/pr-miniprogram': 'Tencent',
-  '/pr-flutter': 'Tencent',
 }
 
-export const packageManagerMap = {
+export const packageManagerMap: Record<TdesignRepo, string> = {
   'tdesign-vue': 'npm',
   'tdesign-vue-next': 'pnpm',
   'tdesign-react': 'pnpm',
@@ -48,7 +50,7 @@ export interface TriggerContext {
   repo: string
   pr_number: number
   token: string
-  trigger: string
+  trigger: Trigger
   dry_run: boolean
 }
 export default function useTrigger(context: TriggerContext) {
@@ -73,7 +75,7 @@ export default function useTrigger(context: TriggerContext) {
   }
 }
 
-function autoPR(context) {
+function autoPR(context: TriggerContext) {
   switch (context.repo) {
     case 'tdesign-icons':
       iconStart(context)
@@ -86,7 +88,7 @@ function autoPR(context) {
   }
 }
 
-async function upgradeDeps(context) {
+async function upgradeDeps(context: TriggerContext) {
   const deps = getInput('deps')
   const packageManager = getInput('package-manager') || 'npm'
 
@@ -134,7 +136,7 @@ async function upgradeDeps(context) {
   }
 }
 
-async function deleteCnbBranch(context) {
+async function deleteCnbBranch(context: TriggerContext) {
   const branch = getInput('branch', { required: true })
   const client = getClient('https://api.cnb.cool', context.token)
   if (!client) {
@@ -143,7 +145,7 @@ async function deleteCnbBranch(context) {
   try {
     await client.repo.git.branches.delete({ repo: context.repo, branch })
   }
-  catch (error) {
-    error(`删除分支失败: ${error.response?.data || error.message}`)
+  catch (err: any) {
+    throw new Error(`删除分支失败: ${err.response?.data || err.message}`)
   }
 }

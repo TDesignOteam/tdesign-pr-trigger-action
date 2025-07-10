@@ -41105,9 +41105,10 @@ async function start(context$1) {
 		return;
 	}
 	const body = addContributor(prData.body || "", prData.user.login);
+	const trigger = context$1.trigger;
 	const gitHelper = new GitHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
+		repo: repoMap[trigger],
+		owner: ownerMap[trigger],
 		token: context$1.token,
 		dryRun: context$1.dry_run
 	});
@@ -41124,13 +41125,13 @@ async function start(context$1) {
 	await gitHelper.commit(title);
 	await gitHelper.push(branchName);
 	const targetRepo = new GithubHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
+		repo: repoMap[trigger],
+		owner: ownerMap[trigger],
 		token: context$1.token,
 		dryRun: context$1.dry_run
 	});
 	const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch);
-	if (newPrData) githubHelper.addComment(context$1.pr_number, `> ${context$1.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
+	if (newPrData) githubHelper.addComment(context$1.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
 }
 
 //#endregion
@@ -41165,10 +41166,11 @@ async function start$1(context$1) {
 	});
 	const prData = await githubHelper.getPrData(context$1.pr_number);
 	const body = addContributor(prData.body || "", prData.user.login);
+	const trigger = context$1.trigger;
 	(0, import_core$2.startGroup)("body");
 	(0, import_core$2.info)(`${body}`);
 	(0, import_core$2.endGroup)();
-	const packageName = iconsMap[context$1.trigger];
+	const packageName = iconsMap[trigger];
 	(0, import_core$2.startGroup)(packageName);
 	let latestVersion = "";
 	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
@@ -41176,36 +41178,36 @@ async function start$1(context$1) {
 	(0, import_core$2.info)(`latestVersion: ${latestVersion}`);
 	(0, import_core$2.endGroup)();
 	const gitHelper = new GitHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
+		repo: repoMap[trigger],
+		owner: ownerMap[trigger],
 		token: context$1.token,
 		dryRun: context$1.dry_run
 	});
 	await gitHelper.clone();
 	await gitHelper.initSubmodule();
-	const packageManager = packageManagerMap[repoMap[context$1.trigger]];
+	const packageManager = packageManagerMap[repoMap[trigger]];
 	if (packageManager === "pnpm") await corepackEnable();
-	await (0, import_exec$1.exec)(packageManager, ["install"], { cwd: `./${repoMap[context$1.trigger]}` });
+	await (0, import_exec$1.exec)(packageManager, ["install"], { cwd: `./${repoMap[trigger]}` });
 	const branchName = `chore/icon/${packageName}/${latestVersion}`;
 	await gitHelper.createBranch(branchName);
-	await bumpIconsVersion(packageManager, repoMap[context$1.trigger]);
-	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[context$1.trigger], latestVersion);
+	await bumpIconsVersion(packageManager, repoMap[trigger]);
+	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[trigger], latestVersion);
 	if (!await gitHelper.isNeedCommit()) return true;
 	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
 	await gitHelper.commit(title);
 	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	if (repoMap[context$1.trigger] === "tdesign-vue-next") await (0, import_exec$1.exec)(packageManager, [
+	if (repoMap[trigger] === "tdesign-vue-next") await (0, import_exec$1.exec)(packageManager, [
 		"-F",
 		"@tdesign/vue-next-test",
 		"run",
 		updateSnapScript
-	], { cwd: `./${repoMap[context$1.trigger]}` });
-	else await (0, import_exec$1.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[context$1.trigger]}` });
+	], { cwd: `./${repoMap[trigger]}` });
+	else await (0, import_exec$1.exec)(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[trigger]}` });
 	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
 	await gitHelper.push(branchName);
 	const targetRepo = new GithubHelper({
-		repo: repoMap[context$1.trigger],
-		owner: ownerMap[context$1.trigger],
+		repo: repoMap[trigger],
+		owner: ownerMap[trigger],
 		token: context$1.token,
 		dryRun: context$1.dry_run
 	});
@@ -41231,8 +41233,7 @@ const repoMap = {
 	"/pr-react": "tdesign-react",
 	"/pr-mobile-vue": "tdesign-mobile-vue",
 	"/pr-mobile-react": "tdesign-mobile-react",
-	"/pr-miniprogram": "tdesign-miniprogram",
-	"/pr-flutter": "tdesign-flutter"
+	"/pr-miniprogram": "tdesign-miniprogram"
 };
 const ownerMap = {
 	"/pr-vue": "Tencent",
@@ -41240,8 +41241,7 @@ const ownerMap = {
 	"/pr-react": "Tencent",
 	"/pr-mobile-vue": "Tencent",
 	"/pr-mobile-react": "Tencent",
-	"/pr-miniprogram": "Tencent",
-	"/pr-flutter": "Tencent"
+	"/pr-miniprogram": "Tencent"
 };
 const packageManagerMap = {
 	"tdesign-vue": "npm",
@@ -41329,8 +41329,8 @@ async function deleteCnbBranch(context$1) {
 			repo: context$1.repo,
 			branch
 		});
-	} catch (error$2) {
-		error$2(`删除分支失败: ${error$2.response?.data || error$2.message}`);
+	} catch (err) {
+		throw new Error(`删除分支失败: ${err.response?.data || err.message}`);
 	}
 }
 
