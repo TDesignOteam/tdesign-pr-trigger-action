@@ -14844,19 +14844,19 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 			return __awaiter$10(this, void 0, void 0, function* () {
 				if (this._disposed) throw new Error("Client has already been disposed.");
 				const parsedUrl = new URL(requestUrl);
-				let info$7 = this._prepareRequest(verb, parsedUrl, headers);
+				let info$8 = this._prepareRequest(verb, parsedUrl, headers);
 				const maxTries = this._allowRetries && RetryableHttpVerbs.includes(verb) ? this._maxRetries + 1 : 1;
 				let numTries = 0;
 				let response;
 				do {
-					response = yield this.requestRaw(info$7, data);
+					response = yield this.requestRaw(info$8, data);
 					if (response && response.message && response.message.statusCode === HttpCodes.Unauthorized) {
 						let authenticationHandler;
 						for (const handler$1 of this.handlers) if (handler$1.canHandleAuthentication(response)) {
 							authenticationHandler = handler$1;
 							break;
 						}
-						if (authenticationHandler) return authenticationHandler.handleAuthentication(this, info$7, data);
+						if (authenticationHandler) return authenticationHandler.handleAuthentication(this, info$8, data);
 						else return response;
 					}
 					let redirectsRemaining = this._maxRedirects;
@@ -14869,8 +14869,8 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 						if (parsedRedirectUrl.hostname !== parsedUrl.hostname) {
 							for (const header in headers) if (header.toLowerCase() === "authorization") delete headers[header];
 						}
-						info$7 = this._prepareRequest(verb, parsedRedirectUrl, headers);
-						response = yield this.requestRaw(info$7, data);
+						info$8 = this._prepareRequest(verb, parsedRedirectUrl, headers);
+						response = yield this.requestRaw(info$8, data);
 						redirectsRemaining--;
 					}
 					if (!response.message.statusCode || !HttpResponseRetryCodes.includes(response.message.statusCode)) return response;
@@ -14895,7 +14895,7 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 		* @param info
 		* @param data
 		*/
-		requestRaw(info$7, data) {
+		requestRaw(info$8, data) {
 			return __awaiter$10(this, void 0, void 0, function* () {
 				return new Promise((resolve$1, reject) => {
 					function callbackForResult(err, res) {
@@ -14903,7 +14903,7 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 						else if (!res) reject(/* @__PURE__ */ new Error("Unknown error"));
 						else resolve$1(res);
 					}
-					this.requestRawWithCallback(info$7, data, callbackForResult);
+					this.requestRawWithCallback(info$8, data, callbackForResult);
 				});
 			});
 		}
@@ -14913,10 +14913,10 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 		* @param data
 		* @param onResult
 		*/
-		requestRawWithCallback(info$7, data, onResult) {
+		requestRawWithCallback(info$8, data, onResult) {
 			if (typeof data === "string") {
-				if (!info$7.options.headers) info$7.options.headers = {};
-				info$7.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
+				if (!info$8.options.headers) info$8.options.headers = {};
+				info$8.options.headers["Content-Length"] = Buffer.byteLength(data, "utf8");
 			}
 			let callbackCalled = false;
 			function handleResult(err, res) {
@@ -14925,7 +14925,7 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 					onResult(err, res);
 				}
 			}
-			const req = info$7.httpModule.request(info$7.options, (msg) => {
+			const req = info$8.httpModule.request(info$8.options, (msg) => {
 				const res = new HttpClientResponse(msg);
 				handleResult(void 0, res);
 			});
@@ -14935,7 +14935,7 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 			});
 			req.setTimeout(this._socketTimeout || 3 * 6e4, () => {
 				if (socket) socket.end();
-				handleResult(/* @__PURE__ */ new Error(`Request timeout: ${info$7.options.path}`));
+				handleResult(/* @__PURE__ */ new Error(`Request timeout: ${info$8.options.path}`));
 			});
 			req.on("error", function(err) {
 				handleResult(err);
@@ -14965,21 +14965,21 @@ var require_lib = __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/no
 			return this._getProxyAgentDispatcher(parsedUrl, proxyUrl);
 		}
 		_prepareRequest(method, requestUrl, headers) {
-			const info$7 = {};
-			info$7.parsedUrl = requestUrl;
-			const usingSsl = info$7.parsedUrl.protocol === "https:";
-			info$7.httpModule = usingSsl ? https$3 : http$3;
+			const info$8 = {};
+			info$8.parsedUrl = requestUrl;
+			const usingSsl = info$8.parsedUrl.protocol === "https:";
+			info$8.httpModule = usingSsl ? https$3 : http$3;
 			const defaultPort = usingSsl ? 443 : 80;
-			info$7.options = {};
-			info$7.options.host = info$7.parsedUrl.hostname;
-			info$7.options.port = info$7.parsedUrl.port ? parseInt(info$7.parsedUrl.port) : defaultPort;
-			info$7.options.path = (info$7.parsedUrl.pathname || "") + (info$7.parsedUrl.search || "");
-			info$7.options.method = method;
-			info$7.options.headers = this._mergeHeaders(headers);
-			if (this.userAgent != null) info$7.options.headers["user-agent"] = this.userAgent;
-			info$7.options.agent = this._getAgent(info$7.parsedUrl);
-			if (this.handlers) for (const handler$1 of this.handlers) handler$1.prepareRequest(info$7.options);
-			return info$7;
+			info$8.options = {};
+			info$8.options.host = info$8.parsedUrl.hostname;
+			info$8.options.port = info$8.parsedUrl.port ? parseInt(info$8.parsedUrl.port) : defaultPort;
+			info$8.options.path = (info$8.parsedUrl.pathname || "") + (info$8.parsedUrl.search || "");
+			info$8.options.method = method;
+			info$8.options.headers = this._mergeHeaders(headers);
+			if (this.userAgent != null) info$8.options.headers["user-agent"] = this.userAgent;
+			info$8.options.agent = this._getAgent(info$8.parsedUrl);
+			if (this.handlers) for (const handler$1 of this.handlers) handler$1.prepareRequest(info$8.options);
+			return info$8;
 		}
 		_mergeHeaders(headers) {
 			if (this.requestOptions && this.requestOptions.headers) return Object.assign({}, lowercaseKeys$1(this.requestOptions.headers), lowercaseKeys$1(headers || {}));
@@ -16951,10 +16951,10 @@ var require_core = __commonJS({ "node_modules/.pnpm/@actions+core@1.11.1/node_mo
 	* Writes info to log with console.log.
 	* @param message info message
 	*/
-	function info$6(message) {
+	function info$7(message) {
 		process.stdout.write(message + os$1.EOL);
 	}
-	exports.info = info$6;
+	exports.info = info$7;
 	/**
 	* Begin an output group.
 	*
@@ -41325,10 +41325,11 @@ async function deleteCnbBranch(context$1) {
 	const client = (0, import_dist.getClient)("https://api.cnb.cool", context$1.token);
 	if (!client) (0, import_core$1.error)("token 无效");
 	try {
-		await client.repo.git.branches.delete({
+		const res = await client.repo.git.branches.delete({
 			repo: context$1.repo,
 			branch
 		});
+		(0, import_core$1.info)(`删除分支成功:${JSON.stringify(res)}`);
 	} catch (err) {
 		throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`);
 	}

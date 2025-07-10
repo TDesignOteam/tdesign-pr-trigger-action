@@ -1,4 +1,4 @@
-import { error, getInput } from '@actions/core'
+import { error, getInput, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { getClient } from 'node-cnb'
 import commonStart from '../tdesign/common'
@@ -143,7 +143,8 @@ async function deleteCnbBranch(context: TriggerContext) {
     error('token 无效')
   }
   try {
-    await client.repo.git.branches.delete({ repo: context.repo, branch })
+    const res = await client.repo.git.branches.delete({ repo: context.repo, branch })
+    info(`删除分支成功:${JSON.stringify(res)}`)
   }
   catch (err: any) {
     throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`)
