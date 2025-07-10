@@ -41330,7 +41330,7 @@ async function deleteCnbBranch(context$1) {
 			branch
 		});
 	} catch (err) {
-		throw new Error(`删除分支失败: ${err.response?.data || err.message}`);
+		throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`);
 	}
 }
 

@@ -146,6 +146,6 @@ async function deleteCnbBranch(context: TriggerContext) {
     await client.repo.git.branches.delete({ repo: context.repo, branch })
   }
   catch (err: any) {
-    throw new Error(`删除分支失败: ${err.response?.data || err.message}`)
+    throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`)
   }
 }
