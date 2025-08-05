@@ -43441,7 +43441,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4
 			return signals_js_1.signals;
 		}
 	});
-	const processOk = (process$3) => !!process$3 && typeof process$3 === "object" && typeof process$3.removeListener === "function" && typeof process$3.emit === "function" && typeof process$3.reallyExit === "function" && typeof process$3.listeners === "function" && typeof process$3.kill === "function" && typeof process$3.pid === "number" && typeof process$3.on === "function";
+	const processOk = (process$4) => !!process$4 && typeof process$4 === "object" && typeof process$4.removeListener === "function" && typeof process$4.emit === "function" && typeof process$4.reallyExit === "function" && typeof process$4.listeners === "function" && typeof process$4.kill === "function" && typeof process$4.pid === "number" && typeof process$4.on === "function";
 	const kExitEmitter = Symbol.for("signal-exit emitter");
 	const global$1 = globalThis;
 	const ObjectDefineProperty = Object.defineProperty.bind(Object);
@@ -43509,7 +43509,7 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4
 	};
 	var SignalExit = class extends SignalExitBase {
 		/* c8 ignore start */
-		#hupSig = process$2.platform === "win32" ? "SIGINT" : "SIGHUP";
+		#hupSig = process$3.platform === "win32" ? "SIGINT" : "SIGHUP";
 		/* c8 ignore stop */
 		#emitter = new Emitter();
 		#process;
@@ -43517,15 +43517,15 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4
 		#originalProcessReallyExit;
 		#sigListeners = {};
 		#loaded = false;
-		constructor(process$3) {
+		constructor(process$4) {
 			super();
-			this.#process = process$3;
+			this.#process = process$4;
 			this.#sigListeners = {};
 			for (const sig of signals_js_1.signals) this.#sigListeners[sig] = () => {
 				const listeners = this.#process.listeners(sig);
 				let { count } = this.#emitter;
 				/* c8 ignore start */
-				const p = process$3;
+				const p = process$4;
 				if (typeof p.__signal_exit_emitter__ === "object" && typeof p.__signal_exit_emitter__.count === "number") count += p.__signal_exit_emitter__.count;
 				/* c8 ignore stop */
 				if (listeners.length === count) {
@@ -43533,11 +43533,11 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4
 					const ret = this.#emitter.emit("exit", null, sig);
 					/* c8 ignore start */
 					const s$1 = sig === "SIGHUP" ? this.#hupSig : sig;
-					if (!ret) process$3.kill(process$3.pid, s$1);
+					if (!ret) process$4.kill(process$4.pid, s$1);
 				}
 			};
-			this.#originalProcessReallyExit = process$3.reallyExit;
-			this.#originalProcessEmit = process$3.emit;
+			this.#originalProcessReallyExit = process$4.reallyExit;
+			this.#originalProcessEmit = process$4.emit;
 		}
 		onExit(cb, opts) {
 			/* c8 ignore start */
@@ -43604,8 +43604,8 @@ var require_cjs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4
 			} else return og.call(this.#process, ev, ...args);
 		}
 	};
-	const process$2 = globalThis.process;
-	_a = signalExitWrap(processOk(process$2) ? new SignalExit(process$2) : new SignalExitFallback()), exports.onExit = _a.onExit, exports.load = _a.load, exports.unload = _a.unload;
+	const process$3 = globalThis.process;
+	_a = signalExitWrap(processOk(process$3) ? new SignalExit(process$3) : new SignalExitFallback()), exports.onExit = _a.onExit, exports.load = _a.load, exports.unload = _a.unload;
 }) });
 
 //#endregion
@@ -44403,7 +44403,13 @@ async function bumpIconsVersion(packageManager, repo) {
 				const iconsViewVersion = await getPkgLatestVersion("tdesign-icons-view");
 				workspaceManifest = updateCatalogs(workspaceManifest, "tdesign-icons-view", iconsViewVersion);
 				await (0, import_lib.updateWorkspaceManifest)(`./${repo}`, workspaceManifest);
-				await (0, import_exec$3.exec)("pnpm", ["install", "--force"], { cwd: `./${repo}` });
+				await (0, import_exec$3.exec)("pnpm", ["install", "--force"], {
+					cwd: `./${repo}`,
+					env: {
+						...node_process.default.env,
+						CI: "false"
+					}
+				});
 			}
 		} else await (0, import_exec$3.exec)("npx", [
 			"npm-check-updates",

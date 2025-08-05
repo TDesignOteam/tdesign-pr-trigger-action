@@ -1,4 +1,5 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
+import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
@@ -70,7 +71,11 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
         const iconsViewVersion = await getPkgLatestVersion('tdesign-icons-view')
         workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-view', iconsViewVersion)
         await updateWorkspaceManifest(`./${repo}`, workspaceManifest)
-        await exec('pnpm', ['install', '--force'], { cwd: `./${repo}` })
+
+        await exec('pnpm', ['install', '--force'], {
+          cwd: `./${repo}`,
+          env: { ...process.env, CI: 'false' }, // Disable CI environment variable
+        })
       }
     }
     else {
