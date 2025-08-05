@@ -1,6 +1,9 @@
+import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 import { getOctokit } from '@actions/github'
+import { updateWorkspaceManifest } from '@pnpm/workspace.manifest-writer'
+import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 
 export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
 export const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i
@@ -59,15 +62,55 @@ export async function getPkgLatestVersion(packageName: string) {
 
 export async function bumpIconsVersion(packageManager: string, repo: string) {
   if (packageManager === 'pnpm') {
-    await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` })
-  }
-  else {
-    await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` })
-  }
+    if (repo === 'tdesign-vue-next') {
+      let workspaceManifest = await readWorkspaceManifest(`./${repo}`)
+      if (workspaceManifest) {
+        const iconsVueNextVersion = await getPkgLatestVersion('tdesign-icons-vue-next')
+        workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-vue-next', iconsVueNextVersion)
+        const iconsViewVersion = await getPkgLatestVersion('tdesign-icons-view')
+        workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-view', iconsViewVersion)
+        await updateWorkspaceManifest(`./${repo}`, workspaceManifest)
+        await exec('pnpm', ['install'], { cwd: `./${repo}` })
+      }
+    }
+    else {
+      await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` })
+    }
 
-  await exec('git', ['status'], { cwd: `./${repo}` })
+    await exec('git', ['status'], { cwd: `./${repo}` })
+  }
 }
-
 export async function corepackEnable() {
   await exec('corepack', ['enable'])
+}
+function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
+  if (workspaceManifest.catalog) {
+    for (const [name, ver] of Object.entries(workspaceManifest.catalog)) {
+      if (name === packageName) {
+        if (ver.startsWith('^') || ver.startsWith('~')) {
+          workspaceManifest.catalog[name] = `${ver.slice(0, 1)}${version}`
+        }
+        else {
+          workspaceManifest.catalog[name] = version
+        }
+      }
+    }
+  }
+  if (workspaceManifest.catalogs) {
+    for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
+      for (const [name, ver] of Object.entries(catalog)) {
+        if (name === packageName) {
+          if (ver.startsWith('^') || ver.startsWith('~')) {
+            catalog[name] = `${ver.slice(0, 1)}${version}`
+          }
+          else {
+            catalog[name] = version
+          }
+        }
+      }
+      workspaceManifest.catalogs[key] = catalog
+    }
+  }
+
+  return workspaceManifest
 }
