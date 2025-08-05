@@ -31,6 +31,8 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/github": "^6.0.1",
+    "@pnpm/workspace.manifest-writer": "^1000.2.3",
+    "@pnpm/workspace.read-manifest": "^1000.2.2",
     "node-cnb": "^1.15.0"
   },
   "devDependencies": {
