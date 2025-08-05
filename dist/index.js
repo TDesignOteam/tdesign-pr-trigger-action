@@ -44403,8 +44403,7 @@ async function bumpIconsVersion(packageManager, repo) {
 				const iconsViewVersion = await getPkgLatestVersion("tdesign-icons-view");
 				workspaceManifest = updateCatalogs(workspaceManifest, "tdesign-icons-view", iconsViewVersion);
 				await (0, import_lib.updateWorkspaceManifest)(`./${repo}`, workspaceManifest);
-				await (0, import_exec$3.exec)("export", ["CI=false"], { cwd: `./${repo}` });
-				await (0, import_exec$3.exec)("pnpm", ["install"], { cwd: `./${repo}` });
+				await (0, import_exec$3.exec)("pnpm", ["install", "--force"], { cwd: `./${repo}` });
 			}
 		} else await (0, import_exec$3.exec)("npx", [
 			"npm-check-updates",
