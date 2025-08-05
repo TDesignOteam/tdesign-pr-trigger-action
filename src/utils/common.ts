@@ -70,6 +70,7 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
         const iconsViewVersion = await getPkgLatestVersion('tdesign-icons-view')
         workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-view', iconsViewVersion)
         await updateWorkspaceManifest(`./${repo}`, workspaceManifest)
+        await exec('export', ['CI=false'], { cwd: `./${repo}` })
         await exec('pnpm', ['install'], { cwd: `./${repo}` })
       }
     }
