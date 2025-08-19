@@ -1,5 +1,6 @@
 {
   "name": "tdesign-pr-trigger-action",
+  "type": "module",
   "version": "0.0.0",
   "private": true,
   "packageManager": "pnpm@10.14.0",
