@@ -1,7 +1,8 @@
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import process$1 from "node:process";
+import { fileURLToPath } from "node:url";
 
 //#region rolldown:runtime
 var __create$2 = Object.create;
@@ -11243,7 +11244,6 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 		let httpRequest = null;
 		let response = null;
 		const httpCache = null;
-		const revalidatingFlag = false;
 		if (request$2.window === "no-window" && request$2.redirect === "error") {
 			httpFetchParams = fetchParams;
 			httpRequest = request$2;
@@ -44288,14 +44288,13 @@ var require_lib$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+objec
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1000.2.3/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
-var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1000.2.3/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.0/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
+var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.0/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.updateWorkspaceManifest = updateWorkspaceManifest$1;
-	exports.addCatalogs = addCatalogs;
 	const fs_1 = __importDefault(__require("fs"));
 	const path_1 = __importDefault(__require("path"));
 	const workspace_read_manifest_1 = require_lib$3();
@@ -44316,10 +44315,11 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspa
 			sortKeys: false
 		});
 	}
-	async function updateWorkspaceManifest$1(dir, updatedFields) {
+	async function updateWorkspaceManifest$1(dir, opts) {
 		const manifest = await (0, workspace_read_manifest_1.readWorkspaceManifest)(dir) ?? {};
-		let shouldBeUpdated = false;
-		for (const [key, value] of Object.entries(updatedFields)) if (!(0, equals_1.default)(manifest[key], value)) {
+		let shouldBeUpdated = opts.updatedCatalogs != null && addCatalogs(manifest, opts.updatedCatalogs);
+		if (opts.cleanupUnusedCatalogs) shouldBeUpdated = removePackagesFromWorkspaceCatalog(manifest, opts.allProjects ?? []) || shouldBeUpdated;
+		for (const [key, value] of Object.entries(opts.updatedFields ?? {})) if (!(0, equals_1.default)(manifest[key], value)) {
 			shouldBeUpdated = true;
 			if (value == null) delete manifest[key];
 			else manifest[key] = value;
@@ -44331,8 +44331,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspa
 		}
 		await writeManifestFile(dir, manifest);
 	}
-	async function addCatalogs(workspaceDir, newCatalogs) {
-		const manifest = await (0, workspace_read_manifest_1.readWorkspaceManifest)(workspaceDir) ?? {};
+	function addCatalogs(manifest, newCatalogs) {
 		let shouldBeUpdated = false;
 		for (const catalogName in newCatalogs) {
 			let targetCatalog = catalogName === "default" ? manifest.catalog ?? manifest.catalogs?.default : manifest.catalogs?.[catalogName];
@@ -44350,7 +44349,63 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspa
 				manifest.catalogs[catalogName] = targetCatalog;
 			}
 		}
-		if (shouldBeUpdated) await writeManifestFile(workspaceDir, manifest);
+		return shouldBeUpdated;
+	}
+	function removePackagesFromWorkspaceCatalog(manifest, packagesJson) {
+		let shouldBeUpdated = false;
+		if (manifest.catalog == null && manifest.catalogs == null) return shouldBeUpdated;
+		const packageReferences = {};
+		for (const pkg of packagesJson) {
+			const pkgManifest = pkg.manifest;
+			const dependencyTypes = [
+				pkgManifest.dependencies,
+				pkgManifest.devDependencies,
+				pkgManifest.optionalDependencies,
+				pkgManifest.peerDependencies
+			];
+			for (const deps of dependencyTypes) {
+				if (!deps) continue;
+				for (const [pkgName, version] of Object.entries(deps)) {
+					if (!packageReferences[pkgName]) packageReferences[pkgName] = /* @__PURE__ */ new Set();
+					packageReferences[pkgName].add(version);
+				}
+			}
+		}
+		if (manifest.catalog) {
+			const packagesToRemove = Object.keys(manifest.catalog).filter((pkg) => !packageReferences[pkg]?.has("catalog:"));
+			for (const pkg of packagesToRemove) {
+				delete manifest.catalog[pkg];
+				shouldBeUpdated = true;
+			}
+			if (Object.keys(manifest.catalog).length === 0) {
+				delete manifest.catalog;
+				shouldBeUpdated = true;
+			}
+		}
+		if (manifest.catalogs) {
+			const catalogsToRemove = [];
+			for (const [catalogName, catalog] of Object.entries(manifest.catalogs)) {
+				if (!catalog) continue;
+				const packagesToRemove = Object.keys(catalog).filter((pkg) => {
+					const references = packageReferences[pkg];
+					return !references?.has(`catalog:${catalogName}`) && !references?.has("catalog:");
+				});
+				for (const pkg of packagesToRemove) {
+					delete catalog[pkg];
+					shouldBeUpdated = true;
+				}
+				if (Object.keys(catalog).length === 0) {
+					catalogsToRemove.push(catalogName);
+					shouldBeUpdated = true;
+				}
+			}
+			for (const catalogName of catalogsToRemove) delete manifest.catalogs[catalogName];
+			if (Object.keys(manifest.catalogs).length === 0) {
+				delete manifest.catalogs;
+				shouldBeUpdated = true;
+			}
+		}
+		return shouldBeUpdated;
 	}
 }) });
 
@@ -44404,7 +44459,7 @@ async function bumpIconsVersion(packageManager, repo) {
 				workspaceManifest = updateCatalogs(workspaceManifest, "tdesign-icons-vue-next", iconsVueNextVersion);
 				const iconsViewVersion = await getPkgLatestVersion("tdesign-icons-view");
 				workspaceManifest = updateCatalogs(workspaceManifest, "tdesign-icons-view", iconsViewVersion);
-				await (0, import_lib.updateWorkspaceManifest)(`./${repo}`, workspaceManifest);
+				await (0, import_lib.updateWorkspaceManifest)(`./${repo}`, { updatedFields: workspaceManifest });
 				await (0, import_exec$3.exec)("pnpm", ["install", "--force"], {
 					cwd: `./${repo}`,
 					env: {
@@ -44885,6 +44940,8 @@ async function run() {
 			(0, import_core.info)("issue_comment not a pull_request comment");
 			return;
 		}
+		const __filename$1 = fileURLToPath(import.meta.url);
+		const __dirname = dirname(__filename$1);
 		const whitelist = readFileSync(resolve(__dirname, "../.comment-trigger-whitelist"), "utf-8");
 		let isWhitelist = false;
 		whitelist.split("\n").forEach((item) => {

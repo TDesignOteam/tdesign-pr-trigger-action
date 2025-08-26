@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import { getInput, info } from '@actions/core'
 import { context } from '@actions/github'
 import useTrigger from './utils/trigger'
@@ -21,7 +22,8 @@ export async function run(): Promise<void> {
       info('issue_comment not a pull_request comment')
       return
     }
-
+    const __filename = fileURLToPath(import.meta.url)
+    const __dirname = dirname(__filename)
     const whitelist = readFileSync(resolve(__dirname, '../.comment-trigger-whitelist'), 'utf-8')
     // TODO 需要白名单的人才能触发
     let isWhitelist = false
