@@ -70,7 +70,7 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
         workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-vue-next', iconsVueNextVersion)
         const iconsViewVersion = await getPkgLatestVersion('tdesign-icons-view')
         workspaceManifest = updateCatalogs(workspaceManifest, 'tdesign-icons-view', iconsViewVersion)
-        await updateWorkspaceManifest(`./${repo}`, workspaceManifest)
+        await updateWorkspaceManifest(`./${repo}`, { updatedFields: workspaceManifest })
 
         await exec('pnpm', ['install', '--force'], {
           cwd: `./${repo}`,
