@@ -44836,7 +44836,7 @@ const packageManagerMap = {
 	"tdesign-react": "pnpm",
 	"tdesign-mobile-vue": "npm",
 	"tdesign-mobile-react": "npm",
-	"tdesign-miniprogram": "npm"
+	"tdesign-miniprogram": "pnpm"
 };
 function useTrigger(context$1) {
 	switch (context$1.trigger) {

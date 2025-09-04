@@ -42,7 +42,7 @@ export const packageManagerMap: Record<TdesignRepo, string> = {
   'tdesign-react': 'pnpm',
   'tdesign-mobile-vue': 'npm',
   'tdesign-mobile-react': 'npm',
-  'tdesign-miniprogram': 'npm',
+  'tdesign-miniprogram': 'pnpm',
 }
 
 export interface TriggerContext {
