@@ -79,7 +79,7 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
       }
     }
     else {
-      await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `../${repo}` })
+      await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` })
     }
   }
   else {

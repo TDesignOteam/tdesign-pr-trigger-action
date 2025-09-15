@@ -44299,7 +44299,7 @@ async function bumpIconsVersion(packageManager, repo) {
 		"update",
 		"tdesign-icons-*",
 		"--latest"
-	], { cwd: `../${repo}` });
+	], { cwd: `./${repo}` });
 	else await (0, import_exec$3.exec)("npx", [
 		"npm-check-updates",
 		"tdesign-icons-*",
