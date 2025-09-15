@@ -79,11 +79,14 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
       }
     }
     else {
-      await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` })
+      await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` })
     }
-
-    await exec('git', ['status'], { cwd: `./${repo}` })
   }
+  else {
+    await exec('npx', ['npm-check-updates', 'tdesign-icons-*', '-u'], { cwd: `./${repo}` })
+  }
+
+  await exec('git', ['status'], { cwd: `./${repo}` })
 }
 export async function corepackEnable() {
   await exec('corepack', ['enable'])
