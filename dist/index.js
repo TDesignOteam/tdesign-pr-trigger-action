@@ -2351,14 +2351,13 @@ var require_multipart = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@fastif
 		this._cb = void 0;
 		this._nparts = 0;
 		this._boy = boy;
-		const parserCfg = {
+		this.parser = new Dicer$1({
 			boundary,
 			maxHeaderPairs: headerPairsLimit,
 			maxHeaderSize: headerSizeLimit,
 			partHwm: fileOpts.highWaterMark,
 			highWaterMark: cfg.highWaterMark
-		};
-		this.parser = new Dicer$1(parserCfg);
+		});
 		this.parser.on("drain", function() {
 			self$1._needDrain = false;
 			if (self$1._cb && !self$1._pause) {
@@ -3418,8 +3417,7 @@ var require_util$5 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 		const parsedMetadata = parseMetadata(metadataList);
 		if (parsedMetadata === "no metadata") return true;
 		if (parsedMetadata.length === 0) return true;
-		const strongest = getStrongestMetadata(parsedMetadata);
-		const metadata = filterMetadataListByAlgorithm(parsedMetadata, strongest);
+		const metadata = filterMetadataListByAlgorithm(parsedMetadata, getStrongestMetadata(parsedMetadata));
 		for (const item of metadata) {
 			const algorithm = item.algo;
 			const expectedValue = item.hash;
@@ -3563,8 +3561,7 @@ var require_util$5 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 				if (Object.getPrototypeOf(this) !== i$1) throw new TypeError(`'next' called on an object that does not implement interface ${name} Iterator.`);
 				const { index, kind: kind$1, target } = object;
 				const values = target();
-				const len = values.length;
-				if (index >= len) return {
+				if (index >= values.length) return {
 					value: void 0,
 					done: true
 				};
@@ -3609,8 +3606,7 @@ var require_util$5 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 			return;
 		}
 		try {
-			const result = await readAllBytes$1(reader);
-			successSteps(result);
+			successSteps(await readAllBytes$1(reader));
 		} catch (e) {
 			errorSteps(e);
 		}
@@ -4051,11 +4047,9 @@ var require_dataURL = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.
 		mimeType = removeASCIIWhitespace(mimeType, true, true);
 		if (position.position >= input.length) return "failure";
 		position.position++;
-		const encodedBody = input.slice(mimeTypeLength + 1);
-		let body = stringPercentDecode(encodedBody);
+		let body = stringPercentDecode(input.slice(mimeTypeLength + 1));
 		if (/;(\u0020){0,}base64$/i.test(mimeType)) {
-			const stringBody = isomorphicDecode(body);
-			body = forgivingBase64(stringBody);
+			body = forgivingBase64(isomorphicDecode(body));
 			if (body === "failure") return "failure";
 			mimeType = mimeType.slice(0, -6);
 			mimeType = mimeType.replace(/(\u0020)+$/, "");
@@ -4110,8 +4104,7 @@ var require_dataURL = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.
 	}
 	/** @param {string} input */
 	function stringPercentDecode(input) {
-		const bytes = encoder$1.encode(input);
-		return percentDecode(bytes);
+		return percentDecode(encoder$1.encode(input));
 	}
 	/** @param {Uint8Array} input */
 	function percentDecode(input) {
@@ -4333,14 +4326,11 @@ var require_file = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29.
 	};
 	var FileLike$1 = class FileLike$1 {
 		constructor(blobLike, fileName, options = {}) {
-			const n = fileName;
-			const t = options.type;
-			const d$1 = options.lastModified ?? Date.now();
 			this[kState$9] = {
 				blobLike,
-				name: n,
-				type: t,
-				lastModified: d$1
+				name: fileName,
+				type: options.type,
+				lastModified: options.lastModified ?? Date.now()
 			};
 		}
 		stream(...args) {
@@ -5482,6 +5472,7 @@ var require_utils$2 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.
 //#region node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/llhttp/constants.js
 var require_constants$2 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/llhttp/constants.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
 	const utils_1$2 = require_utils$2();
 	(function(ERROR) {
 		ERROR[ERROR["OK"] = 0] = "OK";
@@ -8764,10 +8755,7 @@ var require_mock_utils = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici
 		}
 		if (typeof mockDispatch$1.headers === "undefined") return true;
 		if (typeof headers !== "object" || typeof mockDispatch$1.headers !== "object") return false;
-		for (const [matchHeaderName, matchHeaderValue$1] of Object.entries(mockDispatch$1.headers)) {
-			const headerValue = getHeaderByName(headers, matchHeaderName);
-			if (!matchValue$1(matchHeaderValue$1, headerValue)) return false;
-		}
+		for (const [matchHeaderName, matchHeaderValue$1] of Object.entries(mockDispatch$1.headers)) if (!matchValue$1(matchHeaderValue$1, getHeaderByName(headers, matchHeaderName))) return false;
 		return true;
 	}
 	function safeUrl(path$8) {
@@ -9014,20 +9002,18 @@ var require_mock_interceptor = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/
 		createMockScopeDispatchData(statusCode, data, responseOptions = {}) {
 			const responseData = getResponseData$1(data);
 			const contentLength = this[kContentLength] ? { "content-length": responseData.length } : {};
-			const headers = {
-				...this[kDefaultHeaders],
-				...contentLength,
-				...responseOptions.headers
-			};
-			const trailers = {
-				...this[kDefaultTrailers],
-				...responseOptions.trailers
-			};
 			return {
 				statusCode,
 				data,
-				headers,
-				trailers
+				headers: {
+					...this[kDefaultHeaders],
+					...contentLength,
+					...responseOptions.headers
+				},
+				trailers: {
+					...this[kDefaultTrailers],
+					...responseOptions.trailers
+				}
 			};
 		}
 		validateReplyParameters(statusCode, data, responseOptions) {
@@ -9047,22 +9033,19 @@ var require_mock_interceptor = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/
 					this.validateReplyParameters(statusCode$1, data$1, responseOptions$1);
 					return { ...this.createMockScopeDispatchData(statusCode$1, data$1, responseOptions$1) };
 				};
-				const newMockDispatch$1 = addMockDispatch(this[kDispatches$3], this[kDispatchKey], wrappedDefaultsCallback);
-				return new MockScope(newMockDispatch$1);
+				return new MockScope(addMockDispatch(this[kDispatches$3], this[kDispatchKey], wrappedDefaultsCallback));
 			}
 			const [statusCode, data = "", responseOptions = {}] = [...arguments];
 			this.validateReplyParameters(statusCode, data, responseOptions);
 			const dispatchData = this.createMockScopeDispatchData(statusCode, data, responseOptions);
-			const newMockDispatch = addMockDispatch(this[kDispatches$3], this[kDispatchKey], dispatchData);
-			return new MockScope(newMockDispatch);
+			return new MockScope(addMockDispatch(this[kDispatches$3], this[kDispatchKey], dispatchData));
 		}
 		/**
 		* Mock an undici request with a defined error.
 		*/
 		replyWithError(error$2) {
 			if (typeof error$2 === "undefined") throw new InvalidArgumentError$6("error must be defined");
-			const newMockDispatch = addMockDispatch(this[kDispatches$3], this[kDispatchKey], { error: error$2 });
-			return new MockScope(newMockDispatch);
+			return new MockScope(addMockDispatch(this[kDispatches$3], this[kDispatchKey], { error: error$2 }));
 		}
 		/**
 		* Set default reply headers on the interceptor for subsequent replies
@@ -10109,8 +10092,7 @@ var require_response = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5
 		static json(data, init$1 = {}) {
 			webidl$9.argumentLengthCheck(arguments, 1, { header: "Response.json" });
 			if (init$1 !== null) init$1 = webidl$9.converters.ResponseInit(init$1);
-			const bytes = textEncoder$1.encode(serializeJavascriptValueToJSONString(data));
-			const body = extractBody$1(bytes);
+			const body = extractBody$1(textEncoder$1.encode(serializeJavascriptValueToJSONString(data)));
 			const relevantRealm = { settingsObject: {} };
 			const responseObject = new Response$3();
 			responseObject[kRealm$3] = relevantRealm;
@@ -10265,11 +10247,10 @@ var require_response = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5
 		};
 	}
 	function makeNetworkError$1(reason) {
-		const isError = isErrorLike$1(reason);
 		return makeResponse$1({
 			type: "error",
 			status: 0,
-			error: isError ? reason : new Error(reason ? String(reason) : reason),
+			error: isErrorLike$1(reason) ? reason : new Error(reason ? String(reason) : reason),
 			aborted: reason && reason.name === "AbortError"
 		});
 	}
@@ -10965,8 +10946,7 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 			taskDestination = request$2.client.globalObject;
 			crossOriginIsolatedCapability = request$2.client.crossOriginIsolatedCapability;
 		}
-		const currenTime = coarsenedSharedCurrentTime(crossOriginIsolatedCapability);
-		const timingInfo = createOpaqueTimingInfo({ startTime: currenTime });
+		const timingInfo = createOpaqueTimingInfo({ startTime: coarsenedSharedCurrentTime(crossOriginIsolatedCapability) });
 		const fetchParams = {
 			controller: new Fetch(dispatcher),
 			request: request$2,
@@ -11080,8 +11060,7 @@ var require_fetch = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 				return Promise.resolve(response);
 			}
 			case "data:": {
-				const currentURL = requestCurrentURL(request$2);
-				const dataURLStruct = dataURLProcessor(currentURL);
+				const dataURLStruct = dataURLProcessor(requestCurrentURL(request$2));
 				if (dataURLStruct === "failure") return Promise.resolve(makeNetworkError("failed to fetch the data URL"));
 				const mimeType = serializeAMimeType$1(dataURLStruct.mimeType);
 				return Promise.resolve(makeResponse({
@@ -12235,9 +12214,7 @@ var require_util$2 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 	* @returns {boolean}
 	*/
 	function urlEquals$1(A, B, excludeFragment = false) {
-		const serializedA = URLSerializer$1(A, excludeFragment);
-		const serializedB = URLSerializer$1(B, excludeFragment);
-		return serializedA === serializedB;
+		return URLSerializer$1(A, excludeFragment) === URLSerializer$1(B, excludeFragment);
 	}
 	/**
 	* @see https://github.com/chromium/chromium/blob/694d20d134cb553d8d89e5500b9148012b1ba299/content/browser/cache_storage/cache_storage_cache.cc#L260-L262
@@ -12454,10 +12431,8 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 			});
 			const clonedResponse = cloneResponse(innerResponse);
 			const bodyReadPromise = createDeferredPromise();
-			if (innerResponse.body != null) {
-				const reader = innerResponse.body.stream.getReader();
-				readAllBytes(reader).then(bodyReadPromise.resolve, bodyReadPromise.reject);
-			} else bodyReadPromise.resolve(void 0);
+			if (innerResponse.body != null) readAllBytes(innerResponse.body.stream.getReader()).then(bodyReadPromise.resolve, bodyReadPromise.reject);
+			else bodyReadPromise.resolve(void 0);
 			/** @type {CacheBatchOperation[]} */
 			const operations = [];
 			/** @type {CacheBatchOperation} */
@@ -12662,9 +12637,7 @@ var require_cache = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 			const fieldValues$1 = getFieldValues(response.headersList.get("vary"));
 			for (const fieldValue of fieldValues$1) {
 				if (fieldValue === "*") return false;
-				const requestValue = request$2.headersList.get(fieldValue);
-				const queryValue = requestQuery.headersList.get(fieldValue);
-				if (requestValue !== queryValue) return false;
+				if (request$2.headersList.get(fieldValue) !== requestQuery.headersList.get(fieldValue)) return false;
 			}
 			return true;
 		}
@@ -12731,10 +12704,7 @@ var require_cachestorage = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undi
 			request$2 = webidl$3.converters.RequestInfo(request$2);
 			options = webidl$3.converters.MultiCacheQueryOptions(options);
 			if (options.cacheName != null) {
-				if (this.#caches.has(options.cacheName)) {
-					const cacheList = this.#caches.get(options.cacheName);
-					return await new Cache(kConstruct, cacheList).match(request$2, options);
-				}
+				if (this.#caches.has(options.cacheName)) return await new Cache(kConstruct, this.#caches.get(options.cacheName)).match(request$2, options);
 			} else for (const cacheList of this.#caches.values()) {
 				const response = await new Cache(kConstruct, cacheList).match(request$2, options);
 				if (response !== void 0) return response;
@@ -12760,10 +12730,7 @@ var require_cachestorage = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undi
 			webidl$3.brandCheck(this, CacheStorage);
 			webidl$3.argumentLengthCheck(arguments, 1, { header: "CacheStorage.open" });
 			cacheName = webidl$3.converters.DOMString(cacheName);
-			if (this.#caches.has(cacheName)) {
-				const cache$1 = this.#caches.get(cacheName);
-				return new Cache(kConstruct, cache$1);
-			}
+			if (this.#caches.has(cacheName)) return new Cache(kConstruct, this.#caches.get(cacheName));
 			const cache = [];
 			this.#caches.set(cacheName, cache);
 			return new Cache(kConstruct, cache);
@@ -12914,7 +12881,7 @@ var require_util$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 	*/
 	function toIMFDate(date) {
 		if (typeof date === "number") date = new Date(date);
-		const days = [
+		return `${[
 			"Sun",
 			"Mon",
 			"Tue",
@@ -12922,8 +12889,7 @@ var require_util$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 			"Thu",
 			"Fri",
 			"Sat"
-		];
-		const months = [
+		][date.getUTCDay()]}, ${date.getUTCDate().toString().padStart(2, "0")} ${[
 			"Jan",
 			"Feb",
 			"Mar",
@@ -12936,15 +12902,7 @@ var require_util$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 			"Oct",
 			"Nov",
 			"Dec"
-		];
-		const dayName = days[date.getUTCDay()];
-		const day = date.getUTCDate().toString().padStart(2, "0");
-		const month = months[date.getUTCMonth()];
-		const year = date.getUTCFullYear();
-		const hour = date.getUTCHours().toString().padStart(2, "0");
-		const minute = date.getUTCMinutes().toString().padStart(2, "0");
-		const second = date.getUTCSeconds().toString().padStart(2, "0");
-		return `${dayName}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
+		][date.getUTCMonth()]} ${date.getUTCFullYear()} ${date.getUTCHours().toString().padStart(2, "0")}:${date.getUTCMinutes().toString().padStart(2, "0")}:${date.getUTCSeconds().toString().padStart(2, "0")} GMT`;
 	}
 	/**
 	max-age-av        = "Max-Age=" non-zero-digit *DIGIT
@@ -13727,9 +13685,7 @@ var require_connection = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici
 					failWebsocketConnection$2(ws, "Server did not set Connection header to \"upgrade\".");
 					return;
 				}
-				const secWSAccept = response.headersList.get("Sec-WebSocket-Accept");
-				const digest = crypto$3.createHash("sha1").update(keyValue + uid).digest("base64");
-				if (secWSAccept !== digest) {
+				if (response.headersList.get("Sec-WebSocket-Accept") !== crypto$3.createHash("sha1").update(keyValue + uid).digest("base64")) {
 					failWebsocketConnection$2(ws, "Incorrect hash received in Sec-WebSocket-Accept header.");
 					return;
 				}
@@ -14853,8 +14809,7 @@ var require_lib$6 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+ht
 				}
 			}
 			const req = info$8.httpModule.request(info$8.options, (msg) => {
-				const res = new HttpClientResponse(msg);
-				handleResult(void 0, res);
+				handleResult(void 0, new HttpClientResponse(msg));
 			});
 			let socket;
 			req.on("socket", (sock) => {
@@ -15219,6 +15174,7 @@ var require_summary = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.summary = exports.markdownSummary = exports.SUMMARY_DOCS_URL = exports.SUMMARY_ENV_VAR = void 0;
 	const os_1$2 = __require("os");
 	const fs_1$2 = __require("fs");
 	const { access, appendFile, writeFile: writeFile$1 } = fs_1$2.promises;
@@ -15616,6 +15572,7 @@ var require_io_util = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+
 	};
 	var _a$1;
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getCmdPath = exports.tryGetExecutablePath = exports.isRooted = exports.isDirectory = exports.exists = exports.READONLY = exports.UV_FS_O_EXLOCK = exports.IS_WINDOWS = exports.unlink = exports.symlink = exports.stat = exports.rmdir = exports.rm = exports.rename = exports.readlink = exports.readdir = exports.open = exports.mkdir = exports.lstat = exports.copyFile = exports.chmod = void 0;
 	const fs$4 = __importStar$8(__require("fs"));
 	const path$6 = __importStar$8(__require("path"));
 	_a$1 = fs$4.promises, exports.chmod = _a$1.chmod, exports.copyFile = _a$1.copyFile, exports.lstat = _a$1.lstat, exports.mkdir = _a$1.mkdir, exports.open = _a$1.open, exports.readdir = _a$1.readdir, exports.readlink = _a$1.readlink, exports.rename = _a$1.rename, exports.rm = _a$1.rm, exports.rmdir = _a$1.rmdir, exports.stat = _a$1.stat, exports.symlink = _a$1.symlink, exports.unlink = _a$1.unlink;
@@ -15920,13 +15877,10 @@ var require_io = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+io@1.
 	}
 	exports.findInPath = findInPath;
 	function readCopyOptions(options) {
-		const force = options.force == null ? true : options.force;
-		const recursive = Boolean(options.recursive);
-		const copySourceDirectory = options.copySourceDirectory == null ? true : Boolean(options.copySourceDirectory);
 		return {
-			force,
-			recursive,
-			copySourceDirectory
+			force: options.force == null ? true : options.force,
+			recursive: Boolean(options.recursive),
+			copySourceDirectory: options.copySourceDirectory == null ? true : Boolean(options.copySourceDirectory)
 		};
 	}
 	function cpDirRecursive(sourceDir, destDir, currentDepth, force) {
@@ -16067,8 +16021,7 @@ var require_toolrunner = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actio
 				let s$1 = strBuffer + data.toString();
 				let n = s$1.indexOf(os$2.EOL);
 				while (n > -1) {
-					const line = s$1.substring(0, n);
-					onLine(line);
+					onLine(s$1.substring(0, n));
 					s$1 = s$1.substring(n + os$2.EOL.length);
 					n = s$1.indexOf(os$2.EOL);
 				}
@@ -16435,7 +16388,7 @@ var require_exec = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+exe
 	* @param     options            optional exec options.  See ExecOptions
 	* @returns   Promise<number>    exit code
 	*/
-	function exec$5(commandLine, args, options) {
+	function exec$6(commandLine, args, options) {
 		return __awaiter$3(this, void 0, void 0, function* () {
 			const commandArgs = tr.argStringToArray(commandLine);
 			if (commandArgs.length === 0) throw new Error(`Parameter 'commandLine' cannot be null or empty.`);
@@ -16444,7 +16397,7 @@ var require_exec = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+exe
 			return new tr.ToolRunner(toolPath, args, options).exec();
 		});
 	}
-	exports.exec = exec$5;
+	exports.exec = exec$6;
 	/**
 	* Exec a command and get the output.
 	* Output will be streamed to the live console.
@@ -16476,7 +16429,7 @@ var require_exec = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+exe
 				stdout: stdOutListener,
 				stderr: stdErrListener
 			});
-			const exitCode = yield exec$5(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
+			const exitCode = yield exec$6(commandLine, args, Object.assign(Object.assign({}, options), { listeners }));
 			stdout += stdoutDecoder.end();
 			stderr += stderrDecoder.end();
 			return {
@@ -16554,11 +16507,12 @@ var require_platform = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getDetails = exports.isLinux = exports.isMacOS = exports.isWindows = exports.arch = exports.platform = void 0;
 	const os_1$1 = __importDefault$3(__require("os"));
-	const exec$4 = __importStar$4(require_exec());
+	const exec$5 = __importStar$4(require_exec());
 	const getWindowsInfo = () => __awaiter$2(void 0, void 0, void 0, function* () {
-		const { stdout: version } = yield exec$4.getExecOutput("powershell -command \"(Get-CimInstance -ClassName Win32_OperatingSystem).Version\"", void 0, { silent: true });
-		const { stdout: name } = yield exec$4.getExecOutput("powershell -command \"(Get-CimInstance -ClassName Win32_OperatingSystem).Caption\"", void 0, { silent: true });
+		const { stdout: version } = yield exec$5.getExecOutput("powershell -command \"(Get-CimInstance -ClassName Win32_OperatingSystem).Version\"", void 0, { silent: true });
+		const { stdout: name } = yield exec$5.getExecOutput("powershell -command \"(Get-CimInstance -ClassName Win32_OperatingSystem).Caption\"", void 0, { silent: true });
 		return {
 			name: name.trim(),
 			version: version.trim()
@@ -16566,7 +16520,7 @@ var require_platform = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions
 	});
 	const getMacOsInfo = () => __awaiter$2(void 0, void 0, void 0, function* () {
 		var _a$2, _b, _c, _d;
-		const { stdout } = yield exec$4.getExecOutput("sw_vers", void 0, { silent: true });
+		const { stdout } = yield exec$5.getExecOutput("sw_vers", void 0, { silent: true });
 		const version = (_b = (_a$2 = stdout.match(/ProductVersion:\s*(.+)/)) === null || _a$2 === void 0 ? void 0 : _a$2[1]) !== null && _b !== void 0 ? _b : "";
 		return {
 			name: (_d = (_c = stdout.match(/ProductName:\s*(.+)/)) === null || _c === void 0 ? void 0 : _c[1]) !== null && _d !== void 0 ? _d : "",
@@ -16574,7 +16528,7 @@ var require_platform = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions
 		};
 	});
 	const getLinuxInfo = () => __awaiter$2(void 0, void 0, void 0, function* () {
-		const { stdout } = yield exec$4.getExecOutput("lsb_release", [
+		const { stdout } = yield exec$5.getExecOutput("lsb_release", [
 			"-i",
 			"-r",
 			"-s"
@@ -17457,14 +17411,12 @@ var require_dist_node$8 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@octo
 		const urlVariableNames = extractUrlVariableNames(url$2);
 		url$2 = parseUrl$3(url$2).expand(parameters);
 		if (!/^http/.test(url$2)) url$2 = options.baseUrl + url$2;
-		const omittedParameters = Object.keys(options).filter((option) => urlVariableNames.includes(option)).concat("baseUrl");
-		const remainingParameters = omit(parameters, omittedParameters);
+		const remainingParameters = omit(parameters, Object.keys(options).filter((option) => urlVariableNames.includes(option)).concat("baseUrl"));
 		if (!/application\/octet-stream/i.test(headers.accept)) {
 			if (options.mediaType.format) headers.accept = headers.accept.split(/,/).map((format) => format.replace(/application\/vnd(\.\w+)(\.v3)?(\.\w+)?(\+json)?$/, `application/vnd$1$2.${options.mediaType.format}`)).join(",");
 			if (url$2.endsWith("/graphql")) {
 				if (options.mediaType.previews?.length) headers.accept = (headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || []).concat(options.mediaType.previews).map((preview) => {
-					const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
-					return `application/vnd.github.${preview}-preview${format}`;
+					return `application/vnd.github.${preview}-preview${options.mediaType.format ? `.${options.mediaType.format}` : "+json"}`;
 				}).join(",");
 			}
 		}
@@ -19472,12 +19424,11 @@ var require_dist_node = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@octoki
 		return { [Symbol.asyncIterator]: () => ({ async next() {
 			if (!url$2) return { done: true };
 			try {
-				const response = await requestMethod({
+				const normalizedResponse = normalizePaginatedListResponse(await requestMethod({
 					method,
 					url: url$2,
 					headers
-				});
-				const normalizedResponse = normalizePaginatedListResponse(response);
+				}));
 				url$2 = ((normalizedResponse.headers.link || "").match(/<([^<>]+)>;\s*rel="next"/) || [])[1];
 				return { value: normalizedResponse };
 			} catch (error$2) {
@@ -19792,6 +19743,7 @@ var require_utils = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+gi
 		return result;
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getOctokitOptions = exports.GitHub = exports.defaults = exports.context = void 0;
 	const Context$1 = __importStar$1(require_context());
 	const Utils = __importStar$1(require_utils$1());
 	const core_1 = require_dist_node$2();
@@ -28347,8 +28299,7 @@ var require_form_data = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/form-da
 				callback(err);
 				return;
 			}
-			var fileSize = stat.size - (value.start ? value.start : 0);
-			callback(null, fileSize);
+			callback(null, stat.size - (value.start ? value.start : 0));
 		});
 		else if (hasOwn(value, "httpVersion")) callback(null, Number(value.headers["content-length"]));
 		else if (hasOwn(value, "httpModule")) {
@@ -28704,8 +28655,8 @@ var require_ms = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/ms@2.1.3/node_
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/common.js
-var require_common$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/common.js": ((exports, module) => {
+//#region node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/common.js
+var require_common$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/common.js": ((exports, module) => {
 	/**
 	* This is the common logic for both the Node.js and web browser
 	* implementations of `debug()`.
@@ -28907,8 +28858,8 @@ var require_common$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/browser.js
-var require_browser = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/browser.js": ((exports, module) => {
+//#region node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/browser.js
+var require_browser = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/browser.js": ((exports, module) => {
 	/**
 	* This is the web browser implementation of `debug()`.
 	*/
@@ -29174,8 +29125,7 @@ var require_supports_color = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/su
 		return min$1;
 	}
 	function getSupportLevel(stream$3) {
-		const level = supportsColor(stream$3, stream$3 && stream$3.isTTY);
-		return translateLevel(level);
+		return translateLevel(supportsColor(stream$3, stream$3 && stream$3.isTTY));
 	}
 	module.exports = {
 		supportsColor: getSupportLevel,
@@ -29185,8 +29135,8 @@ var require_supports_color = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/su
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/node.js
-var require_node = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/node.js": ((exports, module) => {
+//#region node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/node.js
+var require_node = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/node.js": ((exports, module) => {
 	/**
 	* Module dependencies.
 	*/
@@ -29393,8 +29343,8 @@ var require_node = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.1/
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/index.js
-var require_src = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.1/node_modules/debug/src/index.js": ((exports, module) => {
+//#region node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/index.js
+var require_src = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/debug@4.4.3/node_modules/debug/src/index.js": ((exports, module) => {
 	/**
 	* Detect Electron renderer / nwjs process, which is node, but we should
 	* treat as a browser.
@@ -31498,8 +31448,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 			const maxRate = internals.maxRate;
 			const readableHighWaterMark = this.readableHighWaterMark;
 			const timeWindow = internals.timeWindow;
-			const divider = 1e3 / timeWindow;
-			const bytesThreshold = maxRate / divider;
+			const bytesThreshold = maxRate / (1e3 / timeWindow);
 			const minChunkSize = internals.minChunkSize !== false ? Math.max(internals.minChunkSize, bytesThreshold * .01) : 0;
 			const pushChunk = (_chunk, _callback) => {
 				const bytes = Buffer.byteLength(_chunk);
@@ -31727,7 +31676,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 			const rate = _speedometer(progressBytes);
 			const inRange = loaded <= total;
 			bytesNotified = loaded;
-			const data = {
+			listener({
 				loaded,
 				total,
 				progress: total ? loaded / total : void 0,
@@ -31737,8 +31686,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 				event: e,
 				lengthComputable: total != null,
 				[isDownloadStream ? "download" : "upload"]: true
-			};
-			listener(data);
+			});
 		}, freq);
 	};
 	const progressEventDecorator = (total, throttled) => {
@@ -32291,21 +32239,20 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 			function onloadend() {
 				if (!request$2) return;
 				const responseHeaders = AxiosHeaders$1.from("getAllResponseHeaders" in request$2 && request$2.getAllResponseHeaders());
-				const response = {
-					data: !responseType || responseType === "text" || responseType === "json" ? request$2.responseText : request$2.response,
-					status: request$2.status,
-					statusText: request$2.statusText,
-					headers: responseHeaders,
-					config,
-					request: request$2
-				};
 				settle(function _resolve(value) {
 					resolve$1(value);
 					done();
 				}, function _reject(err) {
 					reject(err);
 					done();
-				}, response);
+				}, {
+					data: !responseType || responseType === "text" || responseType === "json" ? request$2.responseText : request$2.response,
+					status: request$2.status,
+					statusText: request$2.statusText,
+					headers: responseHeaders,
+					config,
+					request: request$2
+				});
 				request$2 = null;
 			}
 			if ("onloadend" in request$2) request$2.onloadend = onloadend;
@@ -32450,10 +32397,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 						return;
 					}
 					let len = value.byteLength;
-					if (onProgress) {
-						let loadedBytes = bytes += len;
-						onProgress(loadedBytes);
-					}
+					if (onProgress) onProgress(bytes += len);
 					controller.enqueue(new Uint8Array(value));
 				} catch (err) {
 					_onFinish(err);
@@ -32624,8 +32568,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 			}
 			if (!adapter) {
 				const reasons = Object.entries(rejectedReasons).map(([id, state$1]) => `adapter ${id} ` + (state$1 === false ? "is not supported by the environment" : "is not available in the build"));
-				let s$1 = length ? reasons.length > 1 ? "since :\n" + reasons.map(renderReason).join("\n") : " " + renderReason(reasons[0]) : "as no adapter specified";
-				throw new AxiosError(`There is no suitable adapter to dispatch the request ` + s$1, "ERR_NOT_SUPPORT");
+				throw new AxiosError(`There is no suitable adapter to dispatch the request ` + (length ? reasons.length > 1 ? "since :\n" + reasons.map(renderReason).join("\n") : " " + renderReason(reasons[0]) : "as no adapter specified"), "ERR_NOT_SUPPORT");
 			}
 			return adapter;
 		},
@@ -32871,8 +32814,7 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 		}
 		getUri(config) {
 			config = mergeConfig(this.defaults, config);
-			const fullPath = buildFullPath(config.baseURL, config.url, config.allowAbsoluteUrls);
-			return buildURL(fullPath, config.params, config.paramsSerializer);
+			return buildURL(buildFullPath(config.baseURL, config.url, config.allowAbsoluteUrls), config.params, config.paramsSerializer);
 		}
 	};
 	utils$1.forEach([
@@ -33141,8 +33083,8 @@ var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/node-cnb@1.16.0/node_modules/node-cnb/dist/index.js
-var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1.16.0/node_modules/node-cnb/dist/index.js": ((exports) => {
+//#region node_modules/.pnpm/node-cnb@1.17.1/node_modules/node-cnb/dist/index.js
+var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1.17.1/node_modules/node-cnb/dist/index.js": ((exports) => {
 	var __create = Object.create;
 	var __defProp = Object.defineProperty;
 	var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -33202,7 +33144,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			"in": "body",
 			"name": "request",
 			"required": true,
-			"schema": { "$ref": "#/definitions/http.UpdateUserInfoPayload" }
+			"schema": { "$ref": "#/definitions/dto.UpdateUserInfoPayload" }
 		}],
 		"responses": { "200": { "description": "OK" } },
 		"path": "/user",
@@ -33409,7 +33351,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"private",
 					"public",
-					"encrypted"
+					"secret"
 				],
 				"in": "query",
 				"name": "filter_type",
@@ -33433,6 +33375,13 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": ["KnowledgeBase"],
 				"in": "query",
 				"name": "flags",
+				"type": "string"
+			},
+			{
+				"description": "仓库状态。Repository status",
+				"enum": ["active", "archived"],
+				"in": "query",
+				"name": "status",
 				"type": "string"
 			},
 			{
@@ -34424,7 +34373,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"private",
 					"public",
-					"encrypted"
+					"secret"
 				],
 				"in": "query",
 				"name": "filter_type",
@@ -34614,7 +34563,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
 		"operationId": "UploadLogos",
 		"tags": ["Assets"],
-		"summary": "发起一个上传 logo 的请求，返回上传 cos 的 url 和 form 内容。Post a request to upload a logo.",
+		"summary": "发起一个上传 logo 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload logo,returns upload URL.Use PUT to initiate a stream upload.",
 		"parameters": [{
 			"default": "test-group",
 			"description": "group",
@@ -34688,6 +34637,119 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"responses": { "200": { "description": "OK" } },
 		"path": "/{mission}/-/members/{username}",
 		"method": "post"
+	};
+	var mission_mission_view_get = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
+		"operationId": "GetMissionViewConfig",
+		"tags": ["Missions"],
+		"summary": "查询任务集视图配置信息。Get mission view config.",
+		"parameters": [{
+			"description": "Mission slug",
+			"in": "path",
+			"name": "mission",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "View ID",
+			"in": "query",
+			"name": "id",
+			"required": true,
+			"type": "string"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
+		} },
+		"path": "/{mission}/-/mission/view",
+		"method": "get"
+	};
+	var mission_mission_view_post = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"operationId": "PostMissionViewConfig",
+		"tags": ["Missions"],
+		"summary": "设置任务集视图配置信息。Set mission view config.",
+		"parameters": [{
+			"description": "Mission slug",
+			"in": "path",
+			"name": "mission",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "Params",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{mission}/-/mission/view",
+		"method": "post"
+	};
+	var mission_mission_viewList_list = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
+		"operationId": "GetMissionViewList",
+		"tags": ["Missions"],
+		"summary": "获取任务集视图列表。Get view list of a mission.",
+		"parameters": [{
+			"description": "mission",
+			"in": "path",
+			"name": "mission",
+			"required": true,
+			"type": "string"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"items": { "$ref": "#/definitions/dto.MissionView" },
+				"type": "array"
+			}
+		} },
+		"path": "/{mission}/-/mission/view-list",
+		"method": "get"
+	};
+	var mission_mission_viewList_post = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"operationId": "PostMissionViewList",
+		"tags": ["Missions"],
+		"summary": "排序任务集视图。Sort mission view list.",
+		"parameters": [{
+			"description": "Mission slug",
+			"in": "path",
+			"name": "mission",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "Params",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionPostViewReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{mission}/-/mission/view-list",
+		"method": "post"
+	};
+	var mission_mission_viewList_put = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"operationId": "PutMissionViewList",
+		"tags": ["Missions"],
+		"summary": "添加、修改任务集视图。Update a mission view or add a new one.",
+		"parameters": [{
+			"description": "Mission slug",
+			"in": "path",
+			"name": "mission",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "Params",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionView" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{mission}/-/mission/view-list",
+		"method": "put"
 	};
 	var registry_delete = {
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-delete:rw",
@@ -34804,6 +34866,56 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"path": "/{repo}",
 		"method": "patch"
 	};
+	var repo_ai_chat_completions_post = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"operationId": "AiChatCompletions",
+		"tags": ["Ai"],
+		"summary": "Ai 对话，参数根据模型不同会有区别。Ai chat completions, params may differ by model.",
+		"parameters": [{
+			"description": "仓库完整路径",
+			"in": "path",
+			"name": "repo",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "AI chat completions params",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsResult" }
+		} },
+		"path": "/{repo}/-/ai/chat/completions",
+		"method": "post"
+	};
+	var repo_badge_upload_post = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:rw",
+		"operationId": "UploadBadge",
+		"tags": ["Badge"],
+		"summary": "上传徽章数据。Upload badge data",
+		"parameters": [{
+			"description": "仓库完整路径",
+			"in": "path",
+			"name": "repo",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "UploadBadge params",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadBadgeReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadBadgeResult" }
+		} },
+		"path": "/{repo}/-/badge/upload",
+		"method": "post"
+	};
 	var repo_build_logs_get = {
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
 		"operationId": "GetBuildLogs",
@@ -34842,7 +34954,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"type": "integer"
 			},
 			{
-				"description": "Pagination page size, default(20), max(100)",
+				"description": "Pagination page size, default(30), max(100)",
 				"in": "query",
 				"name": "pagesize",
 				"type": "integer"
@@ -34925,7 +35037,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"type": "string"
 			},
 			{
-				"description": "prepare、beforeEnd or 'stage-{{index}}'",
+				"description": "stageId",
 				"in": "path",
 				"name": "stageId",
 				"required": true,
@@ -34937,6 +35049,37 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			"schema": { "$ref": "#/definitions/dto.BuildStageResult" }
 		} },
 		"path": "/{repo}/-/build/logs/stage/{sn}/{pipelineId}/{stageId}",
+		"method": "get"
+	};
+	var repo_build_runner_download_log_get = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
+		"operationId": "BuildRunnerDownloadLog",
+		"tags": ["Build"],
+		"summary": "流水线runner日志下载。Pipeline runner log download.",
+		"parameters": [{
+			"description": "Repo path",
+			"in": "path",
+			"name": "repo",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "PipelineId",
+			"in": "path",
+			"name": "pipelineId",
+			"required": true,
+			"type": "string"
+		}],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{repo}/-/build/runner/download/log/{pipelineId}",
 		"method": "get"
 	};
 	var repo_build_start_post = {
@@ -35628,12 +35771,12 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			{
 				"description": "upload token",
 				"in": "path",
-				"name": "token",
+				"name": "upload_token",
 				"required": true,
 				"type": "string"
 			},
 			{
-				"description": "release asset path",
+				"description": "commit asset path",
 				"in": "path",
 				"name": "asset_path",
 				"required": true,
@@ -38805,6 +38948,65 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"path": "/{repo}/-/pulls/{number}/revert",
 		"method": "post"
 	};
+	var repo_pulls_reviews_list = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"operationId": "ListPullReviews",
+		"tags": ["Pulls"],
+		"summary": "查询特定 pull reviews 列表。List pull reviews.",
+		"parameters": [
+			{
+				"description": "repo",
+				"in": "path",
+				"name": "repo",
+				"required": true,
+				"type": "string"
+			},
+			{
+				"description": "number",
+				"in": "path",
+				"name": "number",
+				"required": true,
+				"type": "string"
+			},
+			{
+				"default": 1,
+				"description": "pagination page number",
+				"in": "query",
+				"name": "page",
+				"type": "integer"
+			},
+			{
+				"default": 30,
+				"description": "pagination page size",
+				"in": "query",
+				"name": "page_size",
+				"type": "integer"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"items": { "$ref": "#/definitions/api.PullReview" },
+					"type": "array"
+				}
+			},
+			"403": {
+				"description": "Forbidden",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{repo}/-/pulls/{number}/reviews",
+		"method": "get"
+	};
 	var repo_pulls_reviews_post = {
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
 		"operationId": "PostPullReview",
@@ -38850,6 +39052,68 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		},
 		"path": "/{repo}/-/pulls/{number}/reviews",
 		"method": "post"
+	};
+	var repo_pulls_reviews_comments_list = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"operationId": "ListPullReviewComments",
+		"tags": ["Pulls"],
+		"summary": "查询指定 Pull Review Comments 列表评论。List pull review comments.",
+		"parameters": [
+			{
+				"description": "repo",
+				"in": "path",
+				"name": "repo",
+				"required": true,
+				"type": "string"
+			},
+			{
+				"description": "pull request number",
+				"in": "path",
+				"name": "number",
+				"required": true,
+				"type": "integer"
+			},
+			{
+				"description": "pull request review id",
+				"in": "path",
+				"name": "review_id",
+				"required": true,
+				"type": "integer"
+			},
+			{
+				"default": 1,
+				"description": "pagination page number",
+				"in": "query",
+				"name": "page",
+				"type": "integer"
+			},
+			{
+				"default": 30,
+				"description": "pagination page size",
+				"in": "query",
+				"name": "page_size",
+				"type": "integer"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"items": { "$ref": "#/definitions/api.PullReviewComment" },
+					"type": "array"
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{repo}/-/pulls/{number}/reviews/{review_id}/comments",
+		"method": "get"
 	};
 	var repo_releases_list = {
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
@@ -39193,7 +39457,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			{
 				"description": "upload token",
 				"in": "path",
-				"name": "token",
+				"name": "upload_token",
 				"required": true,
 				"type": "string"
 			},
@@ -39838,7 +40102,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
 		"operationId": "UploadFiles",
 		"tags": ["Assets"],
-		"summary": "发起一个上传 files 的请求，返回上传 cos 的 url 和 form 内容。Initiate a request to upload files,returns COS upload URL and form data.",
+		"summary": "发起一个上传 files 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload files,returns upload URL.Use PUT to initiate a stream upload.",
 		"parameters": [{
 			"default": "test-group/test-repo",
 			"description": "repo",
@@ -39864,7 +40128,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
 		"operationId": "UploadImgs",
 		"tags": ["Assets"],
-		"summary": "发起一个上传 imgs 的请求，返回上传 cos 的 url 和 form 内容。发起一个上传 imgs 的请求，返回上传 cos 的 url 和 form 内容.",
+		"summary": "发起一个上传 imgs 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload images,returns upload URL.Use PUT to initiate a stream upload.",
 		"parameters": [{
 			"default": "test-group/test-repo",
 			"description": "repo",
@@ -39890,7 +40154,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
 		"operationId": "UploadReleases",
 		"tags": ["Assets"],
-		"summary": "发起一个上传 release 附件的请求，返回上传 cos 的 url 。Initiate a request to upload release attachments,",
+		"summary": "发起一个上传 release 附件的请求，返回上传文件的url，附件上限是64GiB。请使用 put 发起流式上传。",
 		"parameters": [
 			{
 				"default": "test-group/test-repo",
@@ -39920,6 +40184,32 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
 		} },
 		"path": "/{repo}/-/upload/releases/{tagName}",
+		"method": "post"
+	};
+	var repo_upload_wiki_post = {
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"operationId": "UploadWikiFile",
+		"tags": ["wiki"],
+		"summary": "发起一个上传 wiki 文件的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload wiki files,returns upload URL.Use PUT to initiate a stream upload.",
+		"parameters": [{
+			"default": "test-group/test-repo",
+			"description": "Repo",
+			"in": "path",
+			"name": "repo",
+			"required": true,
+			"type": "string"
+		}, {
+			"description": "UploadRequestParams",
+			"in": "body",
+			"name": "request",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
+		} },
+		"path": "/{repo}/-/upload/wiki",
 		"method": "post"
 	};
 	var repo_workspace_detail_get = {
@@ -39953,7 +40243,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"tags": ["Workspace"],
 		"summary": "启动云原生开发环境，已存在环境则直接打开，否则重新创建开发环境。Start cloud-native dev. Opens existing env or creates a new one.",
 		"parameters": [{
-			"description": "repo",
+			"description": "仓库完整路径",
 			"in": "path",
 			"name": "repo",
 			"required": true,
@@ -39986,11 +40276,12 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"type": "string"
 			},
 			{
-				"description": "Type",
+				"description": "Type 当前，选项all仅包含仓库下的docker/helm/docker-model类型",
 				"enum": [
 					"all",
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40070,7 +40361,8 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"all",
 					"docker",
-					"helm"
+					"helm",
+					"docker-model"
 				],
 				"in": "query",
 				"name": "type",
@@ -40135,6 +40427,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40180,6 +40473,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40229,6 +40523,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40256,9 +40551,15 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"type": "string"
 			},
 			{
-				"description": "摘要，容器制品时必须。Digest (SHA256), required for container artifacts.",
+				"description": "摘要",
 				"in": "query",
 				"name": "sha256",
+				"type": "string"
+			},
+			{
+				"description": "架构，docker制品必需，例: linux/amd64/v3。required for docker artifacts",
+				"in": "query",
+				"name": "arch",
 				"type": "string"
 			}
 		],
@@ -40287,6 +40588,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40357,6 +40659,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 			"enum": [
 				"docker",
 				"helm",
+				"docker-model",
 				"maven",
 				"npm",
 				"ohpm",
@@ -40400,6 +40703,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40468,6 +40772,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 				"enum": [
 					"docker",
 					"helm",
+					"docker-model",
 					"maven",
 					"npm",
 					"ohpm",
@@ -40560,13 +40865,21 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"group.upload.logos.post": group_upload_logos_post,
 		"mission.delete": mission_delete,
 		"mission.members.post": mission_members_post,
+		"mission.mission.view.get": mission_mission_view_get,
+		"mission.mission.view.post": mission_mission_view_post,
+		"mission.mission.viewList.list": mission_mission_viewList_list,
+		"mission.mission.viewList.post": mission_mission_viewList_post,
+		"mission.mission.viewList.put": mission_mission_viewList_put,
 		"registry.delete": registry_delete,
 		"registry.members.post": registry_members_post,
 		"repo.delete": repo_delete,
 		"repo.get": repo_get,
 		"repo.patch": repo_patch,
+		"repo.ai.chat.completions.post": repo_ai_chat_completions_post,
+		"repo.badge.upload.post": repo_badge_upload_post,
 		"repo.build.logs.get": repo_build_logs_get,
 		"repo.build.logs.stage.get": repo_build_logs_stage_get,
+		"repo.build.runner.download.log.get": repo_build_runner_download_log_get,
 		"repo.build.start.post": repo_build_start_post,
 		"repo.build.status.get": repo_build_status_get,
 		"repo.build.stop.post": repo_build_stop_post,
@@ -40660,7 +40973,9 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"repo.pulls.labels.deleteByName": repo_pulls_labels_deleteByName,
 		"repo.pulls.merge.put": repo_pulls_merge_put,
 		"repo.pulls.revert.post": repo_pulls_revert_post,
+		"repo.pulls.reviews.list": repo_pulls_reviews_list,
 		"repo.pulls.reviews.post": repo_pulls_reviews_post,
+		"repo.pulls.reviews.comments.list": repo_pulls_reviews_comments_list,
 		"repo.releases.list": repo_releases_list,
 		"repo.releases.post": repo_releases_post,
 		"repo.releases.download.get": repo_releases_download_get,
@@ -40693,6 +41008,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		"repo.upload.files.post": repo_upload_files_post,
 		"repo.upload.imgs.post": repo_upload_imgs_post,
 		"repo.upload.releases.post": repo_upload_releases_post,
+		"repo.upload.wiki.post": repo_upload_wiki_post,
 		"repo.workspace.detail.get": repo_workspace_detail_get,
 		"repo.workspace.start.post": repo_workspace_start_post,
 		"slug.packages.list": slug_packages_list,
@@ -40711,15 +41027,15 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 		if (!methodValue) throw new Error("未能找出对应api路径");
 		const { parameters, method } = methodValue;
 		let { path: path$8 } = methodValue;
-		parameters.filter((item) => item.in === "path").forEach((item) => {
+		parameters?.filter((item) => item.in === "path").forEach((item) => {
 			path$8 = path$8.replace(`{${item.name}}`, params[item.name]);
 		});
 		const queryParams = {};
-		parameters.filter((item) => item.in === "query").forEach((item) => {
+		parameters?.filter((item) => item.in === "query").forEach((item) => {
 			queryParams[item.name] = params?.[item.name];
 		});
 		const bodyParams = {};
-		parameters.filter((item) => item.in === "body").forEach((item) => {
+		parameters?.filter((item) => item.in === "body").forEach((item) => {
 			Object.assign(bodyParams, params?.[item.name] || {});
 		});
 		const apiPath = `${baseUrl$1}${path$8}`;
@@ -40765,6 +41081,7 @@ var require_dist$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/node-cnb@1
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
 var require_lib$5 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.USEFUL_NON_ROOT_PNPM_FIELDS = exports.FULL_FILTERED_META_DIR = exports.FULL_META_DIR = exports.ABBREVIATED_META_DIR = exports.WORKSPACE_MANIFEST_FILENAME = exports.STORE_VERSION = exports.LAYOUT_VERSION = exports.ENGINE_NAME = exports.MANIFEST_BASE_NAMES = exports.LOCKFILE_VERSION = exports.LOCKFILE_MAJOR_VERSION = exports.WANTED_LOCKFILE = void 0;
 	exports.getNodeBinLocationForCurrentOS = getNodeBinLocationForCurrentOS;
 	exports.getDenoBinLocationForCurrentOS = getDenoBinLocationForCurrentOS;
 	exports.getBunBinLocationForCurrentOS = getBunBinLocationForCurrentOS;
@@ -42703,8 +43020,7 @@ var require_dumper = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/js-yaml@4.
 	function blockHeader(string, indentPerLevel) {
 		var indentIndicator = needIndentIndicator(string) ? String(indentPerLevel) : "";
 		var clip = string[string.length - 1] === "\n";
-		var chomp = clip && (string[string.length - 2] === "\n" || string === "\n") ? "+" : clip ? "" : "-";
-		return indentIndicator + chomp + "\n";
+		return indentIndicator + (clip && (string[string.length - 2] === "\n" || string === "\n") ? "+" : clip ? "" : "-") + "\n";
 	}
 	function dropEndingNewline(string) {
 		return string[string.length - 1] === "\n" ? string.slice(0, -1) : string;
@@ -43229,6 +43545,7 @@ var require_imurmurhash = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/imurm
 //#region node_modules/.pnpm/signal-exit@4.1.0/node_modules/signal-exit/dist/cjs/signals.js
 var require_signals = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/signal-exit@4.1.0/node_modules/signal-exit/dist/cjs/signals.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.signals = void 0;
 	/**
 	* This is not the set of all possible signals.
 	*
@@ -43609,8 +43926,7 @@ var require_write_yaml_file = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/w
 		if (!fp) throw new TypeError("Expected a filepath");
 		if (data === void 0) throw new TypeError("Expected data to stringify");
 		opts = opts || {};
-		const yaml$1 = YAML.dump(data, opts);
-		return fn(fp, yaml$1, { mode: opts.mode });
+		return fn(fp, YAML.dump(data, opts), { mode: opts.mode });
 	};
 	module.exports = async (fp, data, opts) => {
 		if (opts?.makeDir ?? true) await fs.promises.mkdir(path.dirname(fp), { recursive: true });
@@ -44240,7 +44556,7 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspa
 //#region src/utils/common.ts
 var import_dist = /* @__PURE__ */ __toESM$2(require_dist$1(), 1);
 var import_core$6 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$3 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_exec$4 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
 var import_github$2 = /* @__PURE__ */ __toESM$2(require_github(), 1);
 var import_lib = /* @__PURE__ */ __toESM$2(require_lib(), 1);
 var import_lib$1 = /* @__PURE__ */ __toESM$2(require_lib$3(), 1);
@@ -44270,7 +44586,7 @@ function addContributor(body, contributor) {
 	}).join("\r\n");
 }
 async function getPkgLatestVersion(packageName) {
-	const { stdout } = await (0, import_exec$3.getExecOutput)("npm", [
+	const { stdout } = await (0, import_exec$4.getExecOutput)("npm", [
 		"view",
 		packageName,
 		"version"
@@ -44286,7 +44602,7 @@ async function bumpIconsVersion(packageManager, repo) {
 			const iconsViewVersion = await getPkgLatestVersion("tdesign-icons-view");
 			workspaceManifest = updateCatalogs(workspaceManifest, "tdesign-icons-view", iconsViewVersion);
 			await (0, import_lib.updateWorkspaceManifest)(`./${repo}`, { updatedFields: workspaceManifest });
-			await (0, import_exec$3.exec)("pnpm", ["install", "--force"], {
+			await (0, import_exec$4.exec)("pnpm", ["install", "--force"], {
 				cwd: `./${repo}`,
 				env: {
 					...process$1.env,
@@ -44294,21 +44610,21 @@ async function bumpIconsVersion(packageManager, repo) {
 				}
 			});
 		}
-	} else await (0, import_exec$3.exec)("pnpm", [
+	} else await (0, import_exec$4.exec)("pnpm", [
 		"--recursive",
 		"update",
 		"tdesign-icons-*",
 		"--latest"
 	], { cwd: `./${repo}` });
-	else await (0, import_exec$3.exec)("npx", [
+	else await (0, import_exec$4.exec)("npx", [
 		"npm-check-updates",
 		"tdesign-icons-*",
 		"-u"
 	], { cwd: `./${repo}` });
-	await (0, import_exec$3.exec)("git", ["status"], { cwd: `./${repo}` });
+	await (0, import_exec$4.exec)("git", ["status"], { cwd: `./${repo}` });
 }
 async function corepackEnable() {
-	await (0, import_exec$3.exec)("corepack", ["enable"]);
+	await (0, import_exec$4.exec)("corepack", ["enable"]);
 }
 function updateCatalogs(workspaceManifest, packageName, version) {
 	if (workspaceManifest.catalog) {
@@ -44326,7 +44642,7 @@ function updateCatalogs(workspaceManifest, packageName, version) {
 //#endregion
 //#region src/utils/git-helper.ts
 var import_core$5 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$2 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_exec$3 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
 var GitHelper = class {
 	token;
 	owner;
@@ -44341,19 +44657,19 @@ var GitHelper = class {
 		this.repoPath = `./${context$1.repo}`;
 	}
 	async initConfig() {
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"config",
 			"--global",
 			"user.name",
 			"tdesign-bot"
 		]);
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"config",
 			"--global",
 			"user.email",
 			"tdesign@tencent.com"
 		]);
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"config",
 			"--global",
 			`url.https://${this.token}@github.com/.insteadOf`,
@@ -44366,14 +44682,14 @@ var GitHelper = class {
 	async clone() {
 		await this.initConfig();
 		(0, import_core$5.info)(this.repoUrl);
-		await (0, import_exec$2.exec)("ls", ["-al"]);
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("ls", ["-al"]);
+		await (0, import_exec$3.exec)("git", [
 			"clone",
 			this.repoUrl,
 			this.repoPath
 		]);
-		await (0, import_exec$2.exec)("ls", ["-al"]);
-		const { stdout } = await (0, import_exec$2.getExecOutput)("git", [
+		await (0, import_exec$3.exec)("ls", ["-al"]);
+		const { stdout } = await (0, import_exec$3.getExecOutput)("git", [
 			"rev-parse",
 			"--abbrev-ref",
 			"HEAD"
@@ -44382,14 +44698,14 @@ var GitHelper = class {
 		return stdout.trim();
 	}
 	async createBranch(branch) {
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"checkout",
 			"-b",
 			branch
 		], { cwd: this.repoPath });
 	}
 	async commit(message) {
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"commit",
 			"-am",
 			message,
@@ -44401,14 +44717,14 @@ var GitHelper = class {
 			(0, import_core$5.info)("dry-run模式, 不运行git push");
 			return;
 		}
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"push",
 			"origin",
 			branch
 		], { cwd: this.repoPath });
 	}
 	async initSubmodule() {
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"submodule",
 			"update",
 			"--init",
@@ -44416,14 +44732,14 @@ var GitHelper = class {
 		], { cwd: this.repoPath });
 	}
 	async updateSubmodule() {
-		await (0, import_exec$2.exec)("git", [
+		await (0, import_exec$3.exec)("git", [
 			"submodule",
 			"update",
 			"--remote"
 		], { cwd: this.repoPath });
 	}
 	async isNeedCommit() {
-		const { stdout } = await (0, import_exec$2.getExecOutput)("git", ["status"], { cwd: this.repoPath });
+		const { stdout } = await (0, import_exec$3.getExecOutput)("git", ["status"], { cwd: this.repoPath });
 		return !stdout.includes("nothing to commit, working tree clean");
 	}
 };
@@ -44506,6 +44822,7 @@ var GithubHelper = class {
 //#endregion
 //#region src/tdesign/common.ts
 var import_core$3 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
+var import_exec$2 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
 async function start(context$1) {
 	if (!Reflect.has(repoMap, context$1.trigger)) {
 		(0, import_core$3.info)(`错误的trigger: ${context$1.trigger}`);
@@ -44542,6 +44859,14 @@ async function start(context$1) {
 		return true;
 	}
 	await gitHelper.commit(title);
+	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
+		await (0, import_exec$2.exec)("node", [
+			"scripts/generate-css-vars.js",
+			"--NAME",
+			"all"
+		]);
+		if (await gitHelper.isNeedCommit()) await gitHelper.commit("docs: update css vars");
+	}
 	await gitHelper.push(branchName);
 	const newPrData = await new GithubHelper({
 		repo: repoMap[trigger],
@@ -44765,9 +45090,7 @@ async function run() {
 			(0, import_core.info)("issue_comment not a pull_request comment");
 			return;
 		}
-		const __filename$1 = fileURLToPath(import.meta.url);
-		const __dirname = dirname(__filename$1);
-		const whitelist = readFileSync(resolve(__dirname, "../.comment-trigger-whitelist"), "utf-8");
+		const whitelist = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../.comment-trigger-whitelist"), "utf-8");
 		let isWhitelist = false;
 		whitelist.split("\n").forEach((item) => {
 			if (item.trim() === import_github.context.payload.comment?.user.login) {
