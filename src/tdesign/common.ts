@@ -1,5 +1,6 @@
 import type { AutoPrTrigger, TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
+import { exec } from '@actions/exec'
 import { addContributor, GitHelper, GithubHelper } from '../utils'
 import { ownerMap, repoMap } from '../utils/trigger'
 
@@ -43,6 +44,16 @@ export default async function start(context: TriggerContext) {
   }
 
   await gitHelper.commit(title)
+  if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(repoMap[trigger])) {
+    let scriptPath = 'scripts/generate-css-vars.js'
+    if (repoMap[trigger] === 'tdesign-mobile-react') {
+      scriptPath = 'script/generate-css-vars.mjs'
+    }
+    await exec('node', [scriptPath, '--NAME', 'all'], { cwd: `./${repoMap[trigger]}` })
+    if (await gitHelper.isNeedCommit()) {
+      await gitHelper.commit('docs: update css vars')
+    }
+  }
   await gitHelper.push(branchName)
 
   const targetRepo = new GithubHelper({
