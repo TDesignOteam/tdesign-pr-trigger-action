@@ -44864,7 +44864,7 @@ async function start(context$1) {
 			"scripts/generate-css-vars.js",
 			"--NAME",
 			"all"
-		]);
+		], { cwd: `./${repoMap[trigger]}` });
 		if (await gitHelper.isNeedCommit()) await gitHelper.commit("docs: update css vars");
 	}
 	await gitHelper.push(branchName);
