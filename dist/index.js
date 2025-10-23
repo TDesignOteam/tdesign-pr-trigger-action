@@ -44860,8 +44860,10 @@ async function start(context$1) {
 	}
 	await gitHelper.commit(title);
 	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
+		let scriptPath = "scripts/generate-css-vars.js";
+		if (repoMap[trigger] === "tdesign-mobile-react") scriptPath = "script/generate-css-vars.js";
 		await (0, import_exec$2.exec)("node", [
-			"scripts/generate-css-vars.js",
+			scriptPath,
 			"--NAME",
 			"all"
 		], { cwd: `./${repoMap[trigger]}` });
