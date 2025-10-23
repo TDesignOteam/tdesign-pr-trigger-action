@@ -44861,7 +44861,7 @@ async function start(context$1) {
 	await gitHelper.commit(title);
 	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
 		let scriptPath = "scripts/generate-css-vars.js";
-		if (repoMap[trigger] === "tdesign-mobile-react") scriptPath = "script/generate-css-vars.js";
+		if (repoMap[trigger] === "tdesign-mobile-react") scriptPath = "script/generate-css-vars.mjs";
 		await (0, import_exec$2.exec)("node", [
 			scriptPath,
 			"--NAME",

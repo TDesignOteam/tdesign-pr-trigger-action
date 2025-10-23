@@ -47,7 +47,7 @@ export default async function start(context: TriggerContext) {
   if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(repoMap[trigger])) {
     let scriptPath = 'scripts/generate-css-vars.js'
     if (repoMap[trigger] === 'tdesign-mobile-react') {
-      scriptPath = 'script/generate-css-vars.js'
+      scriptPath = 'script/generate-css-vars.mjs'
     }
     await exec('node', [scriptPath, '--NAME', 'all'], { cwd: `./${repoMap[trigger]}` })
     if (await gitHelper.isNeedCommit()) {
