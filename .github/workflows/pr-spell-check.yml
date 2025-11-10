@@ -3,11 +3,4 @@ on: [pull_request]
 
 jobs:
   run:
-    name: check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: crate-ci/typos@master
-        with:
-          config: .github/workflows/typos-config.toml
+    uses: TDesignOteam/workflows/.github/workflows/pr-spell-check.yml@main
