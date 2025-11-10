@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.20.0",
+  "packageManager": "pnpm@10.21.0",
   "description": "",
   "author": "tdesign",
   "license": "MIT",
@@ -32,21 +32,21 @@
     "@actions/core": "^1.11.1",
     "@actions/exec": "^1.1.1",
     "@actions/github": "^6.0.1",
-    "@pnpm/workspace.manifest-writer": "^1001.0.3",
-    "@pnpm/workspace.read-manifest": "^1000.2.5",
+    "@pnpm/workspace.manifest-writer": "^1001.0.4",
+    "@pnpm/workspace.read-manifest": "^1000.2.6",
     "node-cnb": "^1.17.1"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.2.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
-    "@types/node": "^22.18.13",
-    "eslint": "^9.39.0",
+    "@types/node": "^22.19.0",
+    "eslint": "^9.39.1",
     "eslint-plugin-format": "^1.0.2",
     "lint-staged": "^16.2.6",
     "simple-git-hooks": "^2.13.1",
-    "tsdown": "^0.15.12",
+    "tsdown": "^0.16.1",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.6"
+    "vitest": "^4.0.8"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
