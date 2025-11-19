@@ -5,35 +5,17 @@ import process$1 from "node:process";
 import { fileURLToPath } from "node:url";
 
 //#region rolldown:runtime
-var __create$2 = Object.create;
-var __defProp$9 = Object.defineProperty;
-var __getOwnPropDesc$9 = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames$9 = Object.getOwnPropertyNames;
-var __getProtoOf$2 = Object.getPrototypeOf;
-var __hasOwnProp$9 = Object.prototype.hasOwnProperty;
 var __commonJS = (cb, mod) => function() {
 	return mod || (0, cb[__getOwnPropNames$9(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
-var __copyProps$9 = (to, from, except, desc$1) => {
-	if (from && typeof from === "object" || typeof from === "function") for (var keys$2 = __getOwnPropNames$9(from), i$1 = 0, n = keys$2.length, key; i$1 < n; i$1++) {
-		key = keys$2[i$1];
-		if (!__hasOwnProp$9.call(to, key) && key !== except) __defProp$9(to, key, {
-			get: ((k) => from[k]).bind(null, key),
-			enumerable: !(desc$1 = __getOwnPropDesc$9(from, key)) || desc$1.enumerable
-		});
-	}
-	return to;
-};
-var __toESM$2 = (mod, isNodeMode, target) => (target = mod != null ? __create$2(__getProtoOf$2(mod)) : {}, __copyProps$9(isNodeMode || !mod || !mod.__esModule ? __defProp$9(target, "default", {
-	value: mod,
-	enumerable: true
-}) : target, mod));
 var __require = /* @__PURE__ */ createRequire(import.meta.url);
 
 //#endregion
 //#region node_modules/.pnpm/@actions+core@1.11.1/node_modules/@actions/core/lib/utils.js
 var require_utils$3 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+core@1.11.1/node_modules/@actions/core/lib/utils.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.toCommandProperties = exports.toCommandValue = void 0;
 	/**
 	* Sanitizes an input into a string so it can be passed into issueCommand safely
 	* @param input input to sanitize into a string
@@ -99,6 +81,7 @@ var require_command = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+
 		return result;
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.issue = exports.issueCommand = void 0;
 	const os$3 = __importStar$12(__require("os"));
 	const utils_1$4 = require_utils$3();
 	/**
@@ -189,6 +172,7 @@ var require_file_command = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@act
 		return result;
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.prepareKeyValueMessage = exports.issueFileCommand = void 0;
 	const crypto$5 = __importStar$11(__require("crypto"));
 	const fs$5 = __importStar$11(__require("fs"));
 	const os$2 = __importStar$11(__require("os"));
@@ -214,6 +198,7 @@ var require_file_command = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@act
 //#region node_modules/.pnpm/@actions+http-client@2.2.3/node_modules/@actions/http-client/lib/proxy.js
 var require_proxy = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+http-client@2.2.3/node_modules/@actions/http-client/lib/proxy.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.checkBypass = exports.getProxyUrl = void 0;
 	function getProxyUrl$1(reqUrl) {
 		const usingSsl = reqUrl.protocol === "https:";
 		if (checkBypass(reqUrl)) return;
@@ -2868,7 +2853,7 @@ var require_main = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@fastify+bus
 		if (typeof opts !== "object") throw new TypeError("Busboy expected an options-Object.");
 		if (typeof opts.headers !== "object") throw new TypeError("Busboy expected an options-Object with headers-attribute.");
 		if (typeof opts.headers["content-type"] !== "string") throw new TypeError("Missing Content-Type-header.");
-		const { headers,...streamOptions } = opts;
+		const { headers, ...streamOptions } = opts;
 		this.opts = {
 			autoDestroy: false,
 			...streamOptions
@@ -5367,7 +5352,7 @@ var require_connect = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.
 			this._sessionCache.set(sessionKey, session);
 		}
 	};
-	function buildConnector$4({ allowH2, maxCachedSessions, socketPath, timeout,...opts }) {
+	function buildConnector$4({ allowH2, maxCachedSessions, socketPath, timeout, ...opts }) {
 		if (maxCachedSessions != null && (!Number.isInteger(maxCachedSessions) || maxCachedSessions < 0)) throw new InvalidArgumentError$18("maxCachedSessions must be a positive integer or zero");
 		const options = {
 			path: socketPath,
@@ -5457,6 +5442,7 @@ var require_connect = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.
 //#region node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/llhttp/utils.js
 var require_utils$2 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29.0/node_modules/undici/lib/llhttp/utils.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.enumToMap = void 0;
 	function enumToMap(obj) {
 		const res = {};
 		Object.keys(obj).forEach((key) => {
@@ -6990,7 +6976,7 @@ var require_client = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.2
 		}
 		++h2State.openStreams;
 		stream$3.once("response", (headers$1) => {
-			const { [HTTP2_HEADER_STATUS]: statusCode,...realHeaders } = headers$1;
+			const { [HTTP2_HEADER_STATUS]: statusCode, ...realHeaders } = headers$1;
 			if (request$2.onHeaders(Number(statusCode), realHeaders, stream$3.resume.bind(stream$3), "") === false) stream$3.pause();
 		});
 		stream$3.once("end", () => {
@@ -7523,7 +7509,7 @@ var require_pool = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29.
 		return new Client$3(origin$1, opts);
 	}
 	var Pool$5 = class extends PoolBase$1 {
-		constructor(origin$1, { connections, factory = defaultFactory$3, connect: connect$2, connectTimeout, tls: tls$2, maxCachedSessions, socketPath, autoSelectFamily, autoSelectFamilyAttemptTimeout, allowH2,...options } = {}) {
+		constructor(origin$1, { connections, factory = defaultFactory$3, connect: connect$2, connectTimeout, tls: tls$2, maxCachedSessions, socketPath, autoSelectFamily, autoSelectFamilyAttemptTimeout, allowH2, ...options } = {}) {
 			super();
 			if (connections != null && (!Number.isFinite(connections) || connections < 0)) throw new InvalidArgumentError$15("invalid connections");
 			if (typeof factory !== "function") throw new InvalidArgumentError$15("factory must be a function.");
@@ -7594,7 +7580,7 @@ var require_balanced_pool = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/und
 		return new Pool$4(origin$1, opts);
 	}
 	var BalancedPool$1 = class extends PoolBase {
-		constructor(upstreams = [], { factory = defaultFactory$2,...opts } = {}) {
+		constructor(upstreams = [], { factory = defaultFactory$2, ...opts } = {}) {
 			super();
 			this[kOptions$2] = opts;
 			this[kIndex] = -1;
@@ -7725,7 +7711,7 @@ var require_agent = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici@5.29
 		return opts && opts.connections === 1 ? new Client$2(origin$1, opts) : new Pool$3(origin$1, opts);
 	}
 	var Agent$4 = class extends DispatcherBase$1 {
-		constructor({ factory = defaultFactory$1, maxRedirections = 0, connect: connect$2,...options } = {}) {
+		constructor({ factory = defaultFactory$1, maxRedirections = 0, connect: connect$2, ...options } = {}) {
 			super();
 			if (typeof factory !== "function") throw new InvalidArgumentError$13("factory must be a function.");
 			if (connect$2 != null && typeof connect$2 !== "function" && typeof connect$2 !== "object") throw new InvalidArgumentError$13("connect must be a function or an object");
@@ -8919,7 +8905,7 @@ var require_mock_utils = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undici
 	}
 	function buildMockOptions$1(opts) {
 		if (opts) {
-			const { agent,...mockOptions } = opts;
+			const { agent, ...mockOptions } = opts;
 			return mockOptions;
 		}
 	}
@@ -9496,7 +9482,7 @@ var require_RetryHandler = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/undi
 	}
 	var RetryHandler$1 = class RetryHandler$1 {
 		constructor(opts, handlers) {
-			const { retryOptions,...dispatchOpts } = opts;
+			const { retryOptions, ...dispatchOpts } = opts;
 			const { retry: retryFn, maxRetries, maxTimeout, minTimeout, timeoutFactor, methods, errorCodes, retryAfter, statusCodes } = retryOptions ?? {};
 			this.dispatch = handlers.dispatch;
 			this.handler = handlers.handler;
@@ -14498,6 +14484,7 @@ var require_lib$6 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+ht
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.HttpClient = exports.isHttps = exports.HttpClientResponse = exports.HttpClientError = exports.getProxyUrl = exports.MediaTypes = exports.Headers = exports.HttpCodes = void 0;
 	const http$3 = __importStar$10(__require("http"));
 	const https$3 = __importStar$10(__require("https"));
 	const pm = __importStar$10(require_proxy());
@@ -15004,6 +14991,7 @@ var require_auth = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+htt
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.PersonalAccessTokenCredentialHandler = exports.BearerCredentialHandler = exports.BasicCredentialHandler = void 0;
 	var BasicCredentialHandler = class {
 		constructor(username, password) {
 			this.username = username;
@@ -15092,6 +15080,7 @@ var require_oidc_utils = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actio
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.OidcClient = void 0;
 	const http_client_1 = require_lib$6();
 	const auth_1 = require_auth();
 	const core_1$1 = require_core$1();
@@ -15474,6 +15463,7 @@ var require_path_utils = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actio
 		return result;
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.toPlatformPath = exports.toWin32Path = exports.toPosixPath = void 0;
 	const path$7 = __importStar$9(__require("path"));
 	/**
 	* toPosixPath converts the given path to the posix form. On Windows, \\ will be
@@ -15735,6 +15725,7 @@ var require_io = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+io@1.
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.findInPath = exports.which = exports.mkdirP = exports.rmRF = exports.mv = exports.cp = void 0;
 	const assert_1 = __require("assert");
 	const path$5 = __importStar$7(__require("path"));
 	const ioUtil$1 = __importStar$7(require_io_util());
@@ -15977,6 +15968,7 @@ var require_toolrunner = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actio
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.argStringToArray = exports.ToolRunner = void 0;
 	const os$1 = __importStar$6(__require("os"));
 	const events$2 = __importStar$6(__require("events"));
 	const child = __importStar$6(__require("child_process"));
@@ -16376,6 +16368,7 @@ var require_exec = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+exe
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getExecOutput = exports.exec = void 0;
 	const string_decoder_1 = __require("string_decoder");
 	const tr = __importStar$5(require_toolrunner());
 	/**
@@ -16927,6 +16920,7 @@ var require_core$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+c
 //#region node_modules/.pnpm/@actions+github@6.0.1/node_modules/@actions/github/lib/context.js
 var require_context = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+github@6.0.1/node_modules/@actions/github/lib/context.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.Context = void 0;
 	const fs_1$1 = __require("fs");
 	const os_1 = __require("os");
 	var Context$2 = class {
@@ -17039,6 +17033,7 @@ var require_utils$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+
 		});
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getApiBaseUrl = exports.getProxyFetch = exports.getProxyAgentDispatcher = exports.getProxyAgent = exports.getAuthString = void 0;
 	const httpClient = __importStar$2(require_lib$6());
 	const undici_1 = require_undici();
 	function getAuthString(token, options) {
@@ -18027,7 +18022,7 @@ var require_dist_node$2 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@octo
 				this.auth = auth$1;
 			}
 			else {
-				const { authStrategy,...otherOptions } = options;
+				const { authStrategy, ...otherOptions } = options;
 				const auth$1 = authStrategy(Object.assign({
 					request: this.request,
 					log: this.log,
@@ -19809,6 +19804,7 @@ var require_github = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@actions+g
 		return result;
 	};
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.getOctokit = exports.context = void 0;
 	const Context = __importStar(require_context());
 	const utils_1 = require_utils();
 	exports.context = new Context.Context();
@@ -27118,6 +27114,12 @@ var require_mime_db = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/mime-db@1
 
 //#endregion
 //#region node_modules/.pnpm/mime-types@2.1.35/node_modules/mime-types/index.js
+/*!
+* mime-types
+* Copyright(c) 2014 Jonathan Ong
+* Copyright(c) 2015 Douglas Christopher Wilson
+* MIT Licensed
+*/
 var require_mime_types = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/mime-types@2.1.35/node_modules/mime-types/index.js": ((exports) => {
 	/**
 	* Module dependencies.
@@ -28985,6 +28987,7 @@ var require_follow_redirects = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/
 
 //#endregion
 //#region node_modules/.pnpm/axios@1.11.0/node_modules/axios/dist/node/axios.cjs
+/*! Axios v1.11.0 Copyright (c) 2025 Matt Zabriskie and contributors */
 var require_axios = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/axios@1.11.0/node_modules/axios/dist/node/axios.cjs": ((exports, module) => {
 	const FormData$1 = require_form_data();
 	const crypto = __require("crypto");
@@ -42493,6 +42496,7 @@ var require_read_yaml_file = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/re
 //#region node_modules/.pnpm/@pnpm+error@1000.0.5/node_modules/@pnpm/error/lib/index.js
 var require_lib$4 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+error@1000.0.5/node_modules/@pnpm/error/lib/index.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.LockfileMissingDependencyError = exports.FetchError = exports.PnpmError = void 0;
 	const constants_1$2 = require_lib$5();
 	var PnpmError = class extends Error {
 		code;
@@ -42542,9 +42546,10 @@ var require_lib$4 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+error
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
-var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
+var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.InvalidWorkspaceManifestError = void 0;
 	const error_1 = require_lib$4();
 	var InvalidWorkspaceManifestError = class extends error_1.PnpmError {
 		constructor(message) {
@@ -42555,8 +42560,8 @@ var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_m
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
-var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
+var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.assertValidWorkspaceManifestCatalog = assertValidWorkspaceManifestCatalog;
 	exports.assertValidWorkspaceManifestCatalogs = assertValidWorkspaceManifestCatalogs;
@@ -42580,8 +42585,8 @@ var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+wo
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/index.js
-var require_lib$3 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.5/node_modules/@pnpm/workspace.read-manifest/lib/index.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/index.js
+var require_lib$3 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/index.js": ((exports) => {
 	var __importDefault$2 = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
@@ -43495,6 +43500,7 @@ var require_equals = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+ramd
 //#region node_modules/.pnpm/@pnpm+util.lex-comparator@3.0.2/node_modules/@pnpm/util.lex-comparator/dist/lex-comparator.js
 var require_lex_comparator = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+util.lex-comparator@3.0.2/node_modules/@pnpm/util.lex-comparator/dist/lex-comparator.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
+	exports.lexCompare = void 0;
 	function lexCompare(a, b) {
 		return a > b ? 1 : a < b ? -1 : 0;
 	}
@@ -43613,8 +43619,8 @@ var require_lib$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+objec
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.3/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
-var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.3/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.5/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
+var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.5/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
@@ -43736,12 +43742,12 @@ var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspa
 
 //#endregion
 //#region src/utils/common.ts
-var import_dist = /* @__PURE__ */ __toESM$2(require_dist$1(), 1);
-var import_core$6 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$4 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
-var import_github$2 = /* @__PURE__ */ __toESM$2(require_github(), 1);
-var import_lib = /* @__PURE__ */ __toESM$2(require_lib(), 1);
-var import_lib$1 = /* @__PURE__ */ __toESM$2(require_lib$3(), 1);
+var import_dist = require_dist$1();
+var import_core$6 = require_core$1();
+var import_exec$4 = require_exec();
+var import_github$2 = require_github();
+var import_lib = require_lib();
+var import_lib$1 = require_lib$3();
 const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
 const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
 function addContributor(body, contributor) {
@@ -43823,8 +43829,8 @@ function updateCatalogs(workspaceManifest, packageName, version) {
 
 //#endregion
 //#region src/utils/git-helper.ts
-var import_core$5 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$3 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_core$5 = require_core$1();
+var import_exec$3 = require_exec();
 var GitHelper = class {
 	token;
 	owner;
@@ -43928,8 +43934,8 @@ var GitHelper = class {
 
 //#endregion
 //#region src/utils/github-helper.ts
-var import_core$4 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_github$1 = /* @__PURE__ */ __toESM$2(require_github(), 1);
+var import_core$4 = require_core$1();
+var import_github$1 = require_github();
 var GithubHelper = class {
 	octokit;
 	context;
@@ -44003,8 +44009,8 @@ var GithubHelper = class {
 
 //#endregion
 //#region src/tdesign/common.ts
-var import_core$3 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$2 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_core$3 = require_core$1();
+var import_exec$2 = require_exec();
 async function start(context$1) {
 	if (!Reflect.has(repoMap, context$1.trigger)) {
 		(0, import_core$3.info)(`错误的trigger: ${context$1.trigger}`);
@@ -44063,8 +44069,8 @@ async function start(context$1) {
 
 //#endregion
 //#region src/tdesign/icons.ts
-var import_core$2 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec$1 = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_core$2 = require_core$1();
+var import_exec$1 = require_exec();
 const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
 async function getCdnIconfontVersion() {
 	return (await (await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)).text()).match(CND_ICONFONT_VERSION_REG)?.[1] || "";
@@ -44138,8 +44144,8 @@ async function start$1(context$1) {
 
 //#endregion
 //#region src/utils/trigger.ts
-var import_core$1 = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_exec = /* @__PURE__ */ __toESM$2(require_exec(), 1);
+var import_core$1 = require_core$1();
+var import_exec = require_exec();
 const iconsMap = {
 	"/pr-vue": "tdesign-icons-vue",
 	"/pr-vue-next": "tdesign-icons-vue-next",
@@ -44258,8 +44264,8 @@ async function deleteCnbBranch(context$1) {
 
 //#endregion
 //#region src/index.ts
-var import_core = /* @__PURE__ */ __toESM$2(require_core$1(), 1);
-var import_github = /* @__PURE__ */ __toESM$2(require_github(), 1);
+var import_core = require_core$1();
+var import_github = require_github();
 async function run() {
 	const repo = (0, import_core.getInput)("repo") || import_github.context.repo.repo;
 	const owner = (0, import_core.getInput)("owner") || import_github.context.repo.owner;
