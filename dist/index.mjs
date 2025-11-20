@@ -43750,7 +43750,7 @@ var import_lib = require_lib();
 var import_lib$1 = require_lib$3();
 const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
 const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
-function addContributor(body, contributor) {
+function addContributor(body, contributor, link) {
 	if (SKIP_CHANGELOG_REG.test(body)) {
 		(0, import_core$6.info)(`不需要纳入 Changelog`);
 		return body;
@@ -43767,7 +43767,11 @@ function addContributor(body, contributor) {
 				isSkip = true;
 				return item;
 			}
-			if (CHANGELOG_REG.test(item)) return `${item} @${contributor}`;
+			if (CHANGELOG_REG.test(item)) {
+				let logContent = `${item} @${contributor}`;
+				if (link) logContent += ` ${link}`;
+				return logContent;
+			}
 		}
 		if (item === "### 📝 更新日志") isSkip = false;
 		return item;
@@ -44028,7 +44032,8 @@ async function start(context$1) {
 		githubHelper.addComment(context$1.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
-	const body = addContributor(prData.body || "", prData.user.login);
+	const link = `([common#${context$1.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context$1.pr_number}))`;
+	const body = addContributor(prData.body || "", prData.user.login, link);
 	const trigger = context$1.trigger;
 	const gitHelper = new GitHelper({
 		repo: repoMap[trigger],
