@@ -52,6 +52,7 @@ export default async function start(context: TriggerContext) {
     }
     await exec('node', [scriptPath, '--NAME', 'all'], { cwd: `./${repoMap[trigger]}` })
     if (await gitHelper.isNeedCommit()) {
+      await gitHelper.printDiff()
       await gitHelper.commit('docs: update css vars')
     }
   }

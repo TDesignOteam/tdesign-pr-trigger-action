@@ -43934,6 +43934,9 @@ var GitHelper = class {
 		const { stdout } = await (0, import_exec$3.getExecOutput)("git", ["status"], { cwd: this.repoPath });
 		return !stdout.includes("nothing to commit, working tree clean");
 	}
+	async printDiff() {
+		await (0, import_exec$3.exec)("git", ["diff"], { cwd: this.repoPath });
+	}
 };
 
 //#endregion
@@ -44060,7 +44063,10 @@ async function start(context$1) {
 			"--NAME",
 			"all"
 		], { cwd: `./${repoMap[trigger]}` });
-		if (await gitHelper.isNeedCommit()) await gitHelper.commit("docs: update css vars");
+		if (await gitHelper.isNeedCommit()) {
+			await gitHelper.printDiff();
+			await gitHelper.commit("docs: update css vars");
+		}
 	}
 	await gitHelper.push(branchName);
 	const newPrData = await new GithubHelper({
