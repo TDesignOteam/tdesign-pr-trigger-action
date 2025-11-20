@@ -8,7 +8,7 @@ import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 
 export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
 export const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i
-export function addContributor(body: string, contributor: string): string {
+export function addContributor(body: string, contributor: string, link?: string): string {
   if (SKIP_CHANGELOG_REG.test(body)) {
     info(`不需要纳入 Changelog`)
     return body
@@ -26,7 +26,12 @@ export function addContributor(body: string, contributor: string): string {
       }
       if (CHANGELOG_REG.test(item)) {
         // info(`匹配到更新日志项: ${item}`)
-        return `${item} @${contributor}`
+        let logContent = `${item} @${contributor}`
+        if (link) {
+          logContent += ` ${link}`
+        }
+
+        return logContent
       }
     }
     if (item === '### 📝 更新日志') {

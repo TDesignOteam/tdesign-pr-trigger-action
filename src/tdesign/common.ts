@@ -22,7 +22,8 @@ export default async function start(context: TriggerContext) {
     githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发')
     return
   }
-  const body = addContributor(prData.body || '', prData.user.login)
+  const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`
+  const body = addContributor(prData.body || '', prData.user.login, link)
   const trigger = context.trigger as AutoPrTrigger
   const gitHelper = new GitHelper({
     repo: repoMap[trigger],
@@ -51,6 +52,7 @@ export default async function start(context: TriggerContext) {
     }
     await exec('node', [scriptPath, '--NAME', 'all'], { cwd: `./${repoMap[trigger]}` })
     if (await gitHelper.isNeedCommit()) {
+      await gitHelper.printDiff()
       await gitHelper.commit('docs: update css vars')
     }
   }

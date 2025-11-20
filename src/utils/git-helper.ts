@@ -71,4 +71,8 @@ export class GitHelper {
     const { stdout } = await getExecOutput('git', ['status'], { cwd: this.repoPath })
     return !stdout.includes('nothing to commit, working tree clean')
   }
+
+  async printDiff() {
+    await exec('git', ['diff'], { cwd: this.repoPath })
+  }
 }
