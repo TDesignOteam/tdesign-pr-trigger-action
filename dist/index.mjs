@@ -42546,8 +42546,8 @@ var require_lib$4 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+error
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
-var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
+var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.InvalidWorkspaceManifestError = void 0;
 	const error_1 = require_lib$4();
@@ -42560,8 +42560,8 @@ var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJS({ "node_m
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
-var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
+var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js": ((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.assertValidWorkspaceManifestCatalog = assertValidWorkspaceManifestCatalog;
 	exports.assertValidWorkspaceManifestCatalogs = assertValidWorkspaceManifestCatalogs;
@@ -42585,8 +42585,8 @@ var require_catalogs = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+wo
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/index.js
-var require_lib$3 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.6/node_modules/@pnpm/workspace.read-manifest/lib/index.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/index.js
+var require_lib$3 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.7/node_modules/@pnpm/workspace.read-manifest/lib/index.js": ((exports) => {
 	var __importDefault$2 = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
@@ -43274,6 +43274,7 @@ var require_keys = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+ramda@
 		"toLocaleString"
 	];
 	var hasArgsEnumBug = /* @__PURE__ */ function() {
+		"use strict";
 		return arguments.propertyIsEnumerable("length");
 	}();
 	var contains = function contains$1(list, item) {
@@ -43619,8 +43620,8 @@ var require_lib$1 = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+objec
 }) });
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.5/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
-var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.5/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
+//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.6/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
+var require_lib = /* @__PURE__ */ __commonJS({ "node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.0.6/node_modules/@pnpm/workspace.manifest-writer/lib/index.js": ((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
 	};
@@ -44056,11 +44057,9 @@ async function start(context$1) {
 	}
 	await gitHelper.commit(title);
 	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
-		let scriptPath = "scripts/generate-css-vars.js";
-		if (repoMap[trigger] === "tdesign-mobile-react") scriptPath = "script/generate-css-vars.mjs";
-		await (0, import_exec$2.exec)("node", [
-			scriptPath,
-			"--NAME",
+		await (0, import_exec$2.exec)("npm", [
+			"run",
+			"api:css",
 			"all"
 		], { cwd: `./${repoMap[trigger]}` });
 		if (await gitHelper.isNeedCommit()) {
