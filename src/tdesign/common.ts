@@ -46,11 +46,7 @@ export default async function start(context: TriggerContext) {
 
   await gitHelper.commit(title)
   if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(repoMap[trigger])) {
-    let scriptPath = 'scripts/generate-css-vars.js'
-    if (repoMap[trigger] === 'tdesign-mobile-react') {
-      scriptPath = 'script/generate-css-vars.mjs'
-    }
-    await exec('node', [scriptPath, '--NAME', 'all'], { cwd: `./${repoMap[trigger]}` })
+    await exec('npm', ['run', 'api:css', 'all'], { cwd: `./${repoMap[trigger]}` })
     if (await gitHelper.isNeedCommit()) {
       await gitHelper.printDiff()
       await gitHelper.commit('docs: update css vars')
