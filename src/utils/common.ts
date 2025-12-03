@@ -62,7 +62,7 @@ export async function createPR(context: CreatePRContext) {
   })
 }
 export async function getPkgLatestVersion(packageName: string) {
-  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version'])
+  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version', '--registry=https://registry.npmjs.org/'])
   return stdout.trim()
 }
 
