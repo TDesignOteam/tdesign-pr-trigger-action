@@ -23,7 +23,7 @@
     "build": "tsdown",
     "lint": "eslint . ",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "vitest run",
     "test:update": "vitest run -u",
     "prepare": "simple-git-hooks"
@@ -40,12 +40,12 @@
     "@antfu/eslint-config": "^6.2.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@types/node": "^24.10.1",
+    "@typescript/native-preview": "7.0.0-dev.20251203.1",
     "eslint": "^9.39.1",
     "eslint-plugin-format": "^1.0.2",
     "lint-staged": "^16.2.7",
     "simple-git-hooks": "^2.13.1",
     "tsdown": "^0.16.8",
-    "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   },
   "simple-git-hooks": {
