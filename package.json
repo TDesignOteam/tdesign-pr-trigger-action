@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@actions/core": "^2.0.1",
-    "@actions/exec": "^1.1.1",
+    "@actions/exec": "^2.0.0",
     "@actions/github": "^6.0.1",
     "@pnpm/workspace.manifest-writer": "^1001.0.7",
     "@pnpm/workspace.read-manifest": "^1000.2.8",
