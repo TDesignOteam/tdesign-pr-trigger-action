@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { addContributor } from '../src/utils'
+import { adaptChangelogForRepo, addContributor } from '../src/utils'
 
 describe('utils', () => {
   describe('addContributor', () => {
@@ -27,6 +27,27 @@ describe('utils', () => {
     it('skip log', () => {
       const pr_body = readFileSync('test/fixtures/pr_body_skip_log.md', 'utf8').replaceAll('\n', '\r\n')
       const body = addContributor(pr_body, 'tdesign-helper')
+      expect(body).toMatchSnapshot()
+    })
+  })
+
+  describe('adaptChangelogForRepo', () => {
+    it('tdesign-vue', () => {
+      const pr_body = readFileSync('test/fixtures/pr_body.md', 'utf8').replaceAll('\n', '\r\n')
+      const body = adaptChangelogForRepo(pr_body, 'tdesign-vue')
+
+      expect(body).toMatchSnapshot()
+    })
+    it('tdesign-vue-next', () => {
+      const pr_body = readFileSync('test/fixtures/pr_body.md', 'utf8').replaceAll('\n', '\r\n')
+      const body = adaptChangelogForRepo(pr_body, 'tdesign-vue-next')
+
+      expect(body).toMatchSnapshot()
+    })
+    it('tdesign-react', () => {
+      const pr_body = readFileSync('test/fixtures/pr_body.md', 'utf8').replaceAll('\n', '\r\n')
+      const body = adaptChangelogForRepo(pr_body, 'tdesign-react')
+
       expect(body).toMatchSnapshot()
     })
   })

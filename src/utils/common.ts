@@ -1,4 +1,5 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
+import type { TdesignRepo } from './trigger'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
@@ -39,6 +40,35 @@ export function addContributor(body: string, contributor: string, link?: string)
     }
     return item
   }).join('\r\n')
+}
+
+export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
+  if (SKIP_CHANGELOG_REG.test(body)) {
+    info(`不需要纳入 Changelog`)
+    return body
+  }
+  if (!['tdesign-vue-next', 'tdesign-react'].includes(repo)) {
+    return body
+  }
+
+  // 先移除 "[ ] 本条 PR 不需要纳入 Changelog" 这一行
+  const removeSkipChangelogRegex = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi
+  let updatedBody = body.replace(removeSkipChangelogRegex, '')
+
+  // 使用正则表达式在 "### 📝 更新日志" 后插入 repoType
+  const changelogSectionRegex = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/
+  const match = updatedBody.match(changelogSectionRegex)
+
+  if (match) {
+    const [, changelogHeader, whitespace, rest] = match
+    updatedBody = updatedBody.replace(
+      changelogSectionRegex,
+      `${changelogHeader}${whitespace}#### ${repo}\r\n\r\n${rest}`,
+    )
+    info(`为 ${repo} 适配新的变更日志标识`)
+  }
+
+  return updatedBody
 }
 
 export interface CreatePRContext {
