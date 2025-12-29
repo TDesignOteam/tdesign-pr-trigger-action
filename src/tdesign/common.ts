@@ -1,7 +1,7 @@
 import type { AutoPrTrigger, TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
 import { exec } from '@actions/exec'
-import { addContributor, GitHelper, GithubHelper } from '../utils'
+import { adaptChangelogForRepo, addContributor, GitHelper, GithubHelper } from '../utils'
 import { ownerMap, repoMap } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
@@ -23,8 +23,10 @@ export default async function start(context: TriggerContext) {
     return
   }
   const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`
-  const body = addContributor(prData.body || '', prData.user.login, link)
+  let body = addContributor(prData.body || '', prData.user.login, link)
   const trigger = context.trigger as AutoPrTrigger
+  body = adaptChangelogForRepo(body, repoMap[trigger])
+
   const gitHelper = new GitHelper({
     repo: repoMap[trigger],
     owner: ownerMap[trigger],

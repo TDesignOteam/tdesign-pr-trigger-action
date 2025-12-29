@@ -44970,6 +44970,22 @@ function addContributor(body, contributor, link) {
 		return item;
 	}).join("\r\n");
 }
+function adaptChangelogForRepo(body, repo) {
+	if (SKIP_CHANGELOG_REG.test(body)) {
+		(0, import_core.info)(`不需要纳入 Changelog`);
+		return body;
+	}
+	if (!["tdesign-vue-next", "tdesign-react"].includes(repo)) return body;
+	let updatedBody = body.replace(/-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi, "");
+	const changelogSectionRegex = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
+	const match = updatedBody.match(changelogSectionRegex);
+	if (match) {
+		const [, changelogHeader, whitespace, rest] = match;
+		updatedBody = updatedBody.replace(changelogSectionRegex, `${changelogHeader}${whitespace}#### ${repo}\r\n\r\n${rest}`);
+		(0, import_core.info)(`为 ${repo} 适配新的变更日志标识`);
+	}
+	return updatedBody;
+}
 async function getPkgLatestVersion(packageName) {
 	const { stdout } = await (0, import_exec.getExecOutput)("npm", [
 		"view",
@@ -45225,8 +45241,9 @@ async function start$1(context$1) {
 		return;
 	}
 	const link = `([common#${context$1.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context$1.pr_number}))`;
-	const body = addContributor(prData.body || "", prData.user.login, link);
+	let body = addContributor(prData.body || "", prData.user.login, link);
 	const trigger = context$1.trigger;
+	body = adaptChangelogForRepo(body, repoMap[trigger]);
 	const gitHelper = new GitHelper({
 		repo: repoMap[trigger],
 		owner: ownerMap[trigger],

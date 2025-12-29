@@ -19,7 +19,7 @@ export const iconsMap: Record<AutoPrTrigger, string> = {
   '/pr-mobile-react': 'tdesign-icons-react',
   '/pr-miniprogram': 'cdn-iconfont',
 }
-export const repoMap: Record<AutoPrTrigger, string> = {
+export const repoMap: Record<AutoPrTrigger, TdesignRepo> = {
   '/pr-vue': 'tdesign-vue',
   '/pr-vue-next': 'tdesign-vue-next',
   '/pr-react': 'tdesign-react',
