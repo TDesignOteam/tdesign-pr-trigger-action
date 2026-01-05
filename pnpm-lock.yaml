@@ -18,8 +18,8 @@ importers:
         specifier: ^6.0.1
         version: 6.0.1
       '@pnpm/workspace.manifest-writer':
-        specifier: ^1001.1.0
-        version: 1001.1.0
+        specifier: ^1001.1.1
+        version: 1001.1.1
       '@pnpm/workspace.read-manifest':
         specifier: ^1000.2.9
         version: 1000.2.9
@@ -49,8 +49,8 @@ importers:
         specifier: ^2.13.1
         version: 2.13.1
       tsdown:
-        specifier: ^0.18.3
-        version: 0.18.3(synckit@0.11.11)(typescript@5.9.3)
+        specifier: ^0.18.4
+        version: 0.18.4(synckit@0.11.11)(typescript@5.9.3)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -515,8 +515,8 @@ packages:
     resolution: {integrity: sha512-GjH0TPjbVNrPnl/BAGoFuBLJ2sFfXNKbS33lll/Ehe9yw0fyc8Kdw7kO9if37yQqn6vaa4dAHKkPllum7f/IPQ==}
     engines: {node: '>=18.12'}
 
-  '@pnpm/lockfile.types@1002.0.7':
-    resolution: {integrity: sha512-4KT+rlDtHaGIDUVX0KJ6dG26hJyMEV9LCW0e29zYb9L/9libYdLzuyY2cCIbBI/9NlpCfiy82NcqFg7A3HASaw==}
+  '@pnpm/lockfile.types@1002.0.8':
+    resolution: {integrity: sha512-dNoCS0Wqd4an1Wn4XYkTSiNj7HD/IQaTLaCGbeMwlEmQ/0sNoeZ/cl5CBVFyBhzuliqTImAZxqRxZLEeVyo8GQ==}
     engines: {node: '>=18.12'}
 
   '@pnpm/object.key-sorting@1000.0.1':
@@ -530,8 +530,8 @@ packages:
   '@pnpm/ramda@0.28.1':
     resolution: {integrity: sha512-zcAG+lvU0fMziNeGXpPyCyCJYp5ZVrPElEE4t14jAmViaihohocZ+dDkcRIyAomox8pQsuZnv1EyHR+pOhmUWw==}
 
-  '@pnpm/resolver-base@1005.3.3':
-    resolution: {integrity: sha512-mwh5nHZXP1iORD6bQLYAYp9WWma9kwHsK9tLWICLvrWPxw+RqRthKsp0NxYPR7nV1Yd1cEgAi1lWxgWNxjJ8wA==}
+  '@pnpm/resolver-base@1005.4.0':
+    resolution: {integrity: sha512-hGttP7Kz3NLcXu70NKlPZcmxjcMt7oxXk4+tnXQ9lmmg4F2kbz+z2No4qld/aGlMsFlWgYk4Bxno2S7NsAHcBQ==}
     engines: {node: '>=18.12'}
 
   '@pnpm/types@1001.2.0':
@@ -542,8 +542,8 @@ packages:
     resolution: {integrity: sha512-blFO4Ws97tWv/SNE6N39ZdGmZBrocXnBOfVp0ln4kELmns4pGPZizqyRtR8EjfOLMLstbmNCTReBoDvLz1isVg==}
     engines: {node: '>=18.12'}
 
-  '@pnpm/workspace.manifest-writer@1001.1.0':
-    resolution: {integrity: sha512-YIKqhK2HXj2KJ2vUEOA00/4qbhMAzyAd6noDuaOsd3euLXXf6GttSUxbIDwFdCD6lcXLBc66dfPA+8BgWUsYkQ==}
+  '@pnpm/workspace.manifest-writer@1001.1.1':
+    resolution: {integrity: sha512-BYa9COEIfnjbY8sER9HvooHdt7xW4HUsdxA4QiSB7lsX0Lmtkqe0fHmloHh2Snqm/p2/jjoyHLoSz4/wENHZCA==}
     engines: {node: '>=18.12'}
 
   '@pnpm/workspace.read-manifest@1000.2.9':
@@ -2194,8 +2194,8 @@ packages:
     peerDependencies:
       typescript: '>=4.0.0'
 
-  tsdown@0.18.3:
-    resolution: {integrity: sha512-OVFzktKDTglFAUh/WO8WamBUbZoBlJ9m7NgZZrVyIKe32BfXBeRZ+soFFpuOGVP8g8OU4tOLOpTyPTELWvcTFw==}
+  tsdown@0.18.4:
+    resolution: {integrity: sha512-J/tRS6hsZTkvqmt4+xdELUCkQYDuUCXgBv0fw3ImV09WPGbEKfsPD65E+WUjSu3E7Z6tji9XZ1iWs8rbGqB/ZA==}
     engines: {node: '>=20.19.0'}
     hasBin: true
     peerDependencies:
@@ -2837,10 +2837,10 @@ snapshots:
     dependencies:
       '@pnpm/constants': 1001.3.1
 
-  '@pnpm/lockfile.types@1002.0.7':
+  '@pnpm/lockfile.types@1002.0.8':
     dependencies:
       '@pnpm/patching.types': 1000.1.0
-      '@pnpm/resolver-base': 1005.3.3
+      '@pnpm/resolver-base': 1005.4.0
       '@pnpm/types': 1001.2.0
 
   '@pnpm/object.key-sorting@1000.0.1':
@@ -2852,7 +2852,7 @@ snapshots:
 
   '@pnpm/ramda@0.28.1': {}
 
-  '@pnpm/resolver-base@1005.3.3':
+  '@pnpm/resolver-base@1005.4.0':
     dependencies:
       '@pnpm/types': 1001.2.0
 
@@ -2860,11 +2860,11 @@ snapshots:
 
   '@pnpm/util.lex-comparator@3.0.2': {}
 
-  '@pnpm/workspace.manifest-writer@1001.1.0':
+  '@pnpm/workspace.manifest-writer@1001.1.1':
     dependencies:
       '@pnpm/catalogs.types': 1000.0.0
       '@pnpm/constants': 1001.3.1
-      '@pnpm/lockfile.types': 1002.0.7
+      '@pnpm/lockfile.types': 1002.0.8
       '@pnpm/object.key-sorting': 1000.0.1
       '@pnpm/types': 1001.2.0
       '@pnpm/workspace.read-manifest': 1000.2.9
@@ -4672,7 +4672,7 @@ snapshots:
       picomatch: 4.0.3
       typescript: 5.9.3
 
-  tsdown@0.18.3(synckit@0.11.11)(typescript@5.9.3):
+  tsdown@0.18.4(synckit@0.11.11)(typescript@5.9.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
