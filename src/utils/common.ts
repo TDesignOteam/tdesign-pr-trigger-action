@@ -98,7 +98,7 @@ export async function getPkgLatestVersion(packageName: string) {
 
 export async function bumpIconsVersion(packageManager: string, repo: string) {
   if (packageManager === 'pnpm') {
-    if (repo === 'tdesign-vue-next') {
+    if (repo === 'tdesign-vue-next' || repo === 'tdesign-miniprogram') {
       let workspaceManifest = await readWorkspaceManifest(`./${repo}`)
       if (workspaceManifest) {
         const iconsVueNextVersion = await getPkgLatestVersion('tdesign-icons-vue-next')
