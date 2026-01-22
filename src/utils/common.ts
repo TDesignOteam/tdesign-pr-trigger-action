@@ -47,7 +47,7 @@ export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
     info(`不需要纳入 Changelog`)
     return body
   }
-  if (!['tdesign-vue-next', 'tdesign-react'].includes(repo)) {
+  if (!['tdesign-vue-next', 'tdesign-react', 'tdesign-miniprogram'].includes(repo)) {
     return body
   }
 

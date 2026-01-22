@@ -32951,7 +32951,11 @@ function adaptChangelogForRepo(body, repo) {
 		(0, import_core.info)(`不需要纳入 Changelog`);
 		return body;
 	}
-	if (!["tdesign-vue-next", "tdesign-react"].includes(repo)) return body;
+	if (![
+		"tdesign-vue-next",
+		"tdesign-react",
+		"tdesign-miniprogram"
+	].includes(repo)) return body;
 	let updatedBody = body.replace(/-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi, "");
 	const changelogSectionRegex = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
 	const match = updatedBody.match(changelogSectionRegex);
@@ -33282,8 +33286,9 @@ async function start(context$1) {
 		token: context$1.token,
 		dryRun: context$1.dry_run
 	}).getPrData(context$1.pr_number);
-	const body = addContributor(prData.body || "", prData.user.login);
+	let body = addContributor(prData.body || "", prData.user.login);
 	const trigger = context$1.trigger;
+	body = adaptChangelogForRepo(body, repoMap[trigger]);
 	(0, import_core.startGroup)("body");
 	(0, import_core.info)(`${body}`);
 	(0, import_core.endGroup)();

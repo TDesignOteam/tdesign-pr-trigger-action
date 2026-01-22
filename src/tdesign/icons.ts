@@ -1,7 +1,7 @@
 import type { AutoPrTrigger, TdesignRepo, TriggerContext } from '../utils/trigger'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
-import { addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from '../utils'
+import { adaptChangelogForRepo, addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from '../utils'
 import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
@@ -29,8 +29,9 @@ export default async function start(context: TriggerContext) {
     dryRun: context.dry_run,
   })
   const prData = await githubHelper.getPrData(context.pr_number)
-  const body = addContributor(prData.body || '', prData.user.login)
+  let body = addContributor(prData.body || '', prData.user.login)
   const trigger = context.trigger as AutoPrTrigger
+  body = adaptChangelogForRepo(body, repoMap[trigger])
   startGroup('body')
   info(`${body}`)
   endGroup()
