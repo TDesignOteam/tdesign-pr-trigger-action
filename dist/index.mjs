@@ -31705,7 +31705,7 @@ var require_lib$4 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.9/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.10/node_modules/@pnpm/workspace.read-manifest/lib/errors/InvalidWorkspaceManifestError.js
 var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.InvalidWorkspaceManifestError = void 0;
@@ -31719,7 +31719,7 @@ var require_InvalidWorkspaceManifestError = /* @__PURE__ */ __commonJSMin(((expo
 }));
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.9/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.10/node_modules/@pnpm/workspace.read-manifest/lib/catalogs.js
 var require_catalogs = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
 	exports.assertValidWorkspaceManifestCatalog = assertValidWorkspaceManifestCatalog;
@@ -31744,7 +31744,7 @@ var require_catalogs = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.9/node_modules/@pnpm/workspace.read-manifest/lib/index.js
+//#region node_modules/.pnpm/@pnpm+workspace.read-manifest@1000.2.10/node_modules/@pnpm/workspace.read-manifest/lib/index.js
 var require_lib$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
@@ -31796,6 +31796,14 @@ var require_lib$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	* the future.
 	*/
 	function checkWorkspaceManifestAssignability(_manifest) {}
+}));
+
+//#endregion
+//#region node_modules/.pnpm/tsdown@0.19.0_synckit@0.11.12_typescript@5.9.3/node_modules/tsdown/esm-shims.js
+var getFilename, __filename;
+var init_esm_shims = __esmMin((() => {
+	getFilename = () => fileURLToPath(import.meta.url);
+	__filename = /* @__PURE__ */ getFilename();
 }));
 
 //#endregion
@@ -32107,6 +32115,7 @@ var require_cjs = /* @__PURE__ */ __commonJSMin(((exports) => {
 //#endregion
 //#region node_modules/.pnpm/write-file-atomic@5.0.1/node_modules/write-file-atomic/lib/index.js
 var require_lib$2 = /* @__PURE__ */ __commonJSMin(((exports, module) => {
+	init_esm_shims();
 	module.exports = writeFile;
 	module.exports.sync = writeFileSync;
 	module.exports._getTmpname = getTmpname;
@@ -32779,7 +32788,7 @@ var require_lib$1 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.1.1/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
+//#region node_modules/.pnpm/@pnpm+workspace.manifest-writer@1001.1.2/node_modules/@pnpm/workspace.manifest-writer/lib/index.js
 var require_lib = /* @__PURE__ */ __commonJSMin(((exports) => {
 	var __importDefault = exports && exports.__importDefault || function(mod) {
 		return mod && mod.__esModule ? mod : { "default": mod };
