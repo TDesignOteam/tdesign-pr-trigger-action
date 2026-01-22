@@ -31799,7 +31799,7 @@ var require_lib$3 = /* @__PURE__ */ __commonJSMin(((exports) => {
 }));
 
 //#endregion
-//#region node_modules/.pnpm/tsdown@0.19.0_synckit@0.11.12_typescript@5.9.3/node_modules/tsdown/esm-shims.js
+//#region node_modules/.pnpm/tsdown@0.19.0_@typescript+native-preview@7.0.0-dev.20260122.3_synckit@0.11.12_typescript@5.9.3/node_modules/tsdown/esm-shims.js
 var getFilename, __filename;
 var init_esm_shims = __esmMin((() => {
 	getFilename = () => fileURLToPath(import.meta.url);
