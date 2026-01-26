@@ -5,4 +5,5 @@ export default defineConfig({
   entry: ['src/index.ts'],
   noExternal: [...Object.keys(packageJson.dependencies)],
   shims: true,
+  inlineOnly: false,
 })
