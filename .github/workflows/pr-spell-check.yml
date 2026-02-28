@@ -3,4 +3,4 @@ on: [pull_request]
 
 jobs:
   run:
-    uses: TDesignOteam/workflows/templates/spell-check.yml@templates
+    uses: TDesignOteam/workflows/.github/workflows/reusable-spell-check.yml@templates
