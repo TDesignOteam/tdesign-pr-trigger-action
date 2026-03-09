@@ -39392,7 +39392,7 @@ async function getCdnIconfontVersion() {
 }
 async function miniprogramUpdateIcons(repo, version) {
 	await exec("node", [
-		"./scripts/update-icons.mjs",
+		"./script/update-icons.mjs",
 		"--version",
 		version
 	], { cwd: `./${repo}/packages/tdesign-miniprogram/site` });
