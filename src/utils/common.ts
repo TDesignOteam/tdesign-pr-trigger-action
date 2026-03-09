@@ -9,6 +9,8 @@ import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
 
 export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
 export const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i
+export const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi
+export const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/
 export function addContributor(body: string, contributor: string, link?: string): string {
   if (SKIP_CHANGELOG_REG.test(body)) {
     info(`不需要纳入 Changelog`)
@@ -52,17 +54,15 @@ export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
   }
 
   // 先移除 "[ ] 本条 PR 不需要纳入 Changelog" 这一行
-  const removeSkipChangelogRegex = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi
-  let updatedBody = body.replace(removeSkipChangelogRegex, '')
+  let updatedBody = body.replace(REMOVE_SKIP_CHANGELOG_REG, '')
 
   // 使用正则表达式在 "### 📝 更新日志" 后插入 repoType
-  const changelogSectionRegex = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/
-  const match = updatedBody.match(changelogSectionRegex)
+  const match = updatedBody.match(CHANGELOG_SECTION_REG)
 
   if (match) {
     const [, changelogHeader, whitespace, rest] = match
     updatedBody = updatedBody.replace(
-      changelogSectionRegex,
+      CHANGELOG_SECTION_REG,
       `${changelogHeader}${whitespace}#### ${repo}\r\n\r\n${rest}`,
     )
     info(`为 ${repo} 适配新的变更日志标识`)
