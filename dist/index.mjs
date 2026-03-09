@@ -39045,6 +39045,8 @@ var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
 var import_lib$1 = require_lib$4();
 const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
 const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
+const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi;
+const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
 function addContributor(body, contributor, link) {
 	if (SKIP_CHANGELOG_REG.test(body)) {
 		info(`不需要纳入 Changelog`);
@@ -39082,12 +39084,11 @@ function adaptChangelogForRepo(body, repo) {
 		"tdesign-react",
 		"tdesign-miniprogram"
 	].includes(repo)) return body;
-	let updatedBody = body.replace(/-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi, "");
-	const changelogSectionRegex = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
-	const match = updatedBody.match(changelogSectionRegex);
+	let updatedBody = body.replace(REMOVE_SKIP_CHANGELOG_REG, "");
+	const match = updatedBody.match(CHANGELOG_SECTION_REG);
 	if (match) {
 		const [, changelogHeader, whitespace, rest] = match;
-		updatedBody = updatedBody.replace(changelogSectionRegex, `${changelogHeader}${whitespace}#### ${repo}\r\n\r\n${rest}`);
+		updatedBody = updatedBody.replace(CHANGELOG_SECTION_REG, `${changelogHeader}${whitespace}#### ${repo}\r\n\r\n${rest}`);
 		info(`为 ${repo} 适配新的变更日志标识`);
 	}
 	return updatedBody;

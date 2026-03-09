@@ -43,7 +43,6 @@ export default defineConfig({
       'undici',
       'universal-user-agent',
       'write-file-atomic',
-      'write-yaml-file',
       'yaml',
     ],
   },
