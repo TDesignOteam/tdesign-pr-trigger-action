@@ -39395,7 +39395,7 @@ async function miniprogramUpdateIcons(repo, version) {
 		"./script/update-icons.mjs",
 		"--version",
 		version
-	], { cwd: `./${repo}/packages/tdesign-miniprogram/site` });
+	], { cwd: `./${repo}` });
 	await exec("git", ["status"], { cwd: `./${repo}` });
 }
 async function start(context) {
