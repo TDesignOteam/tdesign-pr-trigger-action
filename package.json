@@ -45,7 +45,7 @@
     "lint-staged": "^16.4.0",
     "simple-git-hooks": "^2.13.1",
     "tsdown": "^0.21.4",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.2",
     "vitest": "^4.1.0"
   },
   "simple-git-hooks": {
