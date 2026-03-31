@@ -2,8 +2,7 @@ name: test-tdesign-icons-trigger
 on:
   pull_request:
     branches: [develop]
-    paths:
-      - dist/*
+   
 
 jobs:
   pr-vue:
