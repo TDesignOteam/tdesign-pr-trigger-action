@@ -13,7 +13,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -21,9 +21,9 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-vue
-          dry-run: true
+          
 
   pr-vue-next:
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -40,9 +40,9 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-vue-next
-          dry-run: true
+          
 
   pr-react:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -59,9 +59,9 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-react
-          dry-run: true
+          
 
   pr-mobile-vue:
     runs-on: ubuntu-latest
@@ -70,7 +70,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -78,9 +78,9 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-mobile-vue
-          dry-run: true
+          
 
   pr-mobile-react:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -97,9 +97,9 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-mobile-react
-          dry-run: true
+         
 
   pr-miniprogram:
     runs-on: ubuntu-latest
@@ -108,7 +108,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
@@ -116,6 +116,6 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 231
           trigger: /pr-miniprogram
-          dry-run: true
+          
