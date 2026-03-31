@@ -1,53 +1,72 @@
-export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
+export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram' | '/pr-tdesign'
 
 export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
 
-export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
+export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram' | 'tdesign-tdesign'
+
+export type TriggerSource = 'common' | 'icons'
 
 export interface RepoMapping {
-  icons: string
-  repo: TdesignRepo
+  source: TriggerSource
+  targetRepo: TdesignRepo
   owner: string
   packageManager: string
+  iconsPackage?: string
 }
 
 export const REPO_MAPPING: Record<AutoPrTrigger, RepoMapping> = {
   '/pr-vue': {
-    icons: 'tdesign-icons-vue',
-    repo: 'tdesign-vue',
+    source: 'common',
+    targetRepo: 'tdesign-vue',
     owner: 'Tencent',
     packageManager: 'npm',
   },
   '/pr-vue-next': {
-    icons: 'tdesign-icons-vue-next',
-    repo: 'tdesign-vue-next',
+    source: 'common',
+    targetRepo: 'tdesign-vue-next',
     owner: 'Tencent',
     packageManager: 'pnpm',
   },
   '/pr-react': {
-    icons: 'tdesign-icons-react',
-    repo: 'tdesign-react',
+    source: 'common',
+    targetRepo: 'tdesign-react',
     owner: 'Tencent',
     packageManager: 'pnpm',
   },
   '/pr-mobile-vue': {
-    icons: 'tdesign-icons-vue-next',
-    repo: 'tdesign-mobile-vue',
+    source: 'common',
+    targetRepo: 'tdesign-mobile-vue',
     owner: 'Tencent',
     packageManager: 'npm',
   },
   '/pr-mobile-react': {
-    icons: 'tdesign-icons-react',
-    repo: 'tdesign-mobile-react',
+    source: 'common',
+    targetRepo: 'tdesign-mobile-react',
     owner: 'Tencent',
     packageManager: 'npm',
   },
   '/pr-miniprogram': {
-    icons: 'cdn-iconfont',
-    repo: 'tdesign-miniprogram',
+    source: 'common',
+    targetRepo: 'tdesign-miniprogram',
     owner: 'Tencent',
     packageManager: 'pnpm',
   },
+  '/pr-tdesign': {
+    source: 'icons',
+    targetRepo: 'tdesign-tdesign',
+    owner: 'Tencent',
+    packageManager: 'pnpm',
+  },
+}
+
+export const ICONS_MAPPING: Record<AutoPrTrigger, string> = {
+  '/pr-vue': 'tdesign-icons-vue',
+  '/pr-vue-next': 'tdesign-icons-vue-next',
+  '/pr-react': 'tdesign-icons-react',
+  '/pr-mobile-vue': 'tdesign-icons-vue-next',
+  '/pr-mobile-react': 'tdesign-icons-react',
+  '/pr-miniprogram': 'cdn-iconfont',
+  '/pr-tdesign': 'tdesign-icons',
 }
 
 export function getRepoMapping(trigger: AutoPrTrigger): RepoMapping | undefined {
@@ -55,17 +74,21 @@ export function getRepoMapping(trigger: AutoPrTrigger): RepoMapping | undefined 
 }
 
 export function getIconsPackage(trigger: AutoPrTrigger): string | undefined {
-  return REPO_MAPPING[trigger]?.icons
+  return ICONS_MAPPING[trigger]
 }
 
 export function getTargetRepo(trigger: AutoPrTrigger): TdesignRepo | undefined {
-  return REPO_MAPPING[trigger]?.repo
+  return REPO_MAPPING[trigger]?.targetRepo
 }
 
 export function getOwner(trigger: AutoPrTrigger): string | undefined {
   return REPO_MAPPING[trigger]?.owner
 }
 
+export function getSource(trigger: AutoPrTrigger): TriggerSource | undefined {
+  return REPO_MAPPING[trigger]?.source
+}
+
 export function getPackageManager(repo: TdesignRepo): string | undefined {
-  return Object.values(REPO_MAPPING).find(r => r.repo === repo)?.packageManager
+  return Object.values(REPO_MAPPING).find(r => r.targetRepo === repo)?.packageManager
 }

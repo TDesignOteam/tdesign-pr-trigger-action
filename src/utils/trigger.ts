@@ -1,14 +1,16 @@
-import type { Trigger } from '../config/mapping'
-import { error, getInput, info } from '@actions/core'
+import type { AutoPrTrigger, TdesignRepo, Trigger } from '../config/mapping'
+import { getInput, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { getClient } from 'node-cnb'
+import { BRANCH_PATTERNS, PR_LABELS, PR_TITLES } from '../config/constants'
+import { getSource } from '../config/mapping'
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
 import { corepackEnable, getPkgLatestVersion } from './common'
 import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
-export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
+export { TdesignRepo }
 
 export interface TriggerContext {
   owner: string
@@ -18,8 +20,8 @@ export interface TriggerContext {
   trigger: Trigger
   dry_run: boolean
 }
+
 export default function useTrigger(context: TriggerContext) {
-  // TODO
   switch (context.trigger) {
     case '/pr-vue':
     case '/pr-vue-next':
@@ -27,6 +29,7 @@ export default function useTrigger(context: TriggerContext) {
     case '/pr-mobile-vue':
     case '/pr-mobile-react':
     case '/pr-miniprogram':
+    case '/pr-tdesign':
       autoPR(context)
       break
     case '/upgrade-deps':
@@ -41,15 +44,21 @@ export default function useTrigger(context: TriggerContext) {
 }
 
 function autoPR(context: TriggerContext) {
-  switch (context.repo) {
-    case 'tdesign-icons':
-      iconStart(context)
-      break
-    case 'tdesign-common':
+  const source = getSource(context.trigger as AutoPrTrigger)
+
+  if (!source) {
+    throw new Error(`无法获取触发源: ${context.trigger}`)
+  }
+
+  switch (source) {
+    case 'common':
       commonStart(context)
       break
+    case 'icons':
+      iconStart(context)
+      break
     default:
-      throw new Error(`该仓库未适配: ${context.repo}`)
+      throw new Error(`未知的触发源: ${source}`)
   }
 }
 
@@ -60,11 +69,13 @@ async function upgradeDeps(context: TriggerContext) {
   if (!deps) {
     throw new Error('请指定需要升级的依赖')
   }
+
   const latestVersion = await getPkgLatestVersion(deps)
 
   if (packageManager !== 'npm') {
     await corepackEnable()
   }
+
   const gitHelper = new GitHelper({
     repo: context.repo,
     owner: context.owner,
@@ -72,8 +83,9 @@ async function upgradeDeps(context: TriggerContext) {
     dryRun: context.dry_run,
   })
   const baseBranch = await gitHelper.clone()
-  const branchName = `chore/deps/${deps}/${latestVersion}`
+  const branchName = BRANCH_PATTERNS.DEPS(deps, latestVersion)
   await gitHelper.createBranch(branchName)
+
   if (packageManager === 'pnpm') {
     await exec('pnpm', ['--recursive', 'update', deps, '--latest'], { cwd: `./${context.repo}` })
   }
@@ -82,10 +94,10 @@ async function upgradeDeps(context: TriggerContext) {
   }
 
   if (!await gitHelper.isNeedCommit()) {
-    return true
+    return
   }
 
-  const title = `chore(deps): upgrade ${deps} to ${latestVersion}`
+  const title = PR_TITLES.DEPS(deps, latestVersion)
   await gitHelper.commit(title)
   await gitHelper.push(branchName)
 
@@ -97,7 +109,7 @@ async function upgradeDeps(context: TriggerContext) {
   })
   const prData = await githubHelper.createPR(title, branchName, title, baseBranch)
   if (prData) {
-    await githubHelper.addLabels(prData.number, ['skip-changelog'])
+    await githubHelper.addLabels(prData.number, [PR_LABELS.SKIP_CHANGELOG])
   }
 }
 
@@ -105,13 +117,14 @@ async function deleteCnbBranch(context: TriggerContext) {
   const branch = getInput('branch', { required: true })
   const client = getClient('https://api.cnb.cool', context.token)
   if (!client) {
-    error('token 无效')
+    throw new Error('token 无效')
   }
+
   try {
     const res = await client.repo.git.branches.delete({ repo: context.repo, branch })
     info(`删除分支成功:${JSON.stringify(res)}`)
   }
-  catch (err: any) {
-    throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`)
+  catch (err) {
+    throw new Error(`删除分支失败: ${(err as any).response?.data ? JSON.stringify((err as any).response.data) : (err as Error).message}`)
   }
 }

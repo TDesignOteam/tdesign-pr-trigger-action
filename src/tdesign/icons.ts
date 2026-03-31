@@ -1,7 +1,8 @@
 import type { AutoPrTrigger } from '../config/mapping'
-import type { TdesignRepo, TriggerContext } from '../utils/trigger'
+import type { TriggerContext } from '../utils/trigger'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
+import { PR_TITLES } from '../config/constants'
 import { getIconsPackage, getOwner, getPackageManager, getTargetRepo } from '../config/mapping'
 import { adaptChangelogForRepo, addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from '../utils'
 
@@ -35,7 +36,7 @@ async function updateSnapshot(gitHelper: any, packageManager: string, repo: stri
   }
 
   if (await gitHelper.isNeedCommit()) {
-    await gitHelper.commit('chore: update snapshot')
+    await gitHelper.commit(PR_TITLES.SNAPSHOT)
   }
 }
 export default async function start(context: TriggerContext): Promise<void> {
@@ -74,7 +75,7 @@ export default async function start(context: TriggerContext): Promise<void> {
   })
   await gitHelper.clone()
   await gitHelper.initSubmodule()
-  const packageManager = getPackageManager(targetRepoName as TdesignRepo) || 'npm'
+  const packageManager = getPackageManager(targetRepoName) || 'npm'
   if (packageManager === 'pnpm') {
     await corepackEnable()
   }
@@ -91,7 +92,7 @@ export default async function start(context: TriggerContext): Promise<void> {
     return
   }
 
-  const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
+  const title = PR_TITLES.ICON(packageName, latestVersion)
   await gitHelper.commit(title)
 
   await updateSnapshot(gitHelper, packageManager, targetRepoName, packageName)

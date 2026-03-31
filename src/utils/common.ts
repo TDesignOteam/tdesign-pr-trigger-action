@@ -3,43 +3,52 @@ import type { TdesignRepo } from './trigger'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
-import { getOctokit } from '@actions/github'
 import { updateWorkspaceManifest } from '@pnpm/workspace.manifest-writer'
 import { readWorkspaceManifest } from '@pnpm/workspace.read-manifest'
+import {
+  CHANGELOG_REG,
+  CHANGELOG_SECTION_REG,
+  NPM_REGISTRY,
+  REMOVE_SKIP_CHANGELOG_REG,
+  SKIP_CHANGELOG_REG,
+  SUPPORTED_CHANGELOG_REPOS,
+  WORKSPACE_MANIFEST_REPOS,
+} from '../config/constants'
 
-export const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i
-export const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i
-export const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi
-export const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/
 export function addContributor(body: string, contributor: string, link?: string): string {
   if (SKIP_CHANGELOG_REG.test(body)) {
     info(`不需要纳入 Changelog`)
     return body
   }
 
-  let isSkip = true
+  const SKIP_LINES = ['', '<!--', '-->']
+  const CHANGELOG_HEADER = '### 📝 更新日志'
+  const CHECKLIST_HEADER = '### ☑️ 请求合并前的自查清单'
+
+  let inChangelogSection = false
+
   return body.split('\r\n').map((item) => {
-    if (['', '<!--', '-->'].includes(item)) {
+    if (SKIP_LINES.includes(item)) {
       return item
     }
-    if (!isSkip) {
-      if (item === '### ☑️ 请求合并前的自查清单') {
-        isSkip = true
-        return item
-      }
-      if (CHANGELOG_REG.test(item)) {
-        // info(`匹配到更新日志项: ${item}`)
-        let logContent = `${item} @${contributor}`
-        if (link) {
-          logContent += ` ${link}`
-        }
 
-        return logContent
+    if (!inChangelogSection) {
+      if (item === CHANGELOG_HEADER) {
+        inChangelogSection = true
       }
+      return item
     }
-    if (item === '### 📝 更新日志') {
-      isSkip = false
+
+    if (item === CHECKLIST_HEADER) {
+      inChangelogSection = false
+      return item
     }
+
+    if (CHANGELOG_REG.test(item)) {
+      const logContent = link ? `${item} @${contributor} ${link}` : `${item} @${contributor}`
+      return logContent
+    }
+
     return item
   }).join('\r\n')
 }
@@ -50,8 +59,7 @@ export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
     return body
   }
 
-  const SUPPORTED_REPOS = ['tdesign-vue-next', 'tdesign-react', 'tdesign-miniprogram']
-  if (!SUPPORTED_REPOS.includes(repo)) {
+  if (!SUPPORTED_CHANGELOG_REPOS.includes(repo as any)) {
     return body
   }
 
@@ -73,36 +81,14 @@ export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
   return updatedBody
 }
 
-export interface CreatePRContext {
-  owner: string
-  repo: string
-  title: string
-  head: string
-  base?: string
-  body: string
-  token: string
-}
-export async function createPR(context: CreatePRContext) {
-  const octokit = getOctokit(context.token)
-  await octokit.rest.pulls.create({
-    owner: context.owner,
-    repo: context.repo,
-    title: context.title,
-    head: context.head,
-    base: context?.base || 'develop',
-    body: context.body,
-  })
-}
-export async function getPkgLatestVersion(packageName: string) {
-  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version', '--registry=https://registry.npmjs.org/'])
+export async function getPkgLatestVersion(packageName: string): Promise<string> {
+  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version', `--registry=${NPM_REGISTRY}`])
   return stdout.trim()
 }
 
-export async function bumpIconsVersion(packageManager: string, repo: string) {
-  const WORKSPACE_MANIFEST_REPOS = ['tdesign-vue-next', 'tdesign-miniprogram']
-
+export async function bumpIconsVersion(packageManager: string, repo: string): Promise<void> {
   if (packageManager === 'pnpm') {
-    if (WORKSPACE_MANIFEST_REPOS.includes(repo)) {
+    if (WORKSPACE_MANIFEST_REPOS.includes(repo as any)) {
       let workspaceManifest = await readWorkspaceManifest(`./${repo}`)
       if (workspaceManifest) {
         const iconsVueNextVersion = await getPkgLatestVersion('tdesign-icons-vue-next')

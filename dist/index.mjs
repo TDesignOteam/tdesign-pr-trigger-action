@@ -47,23 +47,6 @@ function toCommandValue(input) {
 	else if (typeof input === "string" || input instanceof String) return input;
 	return JSON.stringify(input);
 }
-/**
-*
-* @param annotationProperties
-* @returns The command properties to send with the actual annotation command
-* See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
-*/
-function toCommandProperties(annotationProperties) {
-	if (!Object.keys(annotationProperties).length) return {};
-	return {
-		title: annotationProperties.title,
-		file: annotationProperties.file,
-		line: annotationProperties.startLine,
-		endLine: annotationProperties.endLine,
-		col: annotationProperties.startColumn,
-		endColumn: annotationProperties.endColumn
-	};
-}
 //#endregion
 //#region node_modules/.pnpm/@actions+core@3.0.0/node_modules/@actions/core/lib/command.js
 /**
@@ -16539,14 +16522,6 @@ function getInput(name, options) {
 	return val.trim();
 }
 /**
-* Adds an error issue
-* @param message error issue message. Errors will be converted to string via toString()
-* @param properties optional properties to add to the annotation.
-*/
-function error(message, properties = {}) {
-	issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
-}
-/**
 * Writes info to log with console.log.
 * @param message info message
 */
@@ -28975,56 +28950,101 @@ const getClient = (baseUrl, token) => {
 	} });
 };
 //#endregion
+//#region src/config/constants.ts
+const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
+const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
+const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi;
+const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
+const SUPPORTED_CHANGELOG_REPOS = [
+	"tdesign-vue-next",
+	"tdesign-react",
+	"tdesign-miniprogram"
+];
+const WORKSPACE_MANIFEST_REPOS = ["tdesign-vue-next", "tdesign-miniprogram"];
+const CSS_UPDATE_REPOS = ["tdesign-mobile-vue", "tdesign-mobile-react"];
+const NPM_REGISTRY = "https://registry.npmjs.org/";
+const BRANCH_PATTERNS = {
+	DEPS: (dep, version) => `chore/deps/${dep}/${version}`,
+	SUBMODULE: (prNumber) => `chore/submodule/common-pr-${prNumber}`,
+	ICON: (packageName, version) => `chore/icon/${packageName}/${version}`
+};
+const PR_TITLES = {
+	DEPS: (dep, version) => `chore(deps): upgrade ${dep} to ${version}`,
+	SUBMODULE: "chore(submodule): update common",
+	ICON: (packageName, version) => `feat(Icon): upgrade ${packageName} to ${version}`,
+	CSS_VARS: "docs: update css vars",
+	SNAPSHOT: "chore: update snapshot"
+};
+const PR_LABELS = { SKIP_CHANGELOG: "skip-changelog" };
+//#endregion
 //#region src/config/mapping.ts
 const REPO_MAPPING = {
 	"/pr-vue": {
-		icons: "tdesign-icons-vue",
-		repo: "tdesign-vue",
+		source: "common",
+		targetRepo: "tdesign-vue",
 		owner: "Tencent",
 		packageManager: "npm"
 	},
 	"/pr-vue-next": {
-		icons: "tdesign-icons-vue-next",
-		repo: "tdesign-vue-next",
+		source: "common",
+		targetRepo: "tdesign-vue-next",
 		owner: "Tencent",
 		packageManager: "pnpm"
 	},
 	"/pr-react": {
-		icons: "tdesign-icons-react",
-		repo: "tdesign-react",
+		source: "common",
+		targetRepo: "tdesign-react",
 		owner: "Tencent",
 		packageManager: "pnpm"
 	},
 	"/pr-mobile-vue": {
-		icons: "tdesign-icons-vue-next",
-		repo: "tdesign-mobile-vue",
+		source: "common",
+		targetRepo: "tdesign-mobile-vue",
 		owner: "Tencent",
 		packageManager: "npm"
 	},
 	"/pr-mobile-react": {
-		icons: "tdesign-icons-react",
-		repo: "tdesign-mobile-react",
+		source: "common",
+		targetRepo: "tdesign-mobile-react",
 		owner: "Tencent",
 		packageManager: "npm"
 	},
 	"/pr-miniprogram": {
-		icons: "cdn-iconfont",
-		repo: "tdesign-miniprogram",
+		source: "common",
+		targetRepo: "tdesign-miniprogram",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-tdesign": {
+		source: "icons",
+		targetRepo: "tdesign-tdesign",
 		owner: "Tencent",
 		packageManager: "pnpm"
 	}
 };
+const ICONS_MAPPING = {
+	"/pr-vue": "tdesign-icons-vue",
+	"/pr-vue-next": "tdesign-icons-vue-next",
+	"/pr-react": "tdesign-icons-react",
+	"/pr-mobile-vue": "tdesign-icons-vue-next",
+	"/pr-mobile-react": "tdesign-icons-react",
+	"/pr-miniprogram": "cdn-iconfont",
+	"/pr-tdesign": "tdesign-icons"
+};
 function getIconsPackage(trigger) {
-	return REPO_MAPPING[trigger]?.icons;
+	return ICONS_MAPPING[trigger];
 }
 function getTargetRepo(trigger) {
-	return REPO_MAPPING[trigger]?.repo;
+	return REPO_MAPPING[trigger]?.targetRepo;
 }
 function getOwner(trigger) {
 	return REPO_MAPPING[trigger]?.owner;
 }
+function getSource(trigger) {
+	return REPO_MAPPING[trigger]?.source;
+}
 function getPackageManager(repo) {
-	return Object.values(REPO_MAPPING).find((r) => r.repo === repo)?.packageManager;
+	return Object.values(REPO_MAPPING).find((r) => r.targetRepo === repo)?.packageManager;
 }
 //#endregion
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
@@ -39095,34 +39115,30 @@ var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	}
 })))();
 var import_lib$1 = require_lib$4();
-const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
-const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
-const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi;
-const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
 function addContributor(body, contributor, link) {
 	if (SKIP_CHANGELOG_REG.test(body)) {
 		info(`不需要纳入 Changelog`);
 		return body;
 	}
-	let isSkip = true;
+	const SKIP_LINES = [
+		"",
+		"<!--",
+		"-->"
+	];
+	const CHANGELOG_HEADER = "### 📝 更新日志";
+	const CHECKLIST_HEADER = "### ☑️ 请求合并前的自查清单";
+	let inChangelogSection = false;
 	return body.split("\r\n").map((item) => {
-		if ([
-			"",
-			"<!--",
-			"-->"
-		].includes(item)) return item;
-		if (!isSkip) {
-			if (item === "### ☑️ 请求合并前的自查清单") {
-				isSkip = true;
-				return item;
-			}
-			if (CHANGELOG_REG.test(item)) {
-				let logContent = `${item} @${contributor}`;
-				if (link) logContent += ` ${link}`;
-				return logContent;
-			}
+		if (SKIP_LINES.includes(item)) return item;
+		if (!inChangelogSection) {
+			if (item === CHANGELOG_HEADER) inChangelogSection = true;
+			return item;
 		}
-		if (item === "### 📝 更新日志") isSkip = false;
+		if (item === CHECKLIST_HEADER) {
+			inChangelogSection = false;
+			return item;
+		}
+		if (CHANGELOG_REG.test(item)) return link ? `${item} @${contributor} ${link}` : `${item} @${contributor}`;
 		return item;
 	}).join("\r\n");
 }
@@ -39131,11 +39147,7 @@ function adaptChangelogForRepo(body, repo) {
 		info(`不需要纳入 Changelog`);
 		return body;
 	}
-	if (![
-		"tdesign-vue-next",
-		"tdesign-react",
-		"tdesign-miniprogram"
-	].includes(repo)) return body;
+	if (!SUPPORTED_CHANGELOG_REPOS.includes(repo)) return body;
 	let updatedBody = body.replace(REMOVE_SKIP_CHANGELOG_REG, "");
 	const match = updatedBody.match(CHANGELOG_SECTION_REG);
 	if (match) {
@@ -39150,12 +39162,11 @@ async function getPkgLatestVersion(packageName) {
 		"view",
 		packageName,
 		"version",
-		"--registry=https://registry.npmjs.org/"
+		`--registry=${NPM_REGISTRY}`
 	]);
 	return stdout.trim();
 }
 async function bumpIconsVersion(packageManager, repo) {
-	const WORKSPACE_MANIFEST_REPOS = ["tdesign-vue-next", "tdesign-miniprogram"];
 	if (packageManager === "pnpm") if (WORKSPACE_MANIFEST_REPOS.includes(repo)) {
 		let workspaceManifest = await (0, import_lib$1.readWorkspaceManifest)(`./${repo}`);
 		if (workspaceManifest) {
@@ -39396,14 +39407,20 @@ var GithubHelper = class {
 	}
 };
 //#endregion
+//#region src/utils/error-handler.ts
+var ActionError = class extends Error {
+	constructor(message, context) {
+		super(message);
+		this.context = context;
+		this.name = "ActionError";
+	}
+};
+//#endregion
 //#region src/tdesign/common.ts
 async function start$1(context) {
 	const targetRepoName = getTargetRepo(context.trigger);
 	const owner = getOwner(context.trigger);
-	if (!targetRepoName || !owner) {
-		info(`错误的trigger: ${context.trigger}`);
-		return;
-	}
+	if (!targetRepoName || !owner) throw new ActionError(`Invalid trigger: ${context.trigger}`, { trigger: context.trigger });
 	const githubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -39412,13 +39429,12 @@ async function start$1(context) {
 	});
 	const prData = await githubHelper.getPrData(context.pr_number);
 	if (!prData.merged) {
-		info("pr has been merged");
-		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		info("PR has not been merged yet");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
 	const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`;
 	let body = addContributor(prData.body || "", prData.user.login, link);
-	const trigger = context.trigger;
 	body = adaptChangelogForRepo(body, targetRepoName);
 	const gitHelper = new GitHelper({
 		repo: targetRepoName,
@@ -39429,15 +39445,15 @@ async function start$1(context) {
 	const baseBranch = await gitHelper.clone();
 	await gitHelper.initSubmodule();
 	await gitHelper.updateSubmodule();
-	const branchName = `chore/submodule/common-pr-${context.pr_number}`;
+	const branchName = BRANCH_PATTERNS.SUBMODULE(context.pr_number);
+	const title = PR_TITLES.SUBMODULE;
 	await gitHelper.createBranch(branchName);
-	const title = `chore(submodule): update common`;
 	if (!await gitHelper.isNeedCommit()) {
 		info("nothing to commit");
 		return;
 	}
 	await gitHelper.commit(title);
-	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(targetRepoName)) {
+	if (CSS_UPDATE_REPOS.includes(targetRepoName)) {
 		await exec("npm", [
 			"run",
 			"api:css",
@@ -39445,7 +39461,7 @@ async function start$1(context) {
 		], { cwd: `./${targetRepoName}` });
 		if (await gitHelper.isNeedCommit()) {
 			await gitHelper.printDiff();
-			await gitHelper.commit("docs: update css vars");
+			await gitHelper.commit(PR_TITLES.CSS_VARS);
 		}
 	}
 	await gitHelper.push(branchName);
@@ -39455,7 +39471,7 @@ async function start$1(context) {
 		token: context.token,
 		dryRun: context.dry_run
 	}).createPR(title, branchName, body, baseBranch);
-	if (newPrData) githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
+	if (newPrData) await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n创建 PR 成功，请查看 ${newPrData.html_url}`);
 }
 //#endregion
 //#region src/tdesign/icons.ts
@@ -39483,7 +39499,7 @@ async function updateSnapshot(gitHelper, packageManager, repo, packageName) {
 		updateSnapScript
 	], { cwd: `./${repo}` });
 	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${repo}` });
-	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
+	if (await gitHelper.isNeedCommit()) await gitHelper.commit(PR_TITLES.SNAPSHOT);
 }
 async function start(context) {
 	const targetRepoName = getTargetRepo(context.trigger);
@@ -39524,7 +39540,7 @@ async function start(context) {
 	await bumpIconsVersion(packageManager, targetRepoName);
 	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(targetRepoName, latestVersion);
 	if (!await gitHelper.isNeedCommit()) return;
-	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
+	const title = PR_TITLES.ICON(packageName, latestVersion);
 	await gitHelper.commit(title);
 	await updateSnapshot(gitHelper, packageManager, targetRepoName, packageName);
 	await gitHelper.push(branchName);
@@ -39545,6 +39561,7 @@ function useTrigger(context) {
 		case "/pr-mobile-vue":
 		case "/pr-mobile-react":
 		case "/pr-miniprogram":
+		case "/pr-tdesign":
 			autoPR(context);
 			break;
 		case "/upgrade-deps":
@@ -39557,14 +39574,16 @@ function useTrigger(context) {
 	}
 }
 function autoPR(context) {
-	switch (context.repo) {
-		case "tdesign-icons":
-			start(context);
-			break;
-		case "tdesign-common":
+	const source = getSource(context.trigger);
+	if (!source) throw new Error(`无法获取触发源: ${context.trigger}`);
+	switch (source) {
+		case "common":
 			start$1(context);
 			break;
-		default: throw new Error(`该仓库未适配: ${context.repo}`);
+		case "icons":
+			start(context);
+			break;
+		default: throw new Error(`未知的触发源: ${source}`);
 	}
 }
 async function upgradeDeps(context) {
@@ -39580,7 +39599,7 @@ async function upgradeDeps(context) {
 		dryRun: context.dry_run
 	});
 	const baseBranch = await gitHelper.clone();
-	const branchName = `chore/deps/${deps}/${latestVersion}`;
+	const branchName = BRANCH_PATTERNS.DEPS(deps, latestVersion);
 	await gitHelper.createBranch(branchName);
 	if (packageManager === "pnpm") await exec("pnpm", [
 		"--recursive",
@@ -39593,8 +39612,8 @@ async function upgradeDeps(context) {
 		deps,
 		"-u"
 	], { cwd: `./${context.repo}` });
-	if (!await gitHelper.isNeedCommit()) return true;
-	const title = `chore(deps): upgrade ${deps} to ${latestVersion}`;
+	if (!await gitHelper.isNeedCommit()) return;
+	const title = PR_TITLES.DEPS(deps, latestVersion);
 	await gitHelper.commit(title);
 	await gitHelper.push(branchName);
 	const githubHelper = new GithubHelper({
@@ -39604,12 +39623,12 @@ async function upgradeDeps(context) {
 		dryRun: context.dry_run
 	});
 	const prData = await githubHelper.createPR(title, branchName, title, baseBranch);
-	if (prData) await githubHelper.addLabels(prData.number, ["skip-changelog"]);
+	if (prData) await githubHelper.addLabels(prData.number, [PR_LABELS.SKIP_CHANGELOG]);
 }
 async function deleteCnbBranch(context) {
 	const branch = getInput("branch", { required: true });
 	const client = getClient("https://api.cnb.cool", context.token);
-	if (!client) error("token 无效");
+	if (!client) throw new Error("token 无效");
 	try {
 		const res = await client.repo.git.branches.delete({
 			repo: context.repo,
@@ -39617,11 +39636,34 @@ async function deleteCnbBranch(context) {
 		});
 		info(`删除分支成功:${JSON.stringify(res)}`);
 	} catch (err) {
-		throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`);
+		throw new Error(`删除分支失败: ${err.response?.data ? JSON.stringify(err.response.data) : err.message}`);
 	}
 }
 //#endregion
 //#region src/index.ts
+const WHITELIST_FILE = ".comment-trigger-whitelist";
+function isUserInWhitelist(username) {
+	return readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), `../${WHITELIST_FILE}`), "utf-8").split("\n").map((item) => item.trim()).filter(Boolean).includes(username);
+}
+function shouldTriggerFromComment() {
+	if (context.eventName !== "issue_comment") return true;
+	info("pr comment trigger");
+	if (!context.payload.issue?.pull_request) {
+		info("issue_comment not a pull_request comment");
+		return false;
+	}
+	const username = context.payload.comment?.user.login;
+	if (!username) {
+		info("comment user login is missing");
+		return false;
+	}
+	if (!isUserInWhitelist(username)) {
+		info(`${username}不在白名单内，不触发`);
+		return false;
+	}
+	info("comment whitelist trigger");
+	return true;
+}
 async function run() {
 	const repo = getInput("repo") || context.repo.repo;
 	const owner = getInput("owner") || context.repo.owner;
@@ -39630,25 +39672,7 @@ async function run() {
 	const trigger = getInput("trigger") || context.payload.comment?.body || "";
 	const dryRun = getInput("dry-run", { trimWhitespace: true }) === "true";
 	info(`dryRun: ${dryRun}`);
-	if (context.eventName === "issue_comment") {
-		info("pr comment trigger");
-		if (!context.payload.issue?.pull_request) {
-			info("issue_comment not a pull_request comment");
-			return;
-		}
-		const whitelist = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../.comment-trigger-whitelist"), "utf-8");
-		let isWhitelist = false;
-		whitelist.split("\n").forEach((item) => {
-			if (item.trim() === context.payload.comment?.user.login) {
-				info("comment whitelist trigger");
-				isWhitelist = true;
-			}
-		});
-		if (!isWhitelist) {
-			info(`${context.payload.comment?.user.login}不在白名单内，不触发`);
-			return;
-		}
-	}
+	if (!shouldTriggerFromComment()) return;
 	useTrigger({
 		owner,
 		repo,
