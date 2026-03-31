@@ -49,7 +49,9 @@ export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
     info(`不需要纳入 Changelog`)
     return body
   }
-  if (!['tdesign-vue-next', 'tdesign-react', 'tdesign-miniprogram'].includes(repo)) {
+
+  const SUPPORTED_REPOS = ['tdesign-vue-next', 'tdesign-react', 'tdesign-miniprogram']
+  if (!SUPPORTED_REPOS.includes(repo)) {
     return body
   }
 
@@ -97,8 +99,10 @@ export async function getPkgLatestVersion(packageName: string) {
 }
 
 export async function bumpIconsVersion(packageManager: string, repo: string) {
+  const WORKSPACE_MANIFEST_REPOS = ['tdesign-vue-next', 'tdesign-miniprogram']
+
   if (packageManager === 'pnpm') {
-    if (repo === 'tdesign-vue-next' || repo === 'tdesign-miniprogram') {
+    if (WORKSPACE_MANIFEST_REPOS.includes(repo)) {
       let workspaceManifest = await readWorkspaceManifest(`./${repo}`)
       if (workspaceManifest) {
         const iconsVueNextVersion = await getPkgLatestVersion('tdesign-icons-vue-next')
@@ -127,30 +131,26 @@ export async function corepackEnable() {
   await exec('corepack', ['enable'])
 }
 function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
-  if (workspaceManifest.catalog) {
-    for (const [name, ver] of Object.entries(workspaceManifest.catalog)) {
+  const updatePackageVersion = (catalog: Record<string, string>) => {
+    for (const [name, ver] of Object.entries(catalog)) {
       if (name === packageName) {
         if (ver.startsWith('^') || ver.startsWith('~')) {
-          workspaceManifest.catalog[name] = `${ver.slice(0, 1)}${version}`
+          catalog[name] = `${ver.slice(0, 1)}${version}`
         }
         else {
-          workspaceManifest.catalog[name] = version
+          catalog[name] = version
         }
       }
     }
   }
+
+  if (workspaceManifest.catalog) {
+    updatePackageVersion(workspaceManifest.catalog)
+  }
+
   if (workspaceManifest.catalogs) {
     for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
-      for (const [name, ver] of Object.entries(catalog)) {
-        if (name === packageName) {
-          if (ver.startsWith('^') || ver.startsWith('~')) {
-            catalog[name] = `${ver.slice(0, 1)}${version}`
-          }
-          else {
-            catalog[name] = version
-          }
-        }
-      }
+      updatePackageVersion(catalog)
       workspaceManifest.catalogs[key] = catalog
     }
   }

@@ -1,3 +1,4 @@
+import type { Trigger } from '../config/mapping'
 import { error, getInput, info } from '@actions/core'
 import { exec } from '@actions/exec'
 import { getClient } from 'node-cnb'
@@ -7,43 +8,7 @@ import { corepackEnable, getPkgLatestVersion } from './common'
 import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
-export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
-export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
 export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
-
-export const iconsMap: Record<AutoPrTrigger, string> = {
-  '/pr-vue': 'tdesign-icons-vue',
-  '/pr-vue-next': 'tdesign-icons-vue-next',
-  '/pr-react': 'tdesign-icons-react',
-  '/pr-mobile-vue': 'tdesign-icons-vue-next',
-  '/pr-mobile-react': 'tdesign-icons-react',
-  '/pr-miniprogram': 'cdn-iconfont',
-}
-export const repoMap: Record<AutoPrTrigger, TdesignRepo> = {
-  '/pr-vue': 'tdesign-vue',
-  '/pr-vue-next': 'tdesign-vue-next',
-  '/pr-react': 'tdesign-react',
-  '/pr-mobile-vue': 'tdesign-mobile-vue',
-  '/pr-mobile-react': 'tdesign-mobile-react',
-  '/pr-miniprogram': 'tdesign-miniprogram',
-}
-export const ownerMap: Record<AutoPrTrigger, string> = {
-  '/pr-vue': 'Tencent',
-  '/pr-vue-next': 'Tencent',
-  '/pr-react': 'Tencent',
-  '/pr-mobile-vue': 'Tencent',
-  '/pr-mobile-react': 'Tencent',
-  '/pr-miniprogram': 'Tencent',
-}
-
-export const packageManagerMap: Record<TdesignRepo, string> = {
-  'tdesign-vue': 'npm',
-  'tdesign-vue-next': 'pnpm',
-  'tdesign-react': 'pnpm',
-  'tdesign-mobile-vue': 'npm',
-  'tdesign-mobile-react': 'npm',
-  'tdesign-miniprogram': 'pnpm',
-}
 
 export interface TriggerContext {
   owner: string

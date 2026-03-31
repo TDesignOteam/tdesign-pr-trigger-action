@@ -1,11 +1,15 @@
-import type { AutoPrTrigger, TriggerContext } from '../utils/trigger'
+import type { AutoPrTrigger } from '../config/mapping'
+import type { TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
 import { exec } from '@actions/exec'
+import { getOwner, getTargetRepo } from '../config/mapping'
 import { adaptChangelogForRepo, addContributor, GitHelper, GithubHelper } from '../utils'
-import { ownerMap, repoMap } from '../utils/trigger'
 
-export default async function start(context: TriggerContext) {
-  if (!Reflect.has(repoMap, context.trigger)) {
+export default async function start(context: TriggerContext): Promise<void> {
+  const targetRepoName = getTargetRepo(context.trigger as AutoPrTrigger)
+  const owner = getOwner(context.trigger as AutoPrTrigger)
+
+  if (!targetRepoName || !owner) {
     info(`错误的trigger: ${context.trigger}`)
     return
   }
@@ -25,11 +29,11 @@ export default async function start(context: TriggerContext) {
   const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`
   let body = addContributor(prData.body || '', prData.user.login, link)
   const trigger = context.trigger as AutoPrTrigger
-  body = adaptChangelogForRepo(body, repoMap[trigger])
+  body = adaptChangelogForRepo(body, targetRepoName)
 
   const gitHelper = new GitHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+    repo: targetRepoName,
+    owner,
     token: context.token,
     dryRun: context.dry_run,
   })
@@ -43,12 +47,12 @@ export default async function start(context: TriggerContext) {
   const title = `chore(submodule): update common`
   if (!await gitHelper.isNeedCommit()) {
     info('nothing to commit')
-    return true// nothing to commit
+    return
   }
 
   await gitHelper.commit(title)
-  if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(repoMap[trigger])) {
-    await exec('npm', ['run', 'api:css', 'all'], { cwd: `./${repoMap[trigger]}` })
+  if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(targetRepoName)) {
+    await exec('npm', ['run', 'api:css', 'all'], { cwd: `./${targetRepoName}` })
     if (await gitHelper.isNeedCommit()) {
       await gitHelper.printDiff()
       await gitHelper.commit('docs: update css vars')
@@ -56,13 +60,13 @@ export default async function start(context: TriggerContext) {
   }
   await gitHelper.push(branchName)
 
-  const targetRepo = new GithubHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+  const targetRepoHelper = new GithubHelper({
+    repo: targetRepoName,
+    owner,
     token: context.token,
     dryRun: context.dry_run,
   })
-  const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch)
+  const newPrData = await targetRepoHelper.createPR(title, branchName, body, baseBranch)
   if (newPrData) {
     githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
   }

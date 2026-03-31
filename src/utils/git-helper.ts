@@ -22,6 +22,17 @@ export class GitHelper {
     this.repoPath = `./${context.repo}`
   }
 
+  private isDryRun(): boolean {
+    return this.dryRun
+  }
+
+  private logDryRunInfo(action: string, details?: Record<string, unknown>): void {
+    if (this.isDryRun()) {
+      const message = details ? `${action}: ${JSON.stringify(details)}` : action
+      info(`[DRY-RUN] ${message}`)
+    }
+  }
+
   private async initConfig() {
     await exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
     await exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
@@ -52,8 +63,8 @@ export class GitHelper {
   }
 
   async push(branch: string) {
-    if (this.dryRun) {
-      info('dry-run模式, 不运行git push')
+    if (this.isDryRun()) {
+      this.logDryRunInfo('git push', { branch })
       return
     }
     await exec('git', ['push', 'origin', branch], { cwd: this.repoPath })
