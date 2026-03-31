@@ -28975,6 +28975,58 @@ const getClient = (baseUrl, token) => {
 	} });
 };
 //#endregion
+//#region src/config/mapping.ts
+const REPO_MAPPING = {
+	"/pr-vue": {
+		icons: "tdesign-icons-vue",
+		repo: "tdesign-vue",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-vue-next": {
+		icons: "tdesign-icons-vue-next",
+		repo: "tdesign-vue-next",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-react": {
+		icons: "tdesign-icons-react",
+		repo: "tdesign-react",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-mobile-vue": {
+		icons: "tdesign-icons-vue-next",
+		repo: "tdesign-mobile-vue",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-mobile-react": {
+		icons: "tdesign-icons-react",
+		repo: "tdesign-mobile-react",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-miniprogram": {
+		icons: "cdn-iconfont",
+		repo: "tdesign-miniprogram",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	}
+};
+function getIconsPackage(trigger) {
+	return REPO_MAPPING[trigger]?.icons;
+}
+function getTargetRepo(trigger) {
+	return REPO_MAPPING[trigger]?.repo;
+}
+function getOwner(trigger) {
+	return REPO_MAPPING[trigger]?.owner;
+}
+function getPackageManager(repo) {
+	return Object.values(REPO_MAPPING).find((r) => r.repo === repo)?.packageManager;
+}
+//#endregion
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
 var require_lib$6 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -39103,7 +39155,8 @@ async function getPkgLatestVersion(packageName) {
 	return stdout.trim();
 }
 async function bumpIconsVersion(packageManager, repo) {
-	if (packageManager === "pnpm") if (repo === "tdesign-vue-next" || repo === "tdesign-miniprogram") {
+	const WORKSPACE_MANIFEST_REPOS = ["tdesign-vue-next", "tdesign-miniprogram"];
+	if (packageManager === "pnpm") if (WORKSPACE_MANIFEST_REPOS.includes(repo)) {
 		let workspaceManifest = await (0, import_lib$1.readWorkspaceManifest)(`./${repo}`);
 		if (workspaceManifest) {
 			const iconsVueNextVersion = await getPkgLatestVersion("tdesign-icons-vue-next");
@@ -39136,13 +39189,13 @@ async function corepackEnable() {
 	await exec("corepack", ["enable"]);
 }
 function updateCatalogs(workspaceManifest, packageName, version) {
-	if (workspaceManifest.catalog) {
-		for (const [name, ver] of Object.entries(workspaceManifest.catalog)) if (name === packageName) if (ver.startsWith("^") || ver.startsWith("~")) workspaceManifest.catalog[name] = `${ver.slice(0, 1)}${version}`;
-		else workspaceManifest.catalog[name] = version;
-	}
-	if (workspaceManifest.catalogs) for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
+	const updatePackageVersion = (catalog) => {
 		for (const [name, ver] of Object.entries(catalog)) if (name === packageName) if (ver.startsWith("^") || ver.startsWith("~")) catalog[name] = `${ver.slice(0, 1)}${version}`;
 		else catalog[name] = version;
+	};
+	if (workspaceManifest.catalog) updatePackageVersion(workspaceManifest.catalog);
+	if (workspaceManifest.catalogs) for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
+		updatePackageVersion(catalog);
 		workspaceManifest.catalogs[key] = catalog;
 	}
 	return workspaceManifest;
@@ -39161,6 +39214,12 @@ var GitHelper = class {
 		this.repo = context.repo;
 		this.dryRun = context.dryRun;
 		this.repoPath = `./${context.repo}`;
+	}
+	isDryRun() {
+		return this.dryRun;
+	}
+	logDryRunInfo(action, details) {
+		if (this.isDryRun()) info(`[DRY-RUN] ${details ? `${action}: ${JSON.stringify(details)}` : action}`);
 	}
 	async initConfig() {
 		await exec("git", [
@@ -39219,8 +39278,8 @@ var GitHelper = class {
 		], { cwd: this.repoPath });
 	}
 	async push(branch) {
-		if (this.dryRun) {
-			info("dry-run模式, 不运行git push");
+		if (this.isDryRun()) {
+			this.logDryRunInfo("git push", { branch });
 			return;
 		}
 		await exec("git", [
@@ -39263,6 +39322,12 @@ var GithubHelper = class {
 		this.dryRun = context.dryRun;
 		this.octokit = getOctokit(context.token);
 	}
+	isDryRun() {
+		return this.dryRun;
+	}
+	logDryRunInfo(action, details) {
+		if (this.isDryRun()) info(`[DRY-RUN] ${details ? `${action}: ${JSON.stringify(details)}` : action}`);
+	}
 	async getPrData(pr_number) {
 		const { data } = await this.octokit.rest.pulls.get({
 			owner: this.context.owner,
@@ -39272,12 +39337,14 @@ var GithubHelper = class {
 		return data;
 	}
 	async createPR(title, head, body, base) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行createPR");
-			info(`title: ${title}`);
-			info(`head: ${head}`);
-			info(`base: ${base}`);
-			info(`body: ${body}`);
+			this.logDryRunInfo("createPR", {
+				title,
+				head,
+				base,
+				body
+			});
 			endGroup();
 			return;
 		}
@@ -39292,10 +39359,12 @@ var GithubHelper = class {
 		return data;
 	}
 	async addComment(pr_number, body) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行addComment");
-			info(`pr_number: ${pr_number}`);
-			info(`body: ${body}`);
+			this.logDryRunInfo("addComment", {
+				pr_number,
+				body
+			});
 			endGroup();
 			return;
 		}
@@ -39308,10 +39377,12 @@ var GithubHelper = class {
 		return data;
 	}
 	async addLabels(pr_number, labels) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行addLabels");
-			info(`pr_number: ${pr_number}`);
-			info(`labels: ${labels.join(", ")}`);
+			this.logDryRunInfo("addLabels", {
+				pr_number,
+				labels
+			});
 			endGroup();
 			return;
 		}
@@ -39327,7 +39398,9 @@ var GithubHelper = class {
 //#endregion
 //#region src/tdesign/common.ts
 async function start$1(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
+	const targetRepoName = getTargetRepo(context.trigger);
+	const owner = getOwner(context.trigger);
+	if (!targetRepoName || !owner) {
 		info(`错误的trigger: ${context.trigger}`);
 		return;
 	}
@@ -39346,10 +39419,10 @@ async function start$1(context) {
 	const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`;
 	let body = addContributor(prData.body || "", prData.user.login, link);
 	const trigger = context.trigger;
-	body = adaptChangelogForRepo(body, repoMap[trigger]);
+	body = adaptChangelogForRepo(body, targetRepoName);
 	const gitHelper = new GitHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
+		repo: targetRepoName,
+		owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
@@ -39361,15 +39434,15 @@ async function start$1(context) {
 	const title = `chore(submodule): update common`;
 	if (!await gitHelper.isNeedCommit()) {
 		info("nothing to commit");
-		return true;
+		return;
 	}
 	await gitHelper.commit(title);
-	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
+	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(targetRepoName)) {
 		await exec("npm", [
 			"run",
 			"api:css",
 			"all"
-		], { cwd: `./${repoMap[trigger]}` });
+		], { cwd: `./${targetRepoName}` });
 		if (await gitHelper.isNeedCommit()) {
 			await gitHelper.printDiff();
 			await gitHelper.commit("docs: update css vars");
@@ -39377,8 +39450,8 @@ async function start$1(context) {
 	}
 	await gitHelper.push(branchName);
 	const newPrData = await new GithubHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
+		repo: targetRepoName,
+		owner,
 		token: context.token,
 		dryRun: context.dry_run
 	}).createPR(title, branchName, body, baseBranch);
@@ -39398,8 +39471,25 @@ async function miniprogramUpdateIcons(repo, version) {
 	], { cwd: `./${repo}` });
 	await exec("git", ["status"], { cwd: `./${repo}` });
 }
+async function getLatestVersion(packageName) {
+	return packageName === "cdn-iconfont" ? await getCdnIconfontVersion() : await getPkgLatestVersion(packageName);
+}
+async function updateSnapshot(gitHelper, packageManager, repo, packageName) {
+	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
+	if (repo === "tdesign-vue-next") await exec(packageManager, [
+		"-F",
+		"@tdesign/vue-next-test",
+		"run",
+		updateSnapScript
+	], { cwd: `./${repo}` });
+	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${repo}` });
+	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
+}
 async function start(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
+	const targetRepoName = getTargetRepo(context.trigger);
+	const owner = getOwner(context.trigger);
+	const packageName = getIconsPackage(context.trigger);
+	if (!targetRepoName || !owner || !packageName) {
 		info(`错误的trigger: ${context.trigger}`);
 		return;
 	}
@@ -39410,87 +39500,43 @@ async function start(context) {
 		dryRun: context.dry_run
 	}).getPrData(context.pr_number);
 	let body = addContributor(prData.body || "", prData.user.login);
-	const trigger = context.trigger;
-	body = adaptChangelogForRepo(body, repoMap[trigger]);
+	body = adaptChangelogForRepo(body, targetRepoName);
 	startGroup("body");
 	info(`${body}`);
 	endGroup();
-	const packageName = iconsMap[trigger];
 	startGroup(packageName);
-	let latestVersion = "";
-	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
-	else latestVersion = await getPkgLatestVersion(packageName);
+	const latestVersion = await getLatestVersion(packageName);
 	info(`latestVersion: ${latestVersion}`);
 	endGroup();
 	const gitHelper = new GitHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
+		repo: targetRepoName,
+		owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
 	await gitHelper.clone();
 	await gitHelper.initSubmodule();
-	const packageManager = packageManagerMap[repoMap[trigger]];
+	const packageManager = getPackageManager(targetRepoName) || "npm";
 	if (packageManager === "pnpm") await corepackEnable();
-	await exec(packageManager, ["install"], { cwd: `./${repoMap[trigger]}` });
+	await exec(packageManager, ["install"], { cwd: `./${targetRepoName}` });
 	const branchName = `chore/icon/${packageName}/${latestVersion}`;
 	await gitHelper.createBranch(branchName);
-	await bumpIconsVersion(packageManager, repoMap[trigger]);
-	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[trigger], latestVersion);
-	if (!await gitHelper.isNeedCommit()) return true;
+	await bumpIconsVersion(packageManager, targetRepoName);
+	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(targetRepoName, latestVersion);
+	if (!await gitHelper.isNeedCommit()) return;
 	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
 	await gitHelper.commit(title);
-	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	if (repoMap[trigger] === "tdesign-vue-next") await exec(packageManager, [
-		"-F",
-		"@tdesign/vue-next-test",
-		"run",
-		updateSnapScript
-	], { cwd: `./${repoMap[trigger]}` });
-	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[trigger]}` });
-	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
+	await updateSnapshot(gitHelper, packageManager, targetRepoName, packageName);
 	await gitHelper.push(branchName);
 	new GithubHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
+		repo: targetRepoName,
+		owner,
 		token: context.token,
 		dryRun: context.dry_run
 	}).createPR(title, branchName, body);
 }
 //#endregion
 //#region src/utils/trigger.ts
-const iconsMap = {
-	"/pr-vue": "tdesign-icons-vue",
-	"/pr-vue-next": "tdesign-icons-vue-next",
-	"/pr-react": "tdesign-icons-react",
-	"/pr-mobile-vue": "tdesign-icons-vue-next",
-	"/pr-mobile-react": "tdesign-icons-react",
-	"/pr-miniprogram": "cdn-iconfont"
-};
-const repoMap = {
-	"/pr-vue": "tdesign-vue",
-	"/pr-vue-next": "tdesign-vue-next",
-	"/pr-react": "tdesign-react",
-	"/pr-mobile-vue": "tdesign-mobile-vue",
-	"/pr-mobile-react": "tdesign-mobile-react",
-	"/pr-miniprogram": "tdesign-miniprogram"
-};
-const ownerMap = {
-	"/pr-vue": "Tencent",
-	"/pr-vue-next": "Tencent",
-	"/pr-react": "Tencent",
-	"/pr-mobile-vue": "Tencent",
-	"/pr-mobile-react": "Tencent",
-	"/pr-miniprogram": "Tencent"
-};
-const packageManagerMap = {
-	"tdesign-vue": "npm",
-	"tdesign-vue-next": "pnpm",
-	"tdesign-react": "pnpm",
-	"tdesign-mobile-vue": "npm",
-	"tdesign-mobile-react": "npm",
-	"tdesign-miniprogram": "pnpm"
-};
 function useTrigger(context) {
 	switch (context.trigger) {
 		case "/pr-vue":
