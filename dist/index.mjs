@@ -39421,61 +39421,86 @@ var ActionError = class extends Error {
 };
 //#endregion
 //#region src/tdesign/common.ts
+const COMMON_REPO = "tdesign-common";
+const COMMON_OWNER = "Tencent";
+const PR_NOT_MERGED_MESSAGE = "PR 还没合并，无法触发";
+function generateCommonPrLink(prNumber) {
+	return `([common#${prNumber}](https://github.com/${COMMON_OWNER}/${COMMON_REPO}/pull/${prNumber}))`;
+}
+function preparePrBody(originalBody, userLogin, prNumber, targetRepo) {
+	return adaptChangelogForRepo(addContributor(originalBody, userLogin, generateCommonPrLink(prNumber)), targetRepo);
+}
+async function prepareRepository$1(gitHelper) {
+	const baseBranch = await gitHelper.clone();
+	await gitHelper.initSubmodule();
+	await gitHelper.updateSubmodule();
+	return baseBranch;
+}
+async function updateCssVariables(gitHelper, repo) {
+	await exec("npm", [
+		"run",
+		"api:css",
+		"all"
+	], { cwd: `./${repo}` });
+	if (await gitHelper.isNeedCommit()) {
+		await gitHelper.printDiff();
+		await gitHelper.commit(PR_TITLES.CSS_VARS);
+	}
+}
+async function createPrAndComment(targetRepoHelper, sourceGithubHelper, title, branchName, body, baseBranch, trigger, sourcePrNumber) {
+	const prData = await targetRepoHelper.createPR(title, branchName, body, baseBranch);
+	if (prData) {
+		const comment = `> ${trigger}\r\n\r\n创建 PR 成功，请查看 ${prData.html_url}`;
+		await sourceGithubHelper.addComment(sourcePrNumber, comment);
+	}
+}
+async function checkAndCommentUnmergedPr(githubHelper, prNumber) {
+	if (!(await githubHelper.getPrData(prNumber)).merged) {
+		info("PR has not been merged yet");
+		await githubHelper.addComment(prNumber, PR_NOT_MERGED_MESSAGE);
+		return false;
+	}
+	return true;
+}
+function isCssUpdateRequired(repo) {
+	return CSS_UPDATE_REPOS.includes(repo);
+}
 async function start$1(context) {
 	const targetRepoName = getTargetRepo(context.trigger);
 	const owner = getOwner(context.trigger);
 	if (!targetRepoName || !owner) throw new ActionError(`Invalid trigger: ${context.trigger}`, { trigger: context.trigger });
-	const githubHelper = new GithubHelper({
+	const sourceGithubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
-	const prData = await githubHelper.getPrData(context.pr_number);
-	if (!prData.merged) {
-		info("PR has not been merged yet");
-		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
-		return;
-	}
-	const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`;
-	let body = addContributor(prData.body || "", prData.user.login, link);
-	body = adaptChangelogForRepo(body, targetRepoName);
+	if (!await checkAndCommentUnmergedPr(sourceGithubHelper, context.pr_number)) return;
+	const prData = await sourceGithubHelper.getPrData(context.pr_number);
+	const body = preparePrBody(prData.body || "", prData.user.login, context.pr_number, targetRepoName);
 	const gitHelper = new GitHelper({
 		repo: targetRepoName,
 		owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
-	const baseBranch = await gitHelper.clone();
-	await gitHelper.initSubmodule();
-	await gitHelper.updateSubmodule();
+	const baseBranch = await prepareRepository$1(gitHelper);
 	const branchName = BRANCH_PATTERNS.SUBMODULE(context.pr_number);
 	const title = PR_TITLES.SUBMODULE;
 	await gitHelper.createBranch(branchName);
 	if (!await gitHelper.isNeedCommit()) {
-		info("nothing to commit");
+		info("Nothing to commit");
 		return;
 	}
 	await gitHelper.commit(title);
-	if (CSS_UPDATE_REPOS.includes(targetRepoName)) {
-		await exec("npm", [
-			"run",
-			"api:css",
-			"all"
-		], { cwd: `./${targetRepoName}` });
-		if (await gitHelper.isNeedCommit()) {
-			await gitHelper.printDiff();
-			await gitHelper.commit(PR_TITLES.CSS_VARS);
-		}
-	}
+	if (isCssUpdateRequired(targetRepoName)) await updateCssVariables(gitHelper, targetRepoName);
 	await gitHelper.push(branchName);
-	const newPrData = await new GithubHelper({
+	await createPrAndComment(new GithubHelper({
 		repo: targetRepoName,
 		owner,
 		token: context.token,
 		dryRun: context.dry_run
-	}).createPR(title, branchName, body, baseBranch);
-	if (newPrData) await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n创建 PR 成功，请查看 ${newPrData.html_url}`);
+	}), sourceGithubHelper, title, branchName, body, baseBranch, context.trigger, context.pr_number);
 }
 //#endregion
 //#region src/tdesign/icons.ts
