@@ -17,6 +17,7 @@ export const BRANCH_PATTERNS = {
   DEPS: (dep: string, version: string) => `chore/deps/${dep}/${version}`,
   SUBMODULE: (prNumber: number) => `chore/submodule/common-pr-${prNumber}`,
   ICON: (packageName: string, version: string) => `chore/icon/${packageName}/${version}`,
+  SNAPSHOT: (prNumber: number) => `chore/snapshot/pr-${prNumber}`,
 } as const
 
 // PR titles
@@ -42,8 +43,19 @@ export const GIT_CONFIG = {
 // Default branch
 export const DEFAULT_BASE_BRANCH = 'develop'
 
-// Snapshot update script names
-export const SNAPSHOT_SCRIPTS = {
-  DEFAULT: 'test:update',
-  MINIPROGRAM: 'test:snap-update',
+// Snapshot update scripts - each repo may have different commands
+export const SNAPSHOT_SCRIPTS: Record<string, string | string[]> = {
+  // monorepo with -r flag
+  'tdesign-vue-next': ['pnpm', '-r', 'run', 'test:update'],
+  'tdesign-react': ['pnpm', '-r', 'run', 'test:update'],
+  'tdesign-miniprogram': ['pnpm', '-r', 'run', 'test:snap-update'],
+  // default for other repos
+  'DEFAULT': 'npm run test:update',
 } as const
+
+// Snapshot related file patterns for conflict resolution
+export const SNAPSHOT_CONFLICT_PATTERNS = [
+  'csr.test.ts.snap',
+  'ssr.test.ts.snap',
+  'packages/common',
+] as const

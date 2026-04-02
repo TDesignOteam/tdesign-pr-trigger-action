@@ -51,12 +51,65 @@
 7. 运行快照更新测试
 8. 创建 PR 到目标仓库
 
+### 场景 3: 在 PR 评论中触发自身仓库更新
+
+当在某个仓库的 PR 中评论 `/update-common` 或 `/update-snapshot` 指令时,自动更新该仓库的相关内容,并在当前 PR 上评论结果。
+
+**示例:**
+
+- `/update-common` → 在 `tdesign-vue` 等仓库的 PR 中评论,更新该仓库的 `tdesign-common` 子模块
+- `/update-snapshot` → 在仓库的 PR 中评论,运行快照更新脚本(如 `npm run test:update`)
+
+**`/update-common` 触发流程:**
+
+1. 检查评论所在 PR 是否已合并
+2. 克隆当前仓库
+3. 检出 PR 分支
+4. 初始化并更新 common 子模块
+5. 合并 develop 分支并处理冲突(packages/common 使用 --ours)
+6. 提交更改并推送 PR 分支
+7. 在当前 PR 上评论更新结果
+
+**`/update-snapshot` 触发流程:**
+
+1. 检查评论所在 PR 是否已合并
+2. 克隆当前仓库
+3. 检出 PR 分支
+4. 合并 develop 分支并处理冲突
+5. 运行快照更新脚本
+6. 提交更改并推送 PR 分支
+7. 在当前 PR 上评论更新结果
+
+**快照更新脚本配置:**
+
+不同仓库使用不同的快照更新命令:
+
+| 仓库                | 脚本命令                       |
+| ------------------- | ------------------------------ |
+| tdesign-vue-next    | `pnpm -r run test:update`      |
+| tdesign-react       | `pnpm -r run test:update`      |
+| tdesign-miniprogram | `pnpm -r run test:snap-update` |
+| 其他仓库            | `npm run test:update`          |
+
+**PR 评论结果:**
+
+- **无需更新**: `✅ common 子模块已是最新版本，无需更新` / `✅ 快照已是最新版本，无需更新`
+- **已更新**: `✅ 已更新 common 子模块，请合并该分支` / `✅ 已更新快照，请合并该分支`
+- **更新失败**: `❌ 快照更新失败，请检查测试用例`
+
+**特点:**
+
+- `source: 'self'` 表示触发器针对当前仓库自身
+- 使用 `context.repo` 和 `context.owner` 作为目标仓库
+- 在当前 PR 上评论结果,而不是创建新 PR
+- 适用于在开发过程中统一更新公共依赖或快照的场景
+
 ## 配置说明
 
 ### 映射配置 (`config/mapping.ts`)
 
 ```typescript
-export type TriggerSource = 'common' | 'icons'
+export type TriggerSource = 'common' | 'icons' | 'self'
 
 export interface RepoMapping {
   source: TriggerSource // 触发源
@@ -72,15 +125,18 @@ export interface RepoMapping {
 根据触发器的 `source` 字段自动选择处理函数:
 
 ```typescript
-function autoPR(context: TriggerContext) {
+function executeAutoPr(context: TriggerContext): void {
   const source = getSource(context.trigger as AutoPrTrigger)
 
   switch (source) {
     case 'common':
-      commonStart(context) // 处理子模块更新
+      commonStart(context) // 处理跨仓库子模块更新
       break
     case 'icons':
       iconStart(context) // 处理 icons 依赖更新
+      break
+    case 'self':
+      selfUpdate(context) // 处理自身仓库更新
       break
   }
 }

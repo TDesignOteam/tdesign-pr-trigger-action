@@ -1,10 +1,10 @@
-export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram' | '/pr-tdesign'
+export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram' | '/pr-tdesign' | '/update-common' | '/update-snapshot'
 
 export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
 
-export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram' | 'tdesign-tdesign'
+export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram' | 'tdesign-tdesign' | 'tdesign-common'
 
-export type TriggerSource = 'common' | 'icons'
+export type TriggerSource = 'common' | 'icons' | 'self'
 
 export interface RepoMapping {
   source: TriggerSource
@@ -57,9 +57,21 @@ export const REPO_MAPPING: Record<AutoPrTrigger, RepoMapping> = {
     owner: 'Tencent',
     packageManager: 'pnpm',
   },
+  '/update-common': {
+    source: 'self',
+    targetRepo: 'tdesign-common',
+    owner: 'Tencent',
+    packageManager: 'npm',
+  },
+  '/update-snapshot': {
+    source: 'self',
+    targetRepo: 'tdesign-common',
+    owner: 'Tencent',
+    packageManager: 'npm',
+  },
 }
 
-export const ICONS_MAPPING: Record<AutoPrTrigger, string> = {
+export const ICONS_MAPPING: Partial<Record<AutoPrTrigger, string>> = {
   '/pr-vue': 'tdesign-icons-vue',
   '/pr-vue-next': 'tdesign-icons-vue-next',
   '/pr-react': 'tdesign-icons-react',

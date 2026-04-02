@@ -28966,7 +28966,8 @@ const NPM_REGISTRY = "https://registry.npmjs.org/";
 const BRANCH_PATTERNS = {
 	DEPS: (dep, version) => `chore/deps/${dep}/${version}`,
 	SUBMODULE: (prNumber) => `chore/submodule/common-pr-${prNumber}`,
-	ICON: (packageName, version) => `chore/icon/${packageName}/${version}`
+	ICON: (packageName, version) => `chore/icon/${packageName}/${version}`,
+	SNAPSHOT: (prNumber) => `chore/snapshot/pr-${prNumber}`
 };
 const PR_TITLES = {
 	DEPS: (dep, version) => `chore(deps): upgrade ${dep} to ${version}`,
@@ -28976,10 +28977,37 @@ const PR_TITLES = {
 	SNAPSHOT: "chore: update snapshot"
 };
 const PR_LABELS = { SKIP_CHANGELOG: "skip-changelog" };
-const SNAPSHOT_SCRIPTS = {
-	DEFAULT: "test:update",
-	MINIPROGRAM: "test:snap-update"
+const GIT_CONFIG = {
+	USER_NAME: "tdesign-bot",
+	USER_EMAIL: "tdesign@tencent.com"
 };
+const DEFAULT_BASE_BRANCH = "develop";
+const SNAPSHOT_SCRIPTS = {
+	"tdesign-vue-next": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:update"
+	],
+	"tdesign-react": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:update"
+	],
+	"tdesign-miniprogram": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:snap-update"
+	],
+	"DEFAULT": "npm run test:update"
+};
+const SNAPSHOT_CONFLICT_PATTERNS = [
+	"csr.test.ts.snap",
+	"ssr.test.ts.snap",
+	"packages/common"
+];
 //#endregion
 //#region src/config/mapping.ts
 const REPO_MAPPING = {
@@ -29024,6 +29052,18 @@ const REPO_MAPPING = {
 		targetRepo: "tdesign-tdesign",
 		owner: "Tencent",
 		packageManager: "pnpm"
+	},
+	"/update-common": {
+		source: "self",
+		targetRepo: "tdesign-common",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/update-snapshot": {
+		source: "self",
+		targetRepo: "tdesign-common",
+		owner: "Tencent",
+		packageManager: "npm"
 	}
 };
 const ICONS_MAPPING = {
@@ -39217,6 +39257,7 @@ function updateCatalogs(workspaceManifest, packageName, version) {
 }
 //#endregion
 //#region src/utils/git-helper.ts
+const _BOTH_MODIFIED_REG = /both modified:\s+(.+)/g;
 var GitHelper = class {
 	token;
 	owner;
@@ -39241,13 +39282,13 @@ var GitHelper = class {
 			"config",
 			"--global",
 			"user.name",
-			"tdesign-bot"
+			GIT_CONFIG.USER_NAME
 		]);
 		await exec("git", [
 			"config",
 			"--global",
 			"user.email",
-			"tdesign@tencent.com"
+			GIT_CONFIG.USER_EMAIL
 		]);
 		await exec("git", [
 			"config",
@@ -39255,6 +39296,19 @@ var GitHelper = class {
 			`url.https://${this.token}@github.com/.insteadOf`,
 			"https://github.com/"
 		]);
+	}
+	async mergeDevelop() {
+		await exec("git", [
+			"merge",
+			DEFAULT_BASE_BRANCH,
+			"--no-commit"
+		], { cwd: this.repoPath });
+	}
+	async getConflictFiles() {
+		const { stdout } = await getExecOutput("git", ["status"], { cwd: this.repoPath });
+		const matches = stdout.match(_BOTH_MODIFIED_REG);
+		if (!matches) return [];
+		return matches.map((line) => line.replace("both modified: ", "").trim());
 	}
 	get repoUrl() {
 		return `https://github.com/${this.owner}/${this.repo}.git`;
@@ -39284,6 +39338,42 @@ var GitHelper = class {
 			branch
 		], { cwd: this.repoPath });
 	}
+	async checkoutBranch(branch) {
+		await exec("git", ["checkout", branch], { cwd: this.repoPath });
+	}
+	/**
+	* Checkout PR branch via git fetch
+	*/
+	async checkoutPr(prNumber) {
+		await exec("git", [
+			"fetch",
+			"origin",
+			`pull/${prNumber}/head:pr-${prNumber}`
+		], { cwd: this.repoPath });
+		await exec("git", ["checkout", `pr-${prNumber}`], { cwd: this.repoPath });
+	}
+	/**
+	* Add a remote for forked repository
+	*/
+	async addRemote(name, url) {
+		await exec("git", [
+			"remote",
+			"add",
+			name,
+			url
+		], { cwd: this.repoPath });
+		await exec("git", ["fetch", name], { cwd: this.repoPath });
+	}
+	/**
+	* Set upstream for current branch
+	*/
+	async setUpstream(remote, branch) {
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`${remote}/${branch}`
+		], { cwd: this.repoPath });
+	}
 	async commit(message) {
 		await exec("git", [
 			"commit",
@@ -39292,12 +39382,20 @@ var GitHelper = class {
 			"--no-verify"
 		], { cwd: this.repoPath });
 	}
-	async push(branch) {
+	async push(branch, forkOwner) {
 		if (this.isDryRun()) {
-			this.logDryRunInfo("git push", { branch });
+			this.logDryRunInfo("git push", {
+				branch,
+				forkOwner
+			});
 			return;
 		}
-		await exec("git", [
+		if (forkOwner) await exec("git", [
+			"push",
+			forkOwner,
+			`HEAD:${branch}`
+		], { cwd: this.repoPath });
+		else await exec("git", [
 			"push",
 			"origin",
 			branch
@@ -39599,7 +39697,9 @@ const AUTO_PR_TRIGGERS = [
 	"/pr-mobile-vue",
 	"/pr-mobile-react",
 	"/pr-miniprogram",
-	"/pr-tdesign"
+	"/pr-tdesign",
+	"/update-common",
+	"/update-snapshot"
 ];
 const CNB_API_URL = "https://api.cnb.cool";
 const ERROR_MESSAGES = {
@@ -39618,6 +39718,147 @@ const ERROR_MESSAGES = {
 function isAutoPrTrigger(trigger) {
 	return AUTO_PR_TRIGGERS.includes(trigger);
 }
+function isForkPr(prData) {
+	return prData.head.repo?.id !== prData.base.repo.id;
+}
+async function selfUpdate(context) {
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await githubHelper.getPrData(context.pr_number);
+	if (!prData.merged) {
+		info("PR has not been merged yet");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		return;
+	}
+	const gitHelper = new GitHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	await gitHelper.clone();
+	const prBranch = prData.head.ref;
+	const forkOwner = prData.head.user.login;
+	const isFork = isForkPr(prData);
+	if (isFork) {
+		const forkRepoUrl = prData.head.repo?.clone_url || `https://github.com/${forkOwner}/${context.repo}.git`;
+		await gitHelper.addRemote(forkOwner, forkRepoUrl);
+		await gitHelper.checkoutPr(context.pr_number);
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`refs/remotes/${forkOwner}/${prBranch}`,
+			`pr-${context.pr_number}`
+		], { cwd: `./${context.repo}` });
+	} else await gitHelper.checkoutBranch(prBranch);
+	await gitHelper.initSubmodule();
+	await gitHelper.updateSubmodule();
+	await gitHelper.mergeDevelop();
+	await handleSnapshotConflicts(gitHelper, context.repo);
+	if (!await gitHelper.isNeedCommit()) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ common 子模块已是最新版本，无需更新`);
+		return;
+	}
+	const title = PR_TITLES.SUBMODULE;
+	await gitHelper.commit(title);
+	await gitHelper.push(prBranch, isFork ? forkOwner : void 0);
+	await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 已更新 common 子模块，请合并该分支`);
+}
+async function snapshotUpdate(context) {
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await githubHelper.getPrData(context.pr_number);
+	if (!prData.merged) {
+		info("PR has not been merged yet");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		return;
+	}
+	const gitHelper = new GitHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	await gitHelper.clone();
+	const prBranch = prData.head.ref;
+	const forkOwner = prData.head.user.login;
+	const isFork = isForkPr(prData);
+	if (isFork) {
+		const forkRepoUrl = prData.head.repo?.clone_url || `https://github.com/${forkOwner}/${context.repo}.git`;
+		await gitHelper.addRemote(forkOwner, forkRepoUrl);
+		await gitHelper.checkoutPr(context.pr_number);
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`refs/remotes/${forkOwner}/${prBranch}`,
+			`pr-${context.pr_number}`
+		], { cwd: `./${context.repo}` });
+	} else await gitHelper.checkoutBranch(prBranch);
+	await gitHelper.mergeDevelop();
+	await handleSnapshotConflicts(gitHelper, context.repo);
+	if (await runSnapshotScript(getSnapshotScript(context.repo), context.repo) !== 0) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n❌ 快照更新失败，请检查测试用例`);
+		return;
+	}
+	if (!await gitHelper.isNeedCommit()) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 快照已是最新版本，无需更新`);
+		return;
+	}
+	const title = PR_TITLES.SNAPSHOT;
+	await gitHelper.commit(title);
+	await gitHelper.push(prBranch, isFork ? forkOwner : void 0);
+	await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 已更新快照，请合并该分支`);
+}
+function getSnapshotScript(repo) {
+	return SNAPSHOT_SCRIPTS[repo] || SNAPSHOT_SCRIPTS.DEFAULT;
+}
+async function runSnapshotScript(script, repo) {
+	const cwd = `./${repo}`;
+	if (Array.isArray(script)) {
+		const [cmd, ...args] = script;
+		return exec(cmd, args, { cwd });
+	}
+	const match = script.match(PACKAGE_MANAGER_REG);
+	if (match) return exec(match[1], ["run", match[2]], { cwd });
+	return exec("npm", ["run", script], { cwd });
+}
+async function handleSnapshotConflicts(gitHelper, repo) {
+	const cwd = `./${repo}`;
+	const conflictFiles = await gitHelper.getConflictFiles();
+	if (conflictFiles.length === 0) return;
+	info(`Found ${conflictFiles.length} conflict files`);
+	if (conflictFiles.some((file) => !SNAPSHOT_CONFLICT_PATTERNS.some((pattern) => file.includes(pattern)))) throw new ActionError("发现未知的冲突文件，请手动处理", { conflictFiles });
+	for (const file of conflictFiles) if (file.includes("packages/common")) {
+		await exec("git", [
+			"checkout",
+			"--ours",
+			file
+		], { cwd });
+		await exec("git", ["add", file], { cwd });
+		info(`Resolved conflict for ${file} using --ours`);
+	} else {
+		await exec("git", [
+			"checkout",
+			"--theirs",
+			file
+		], { cwd });
+		await exec("git", ["add", file], { cwd });
+		info(`Resolved conflict for ${file} using --theirs`);
+	}
+	await exec("git", [
+		"commit",
+		"-am",
+		"chore: merge develop"
+	], { cwd });
+}
 function executeAutoPr(context) {
 	const source = getSource(context.trigger);
 	if (!source) throw new ActionError(ERROR_MESSAGES.INVALID_TRIGGER_SOURCE(context.trigger), { trigger: context.trigger });
@@ -39627,6 +39868,10 @@ function executeAutoPr(context) {
 			break;
 		case "icons":
 			start(context);
+			break;
+		case "self":
+			if (context.trigger === "/update-snapshot") snapshotUpdate(context);
+			else selfUpdate(context);
 			break;
 		default: throw new ActionError(ERROR_MESSAGES.UNKNOWN_TRIGGER_SOURCE(source), { source });
 	}

@@ -1,5 +1,9 @@
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
+import { DEFAULT_BASE_BRANCH, GIT_CONFIG } from '../config/constants'
+
+// Regex for parsing git status conflict files
+const _BOTH_MODIFIED_REG = /both modified:\s+(.+)/g
 
 export interface GitContext {
   owner: string
@@ -34,9 +38,22 @@ export class GitHelper {
   }
 
   private async initConfig() {
-    await exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
-    await exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
+    await exec('git', ['config', '--global', 'user.name', GIT_CONFIG.USER_NAME])
+    await exec('git', ['config', '--global', 'user.email', GIT_CONFIG.USER_EMAIL])
     await exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
+  }
+
+  async mergeDevelop() {
+    await exec('git', ['merge', DEFAULT_BASE_BRANCH, '--no-commit'], { cwd: this.repoPath })
+  }
+
+  async getConflictFiles(): Promise<string[]> {
+    const { stdout } = await getExecOutput('git', ['status'], { cwd: this.repoPath })
+    const matches = stdout.match(_BOTH_MODIFIED_REG)
+    if (!matches) {
+      return []
+    }
+    return matches.map(line => line.replace('both modified: ', '').trim())
   }
 
   private get repoUrl() {
@@ -58,16 +75,49 @@ export class GitHelper {
     await exec('git', ['checkout', '-b', branch], { cwd: this.repoPath })
   }
 
+  async checkoutBranch(branch: string) {
+    await exec('git', ['checkout', branch], { cwd: this.repoPath })
+  }
+
+  /**
+   * Checkout PR branch via git fetch
+   */
+  async checkoutPr(prNumber: number) {
+    await exec('git', ['fetch', 'origin', `pull/${prNumber}/head:pr-${prNumber}`], { cwd: this.repoPath })
+    await exec('git', ['checkout', `pr-${prNumber}`], { cwd: this.repoPath })
+  }
+
+  /**
+   * Add a remote for forked repository
+   */
+  async addRemote(name: string, url: string) {
+    await exec('git', ['remote', 'add', name, url], { cwd: this.repoPath })
+    await exec('git', ['fetch', name], { cwd: this.repoPath })
+  }
+
+  /**
+   * Set upstream for current branch
+   */
+  async setUpstream(remote: string, branch: string) {
+    await exec('git', ['branch', '--set-upstream-to', `${remote}/${branch}`], { cwd: this.repoPath })
+  }
+
   async commit(message: string) {
     await exec('git', ['commit', '-am', message, '--no-verify'], { cwd: this.repoPath })
   }
 
-  async push(branch: string) {
+  async push(branch: string, forkOwner?: string) {
     if (this.isDryRun()) {
-      this.logDryRunInfo('git push', { branch })
+      this.logDryRunInfo('git push', { branch, forkOwner })
       return
     }
-    await exec('git', ['push', 'origin', branch], { cwd: this.repoPath })
+    // Fork PR: push to fork owner's branch
+    if (forkOwner) {
+      await exec('git', ['push', forkOwner, `HEAD:${branch}`], { cwd: this.repoPath })
+    }
+    else {
+      await exec('git', ['push', 'origin', branch], { cwd: this.repoPath })
+    }
   }
 
   async initSubmodule() {
