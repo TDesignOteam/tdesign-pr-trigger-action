@@ -2,7 +2,6 @@ name: test-tdesign-icons-trigger
 on:
   pull_request:
     branches: [develop]
-   
 
 jobs:
   pr-vue:
@@ -20,9 +19,8 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-vue
-          
 
   pr-vue-next:
     runs-on: ubuntu-latest
@@ -39,9 +37,8 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-vue-next
-          
 
   pr-react:
     runs-on: ubuntu-latest
@@ -58,9 +55,8 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-react
-          
 
   pr-mobile-vue:
     runs-on: ubuntu-latest
@@ -77,9 +73,8 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-mobile-vue
-          
 
   pr-mobile-react:
     runs-on: ubuntu-latest
@@ -96,9 +91,8 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-mobile-react
-         
 
   pr-miniprogram:
     runs-on: ubuntu-latest
@@ -115,6 +109,5 @@ jobs:
           token: ${{ secrets.TDESIGN_BOT_TOKEN }}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 231
+          pr_number: 233
           trigger: /pr-miniprogram
-          
