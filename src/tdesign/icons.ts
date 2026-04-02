@@ -26,18 +26,18 @@ async function runMiniprogramIconUpdate(repo: string, version: string): Promise<
   await exec('git', ['status'], { cwd: `./${repo}` })
 }
 
-function getSnapshotScriptName(packageName: string): string {
-  return packageName === 'cdn-iconfont' ? SNAPSHOT_SCRIPTS.MINIPROGRAM : SNAPSHOT_SCRIPTS.DEFAULT
+function getSnapshotScript(repo: string): string | string[] {
+  return SNAPSHOT_SCRIPTS[repo] || SNAPSHOT_SCRIPTS.DEFAULT
 }
 
-async function runSnapshotUpdate(gitHelper: GitHelper, packageManager: string, repo: string, packageName: string): Promise<void> {
-  const scriptName = getSnapshotScriptName(packageName)
+async function runSnapshotUpdate(gitHelper: GitHelper, packageManager: string, repo: string): Promise<void> {
+  const script = getSnapshotScript(repo)
 
-  if (repo === 'tdesign-vue-next') {
-    await exec(packageManager, ['-F', '@tdesign/vue-next-test', 'run', scriptName], { cwd: `./${repo}` })
+  if (Array.isArray(script)) {
+    await exec(script[0], script.slice(1), { cwd: `./${repo}` })
   }
   else {
-    await exec(packageManager, ['run', scriptName], { cwd: `./${repo}` })
+    await exec(packageManager, ['run', script], { cwd: `./${repo}` })
   }
 
   if (await gitHelper.isNeedCommit()) {
@@ -118,7 +118,7 @@ export default async function start(context: TriggerContext): Promise<void> {
   const title = PR_TITLES.ICON(packageName, latestVersion)
   await gitHelper.commit(title)
 
-  await runSnapshotUpdate(gitHelper, packageManager, targetRepoName, packageName)
+  await runSnapshotUpdate(gitHelper, packageManager, targetRepoName)
 
   await gitHelper.push(branchName)
 
