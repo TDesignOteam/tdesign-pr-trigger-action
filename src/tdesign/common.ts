@@ -1,69 +1,138 @@
-import type { AutoPrTrigger, TriggerContext } from '../utils/trigger'
+import type { AutoPrTrigger } from '../config/mapping'
+import type { TriggerContext } from '../utils/trigger'
 import { info } from '@actions/core'
 import { exec } from '@actions/exec'
+import { BRANCH_PATTERNS, CSS_UPDATE_REPOS, PR_TITLES } from '../config/constants'
+import { getOwner, getTargetRepo } from '../config/mapping'
 import { adaptChangelogForRepo, addContributor, GitHelper, GithubHelper } from '../utils'
-import { ownerMap, repoMap } from '../utils/trigger'
+import { ActionError } from '../utils/error-handler'
 
-export default async function start(context: TriggerContext) {
-  if (!Reflect.has(repoMap, context.trigger)) {
-    info(`错误的trigger: ${context.trigger}`)
-    return
+const COMMON_REPO = 'tdesign-common'
+const COMMON_OWNER = 'Tencent'
+const PR_NOT_MERGED_MESSAGE = 'PR 还没合并，无法触发'
+
+function generateCommonPrLink(prNumber: number): string {
+  return `([common#${prNumber}](https://github.com/${COMMON_OWNER}/${COMMON_REPO}/pull/${prNumber}))`
+}
+
+function preparePrBody(originalBody: string, userLogin: string, prNumber: number, targetRepo: string): string {
+  const link = generateCommonPrLink(prNumber)
+  const body = addContributor(originalBody, userLogin, link)
+  return adaptChangelogForRepo(body, targetRepo as any)
+}
+
+async function prepareRepository(gitHelper: GitHelper): Promise<string> {
+  const baseBranch = await gitHelper.clone()
+  await gitHelper.initSubmodule()
+  await gitHelper.updateSubmodule()
+  return baseBranch
+}
+
+async function updateCssVariables(gitHelper: GitHelper, repo: string): Promise<void> {
+  await exec('npm', ['run', 'api:css', 'all'], { cwd: `./${repo}` })
+  if (await gitHelper.isNeedCommit()) {
+    await gitHelper.printDiff()
+    await gitHelper.commit(PR_TITLES.CSS_VARS)
+  }
+}
+
+async function createPrAndComment(
+  targetRepoHelper: GithubHelper,
+  sourceGithubHelper: GithubHelper,
+  title: string,
+  branchName: string,
+  body: string,
+  baseBranch: string,
+  trigger: string,
+  sourcePrNumber: number,
+): Promise<void> {
+  const prData = await targetRepoHelper.createPR(title, branchName, body, baseBranch)
+  if (prData) {
+    const comment = `> ${trigger}\r\n\r\n创建 PR 成功，请查看 ${prData.html_url}`
+    await sourceGithubHelper.addComment(sourcePrNumber, comment)
+  }
+}
+
+async function checkAndCommentUnmergedPr(
+  githubHelper: GithubHelper,
+  prNumber: number,
+): Promise<boolean> {
+  const prData = await githubHelper.getPrData(prNumber)
+  if (!prData.merged) {
+    info('PR has not been merged yet')
+    await githubHelper.addComment(prNumber, PR_NOT_MERGED_MESSAGE)
+    return false
+  }
+  return true
+}
+
+function isCssUpdateRequired(repo: string): boolean {
+  return CSS_UPDATE_REPOS.includes(repo as any)
+}
+
+export default async function start(context: TriggerContext): Promise<void> {
+  const targetRepoName = getTargetRepo(context.trigger as AutoPrTrigger)
+  const owner = getOwner(context.trigger as AutoPrTrigger)
+
+  if (!targetRepoName || !owner) {
+    throw new ActionError(`Invalid trigger: ${context.trigger}`, { trigger: context.trigger })
   }
 
-  const githubHelper = new GithubHelper({
+  const sourceGithubHelper = new GithubHelper({
     repo: context.repo,
     owner: context.owner,
     token: context.token,
     dryRun: context.dry_run,
   })
-  const prData = await githubHelper.getPrData(context.pr_number)
-  if (!prData.merged) {
-    info('pr has been merged')
-    githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发')
+
+  if (!(await checkAndCommentUnmergedPr(sourceGithubHelper, context.pr_number))) {
     return
   }
-  const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`
-  let body = addContributor(prData.body || '', prData.user.login, link)
-  const trigger = context.trigger as AutoPrTrigger
-  body = adaptChangelogForRepo(body, repoMap[trigger])
+
+  const prData = await sourceGithubHelper.getPrData(context.pr_number)
+  const body = preparePrBody(prData.body || '', prData.user.login, context.pr_number, targetRepoName)
 
   const gitHelper = new GitHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+    repo: targetRepoName,
+    owner,
     token: context.token,
     dryRun: context.dry_run,
   })
 
-  const baseBranch = await gitHelper.clone()
-  await gitHelper.initSubmodule()
-  await gitHelper.updateSubmodule()
+  const baseBranch = await prepareRepository(gitHelper)
 
-  const branchName = `chore/submodule/common-pr-${context.pr_number}`
+  const branchName = BRANCH_PATTERNS.SUBMODULE(context.pr_number)
+  const title = PR_TITLES.SUBMODULE
   await gitHelper.createBranch(branchName)
-  const title = `chore(submodule): update common`
+
   if (!await gitHelper.isNeedCommit()) {
-    info('nothing to commit')
-    return true// nothing to commit
+    info('Nothing to commit')
+    return
   }
 
   await gitHelper.commit(title)
-  if (['tdesign-mobile-vue', 'tdesign-mobile-react'].includes(repoMap[trigger])) {
-    await exec('npm', ['run', 'api:css', 'all'], { cwd: `./${repoMap[trigger]}` })
-    if (await gitHelper.isNeedCommit()) {
-      await gitHelper.printDiff()
-      await gitHelper.commit('docs: update css vars')
-    }
+
+  if (isCssUpdateRequired(targetRepoName)) {
+    await updateCssVariables(gitHelper, targetRepoName)
   }
+
   await gitHelper.push(branchName)
 
-  const targetRepo = new GithubHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+  const targetRepoHelper = new GithubHelper({
+    repo: targetRepoName,
+    owner,
     token: context.token,
     dryRun: context.dry_run,
   })
-  const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch)
-  if (newPrData) {
-    githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
-  }
+
+  await createPrAndComment(
+    targetRepoHelper,
+    sourceGithubHelper,
+    title,
+    branchName,
+    body,
+    baseBranch,
+    context.trigger,
+    context.pr_number,
+  )
 }

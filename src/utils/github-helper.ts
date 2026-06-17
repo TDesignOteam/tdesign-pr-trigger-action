@@ -18,6 +18,17 @@ export class GithubHelper {
     this.octokit = getOctokit(context.token)
   }
 
+  private isDryRun(): boolean {
+    return this.dryRun
+  }
+
+  private logDryRunInfo(action: string, details?: Record<string, unknown>): void {
+    if (this.isDryRun()) {
+      const message = details ? `${action}: ${JSON.stringify(details)}` : action
+      info(`[DRY-RUN] ${message}`)
+    }
+  }
+
   async getPrData(pr_number: number) {
     const { data } = await this.octokit.rest.pulls.get({
       owner: this.context.owner,
@@ -28,12 +39,9 @@ export class GithubHelper {
   }
 
   async createPR(title: string, head: string, body: string, base?: string) {
-    if (this.dryRun) {
+    if (this.isDryRun()) {
       startGroup('dry-run模式, 不运行createPR')
-      info(`title: ${title}`)
-      info(`head: ${head}`)
-      info(`base: ${base}`)
-      info(`body: ${body}`)
+      this.logDryRunInfo('createPR', { title, head, base, body })
       endGroup()
       return
     }
@@ -49,10 +57,9 @@ export class GithubHelper {
   }
 
   async addComment(pr_number: number, body: string) {
-    if (this.dryRun) {
+    if (this.isDryRun()) {
       startGroup('dry-run模式, 不运行addComment')
-      info(`pr_number: ${pr_number}`)
-      info(`body: ${body}`)
+      this.logDryRunInfo('addComment', { pr_number, body })
       endGroup()
       return
     }
@@ -66,10 +73,9 @@ export class GithubHelper {
   }
 
   async addLabels(pr_number: number, labels: string[]) {
-    if (this.dryRun) {
+    if (this.isDryRun()) {
       startGroup('dry-run模式, 不运行addLabels')
-      info(`pr_number: ${pr_number}`)
-      info(`labels: ${labels.join(', ')}`)
+      this.logDryRunInfo('addLabels', { pr_number, labels })
       endGroup()
       return
     }

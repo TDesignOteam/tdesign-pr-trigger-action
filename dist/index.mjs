@@ -47,23 +47,6 @@ function toCommandValue(input) {
 	else if (typeof input === "string" || input instanceof String) return input;
 	return JSON.stringify(input);
 }
-/**
-*
-* @param annotationProperties
-* @returns The command properties to send with the actual annotation command
-* See IssueCommandProperties: https://github.com/actions/runner/blob/main/src/Runner.Worker/ActionCommandManager.cs#L646
-*/
-function toCommandProperties(annotationProperties) {
-	if (!Object.keys(annotationProperties).length) return {};
-	return {
-		title: annotationProperties.title,
-		file: annotationProperties.file,
-		line: annotationProperties.startLine,
-		endLine: annotationProperties.endLine,
-		col: annotationProperties.startColumn,
-		endColumn: annotationProperties.endColumn
-	};
-}
 //#endregion
 //#region node_modules/.pnpm/@actions+core@3.0.0/node_modules/@actions/core/lib/command.js
 /**
@@ -16539,14 +16522,6 @@ function getInput(name, options) {
 	return val.trim();
 }
 /**
-* Adds an error issue
-* @param message error issue message. Errors will be converted to string via toString()
-* @param properties optional properties to add to the annotation.
-*/
-function error(message, properties = {}) {
-	issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
-}
-/**
 * Writes info to log with console.log.
 * @param message info message
 */
@@ -28975,6 +28950,147 @@ const getClient = (baseUrl, token) => {
 	} });
 };
 //#endregion
+//#region src/config/constants.ts
+const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
+const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
+const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi;
+const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
+const SUPPORTED_CHANGELOG_REPOS = [
+	"tdesign-vue-next",
+	"tdesign-react",
+	"tdesign-miniprogram"
+];
+const WORKSPACE_MANIFEST_REPOS = ["tdesign-vue-next", "tdesign-miniprogram"];
+const CSS_UPDATE_REPOS = ["tdesign-mobile-vue", "tdesign-mobile-react"];
+const NPM_REGISTRY = "https://registry.npmjs.org/";
+const BRANCH_PATTERNS = {
+	DEPS: (dep, version) => `chore/deps/${dep}/${version}`,
+	SUBMODULE: (prNumber) => `chore/submodule/common-pr-${prNumber}`,
+	ICON: (packageName, version) => `chore/icon/${packageName}/${version}`,
+	SNAPSHOT: (prNumber) => `chore/snapshot/pr-${prNumber}`
+};
+const PR_TITLES = {
+	DEPS: (dep, version) => `chore(deps): upgrade ${dep} to ${version}`,
+	SUBMODULE: "chore(submodule): update common",
+	ICON: (packageName, version) => `feat(Icon): upgrade ${packageName} to ${version}`,
+	CSS_VARS: "docs: update css vars",
+	SNAPSHOT: "chore: update snapshot"
+};
+const PR_LABELS = { SKIP_CHANGELOG: "skip-changelog" };
+const GIT_CONFIG = {
+	USER_NAME: "tdesign-bot",
+	USER_EMAIL: "tdesign@tencent.com"
+};
+const DEFAULT_BASE_BRANCH = "develop";
+const SNAPSHOT_SCRIPTS = {
+	"tdesign-vue-next": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:update"
+	],
+	"tdesign-react": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:update"
+	],
+	"tdesign-miniprogram": [
+		"pnpm",
+		"-r",
+		"run",
+		"test:snap-update"
+	],
+	"DEFAULT": "npm run test:update"
+};
+const SNAPSHOT_CONFLICT_PATTERNS = [
+	"csr.test.ts.snap",
+	"ssr.test.ts.snap",
+	"packages/common"
+];
+//#endregion
+//#region src/config/mapping.ts
+const REPO_MAPPING = {
+	"/pr-vue": {
+		source: "common",
+		targetRepo: "tdesign-vue",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-vue-next": {
+		source: "common",
+		targetRepo: "tdesign-vue-next",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-react": {
+		source: "common",
+		targetRepo: "tdesign-react",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-mobile-vue": {
+		source: "common",
+		targetRepo: "tdesign-mobile-vue",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-mobile-react": {
+		source: "common",
+		targetRepo: "tdesign-mobile-react",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/pr-miniprogram": {
+		source: "common",
+		targetRepo: "tdesign-miniprogram",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/pr-tdesign": {
+		source: "icons",
+		targetRepo: "tdesign-tdesign",
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
+	"/update-common": {
+		source: "self",
+		targetRepo: "tdesign-common",
+		owner: "Tencent",
+		packageManager: "npm"
+	},
+	"/update-snapshot": {
+		source: "self",
+		targetRepo: "tdesign-common",
+		owner: "Tencent",
+		packageManager: "npm"
+	}
+};
+const ICONS_MAPPING = {
+	"/pr-vue": "tdesign-icons-vue",
+	"/pr-vue-next": "tdesign-icons-vue-next",
+	"/pr-react": "tdesign-icons-react",
+	"/pr-mobile-vue": "tdesign-icons-vue-next",
+	"/pr-mobile-react": "tdesign-icons-react",
+	"/pr-miniprogram": "cdn-iconfont",
+	"/pr-tdesign": "tdesign-icons"
+};
+function getIconsPackage(trigger) {
+	return ICONS_MAPPING[trigger];
+}
+function getTargetRepo(trigger) {
+	return REPO_MAPPING[trigger]?.targetRepo;
+}
+function getOwner(trigger) {
+	return REPO_MAPPING[trigger]?.owner;
+}
+function getSource(trigger) {
+	return REPO_MAPPING[trigger]?.source;
+}
+function getPackageManager(repo) {
+	return Object.values(REPO_MAPPING).find((r) => r.targetRepo === repo)?.packageManager;
+}
+//#endregion
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
 var require_lib$6 = /* @__PURE__ */ __commonJSMin(((exports) => {
 	Object.defineProperty(exports, "__esModule", { value: true });
@@ -39043,34 +39159,30 @@ var import_lib = (/* @__PURE__ */ __commonJSMin(((exports) => {
 	}
 })))();
 var import_lib$1 = require_lib$4();
-const SKIP_CHANGELOG_REG = /\[x\] 本条 PR 不需要纳入 Changelog/i;
-const CHANGELOG_REG = /-\s([A-Z]+)(?:\(([A-Z\s_-]*)\))?\s*:\s*(.+)/i;
-const REMOVE_SKIP_CHANGELOG_REG = /-\s\[ \] 本条 PR 不需要纳入 Changelog\r\n?/gi;
-const CHANGELOG_SECTION_REG = /(### 📝 更新日志\r\n)([\r\n]*)(.*)/;
 function addContributor(body, contributor, link) {
 	if (SKIP_CHANGELOG_REG.test(body)) {
 		info(`不需要纳入 Changelog`);
 		return body;
 	}
-	let isSkip = true;
+	const SKIP_LINES = [
+		"",
+		"<!--",
+		"-->"
+	];
+	const CHANGELOG_HEADER = "### 📝 更新日志";
+	const CHECKLIST_HEADER = "### ☑️ 请求合并前的自查清单";
+	let inChangelogSection = false;
 	return body.split("\r\n").map((item) => {
-		if ([
-			"",
-			"<!--",
-			"-->"
-		].includes(item)) return item;
-		if (!isSkip) {
-			if (item === "### ☑️ 请求合并前的自查清单") {
-				isSkip = true;
-				return item;
-			}
-			if (CHANGELOG_REG.test(item)) {
-				let logContent = `${item} @${contributor}`;
-				if (link) logContent += ` ${link}`;
-				return logContent;
-			}
+		if (SKIP_LINES.includes(item)) return item;
+		if (!inChangelogSection) {
+			if (item === CHANGELOG_HEADER) inChangelogSection = true;
+			return item;
 		}
-		if (item === "### 📝 更新日志") isSkip = false;
+		if (item === CHECKLIST_HEADER) {
+			inChangelogSection = false;
+			return item;
+		}
+		if (CHANGELOG_REG.test(item)) return link ? `${item} @${contributor} ${link}` : `${item} @${contributor}`;
 		return item;
 	}).join("\r\n");
 }
@@ -39079,11 +39191,7 @@ function adaptChangelogForRepo(body, repo) {
 		info(`不需要纳入 Changelog`);
 		return body;
 	}
-	if (![
-		"tdesign-vue-next",
-		"tdesign-react",
-		"tdesign-miniprogram"
-	].includes(repo)) return body;
+	if (!SUPPORTED_CHANGELOG_REPOS.includes(repo)) return body;
 	let updatedBody = body.replace(REMOVE_SKIP_CHANGELOG_REG, "");
 	const match = updatedBody.match(CHANGELOG_SECTION_REG);
 	if (match) {
@@ -39098,12 +39206,12 @@ async function getPkgLatestVersion(packageName) {
 		"view",
 		packageName,
 		"version",
-		"--registry=https://registry.npmjs.org/"
+		`--registry=${NPM_REGISTRY}`
 	]);
 	return stdout.trim();
 }
 async function bumpIconsVersion(packageManager, repo) {
-	if (packageManager === "pnpm") if (repo === "tdesign-vue-next" || repo === "tdesign-miniprogram") {
+	if (packageManager === "pnpm") if (WORKSPACE_MANIFEST_REPOS.includes(repo)) {
 		let workspaceManifest = await (0, import_lib$1.readWorkspaceManifest)(`./${repo}`);
 		if (workspaceManifest) {
 			const iconsVueNextVersion = await getPkgLatestVersion("tdesign-icons-vue-next");
@@ -39136,19 +39244,20 @@ async function corepackEnable() {
 	await exec("corepack", ["enable"]);
 }
 function updateCatalogs(workspaceManifest, packageName, version) {
-	if (workspaceManifest.catalog) {
-		for (const [name, ver] of Object.entries(workspaceManifest.catalog)) if (name === packageName) if (ver.startsWith("^") || ver.startsWith("~")) workspaceManifest.catalog[name] = `${ver.slice(0, 1)}${version}`;
-		else workspaceManifest.catalog[name] = version;
-	}
-	if (workspaceManifest.catalogs) for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
+	const updatePackageVersion = (catalog) => {
 		for (const [name, ver] of Object.entries(catalog)) if (name === packageName) if (ver.startsWith("^") || ver.startsWith("~")) catalog[name] = `${ver.slice(0, 1)}${version}`;
 		else catalog[name] = version;
+	};
+	if (workspaceManifest.catalog) updatePackageVersion(workspaceManifest.catalog);
+	if (workspaceManifest.catalogs) for (const [key, catalog] of Object.entries(workspaceManifest.catalogs)) {
+		updatePackageVersion(catalog);
 		workspaceManifest.catalogs[key] = catalog;
 	}
 	return workspaceManifest;
 }
 //#endregion
 //#region src/utils/git-helper.ts
+const _BOTH_MODIFIED_REG = /both modified:\s+(.+)/g;
 var GitHelper = class {
 	token;
 	owner;
@@ -39162,18 +39271,24 @@ var GitHelper = class {
 		this.dryRun = context.dryRun;
 		this.repoPath = `./${context.repo}`;
 	}
+	isDryRun() {
+		return this.dryRun;
+	}
+	logDryRunInfo(action, details) {
+		if (this.isDryRun()) info(`[DRY-RUN] ${details ? `${action}: ${JSON.stringify(details)}` : action}`);
+	}
 	async initConfig() {
 		await exec("git", [
 			"config",
 			"--global",
 			"user.name",
-			"tdesign-bot"
+			GIT_CONFIG.USER_NAME
 		]);
 		await exec("git", [
 			"config",
 			"--global",
 			"user.email",
-			"tdesign@tencent.com"
+			GIT_CONFIG.USER_EMAIL
 		]);
 		await exec("git", [
 			"config",
@@ -39181,6 +39296,19 @@ var GitHelper = class {
 			`url.https://${this.token}@github.com/.insteadOf`,
 			"https://github.com/"
 		]);
+	}
+	async mergeDevelop() {
+		await exec("git", [
+			"merge",
+			DEFAULT_BASE_BRANCH,
+			"--no-commit"
+		], { cwd: this.repoPath });
+	}
+	async getConflictFiles() {
+		const { stdout } = await getExecOutput("git", ["status"], { cwd: this.repoPath });
+		const matches = stdout.match(_BOTH_MODIFIED_REG);
+		if (!matches) return [];
+		return matches.map((line) => line.replace("both modified: ", "").trim());
 	}
 	get repoUrl() {
 		return `https://github.com/${this.owner}/${this.repo}.git`;
@@ -39210,6 +39338,42 @@ var GitHelper = class {
 			branch
 		], { cwd: this.repoPath });
 	}
+	async checkoutBranch(branch) {
+		await exec("git", ["checkout", branch], { cwd: this.repoPath });
+	}
+	/**
+	* Checkout PR branch via git fetch
+	*/
+	async checkoutPr(prNumber) {
+		await exec("git", [
+			"fetch",
+			"origin",
+			`pull/${prNumber}/head:pr-${prNumber}`
+		], { cwd: this.repoPath });
+		await exec("git", ["checkout", `pr-${prNumber}`], { cwd: this.repoPath });
+	}
+	/**
+	* Add a remote for forked repository
+	*/
+	async addRemote(name, url) {
+		await exec("git", [
+			"remote",
+			"add",
+			name,
+			url
+		], { cwd: this.repoPath });
+		await exec("git", ["fetch", name], { cwd: this.repoPath });
+	}
+	/**
+	* Set upstream for current branch
+	*/
+	async setUpstream(remote, branch) {
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`${remote}/${branch}`
+		], { cwd: this.repoPath });
+	}
 	async commit(message) {
 		await exec("git", [
 			"commit",
@@ -39218,12 +39382,20 @@ var GitHelper = class {
 			"--no-verify"
 		], { cwd: this.repoPath });
 	}
-	async push(branch) {
-		if (this.dryRun) {
-			info("dry-run模式, 不运行git push");
+	async push(branch, forkOwner) {
+		if (this.isDryRun()) {
+			this.logDryRunInfo("git push", {
+				branch,
+				forkOwner
+			});
 			return;
 		}
-		await exec("git", [
+		if (forkOwner) await exec("git", [
+			"push",
+			forkOwner,
+			`HEAD:${branch}`
+		], { cwd: this.repoPath });
+		else await exec("git", [
 			"push",
 			"origin",
 			branch
@@ -39263,6 +39435,12 @@ var GithubHelper = class {
 		this.dryRun = context.dryRun;
 		this.octokit = getOctokit(context.token);
 	}
+	isDryRun() {
+		return this.dryRun;
+	}
+	logDryRunInfo(action, details) {
+		if (this.isDryRun()) info(`[DRY-RUN] ${details ? `${action}: ${JSON.stringify(details)}` : action}`);
+	}
 	async getPrData(pr_number) {
 		const { data } = await this.octokit.rest.pulls.get({
 			owner: this.context.owner,
@@ -39272,12 +39450,14 @@ var GithubHelper = class {
 		return data;
 	}
 	async createPR(title, head, body, base) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行createPR");
-			info(`title: ${title}`);
-			info(`head: ${head}`);
-			info(`base: ${base}`);
-			info(`body: ${body}`);
+			this.logDryRunInfo("createPR", {
+				title,
+				head,
+				base,
+				body
+			});
 			endGroup();
 			return;
 		}
@@ -39292,10 +39472,12 @@ var GithubHelper = class {
 		return data;
 	}
 	async addComment(pr_number, body) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行addComment");
-			info(`pr_number: ${pr_number}`);
-			info(`body: ${body}`);
+			this.logDryRunInfo("addComment", {
+				pr_number,
+				body
+			});
 			endGroup();
 			return;
 		}
@@ -39308,10 +39490,12 @@ var GithubHelper = class {
 		return data;
 	}
 	async addLabels(pr_number, labels) {
-		if (this.dryRun) {
+		if (this.isDryRun()) {
 			startGroup("dry-run模式, 不运行addLabels");
-			info(`pr_number: ${pr_number}`);
-			info(`labels: ${labels.join(", ")}`);
+			this.logDryRunInfo("addLabels", {
+				pr_number,
+				labels
+			});
 			endGroup();
 			return;
 		}
@@ -39325,12 +39509,219 @@ var GithubHelper = class {
 	}
 };
 //#endregion
+//#region src/utils/error-handler.ts
+var ActionError = class extends Error {
+	constructor(message, context) {
+		super(message);
+		this.context = context;
+		this.name = "ActionError";
+	}
+};
+//#endregion
 //#region src/tdesign/common.ts
+const COMMON_REPO = "tdesign-common";
+const COMMON_OWNER = "Tencent";
+const PR_NOT_MERGED_MESSAGE = "PR 还没合并，无法触发";
+function generateCommonPrLink(prNumber) {
+	return `([common#${prNumber}](https://github.com/${COMMON_OWNER}/${COMMON_REPO}/pull/${prNumber}))`;
+}
+function preparePrBody(originalBody, userLogin, prNumber, targetRepo) {
+	return adaptChangelogForRepo(addContributor(originalBody, userLogin, generateCommonPrLink(prNumber)), targetRepo);
+}
+async function prepareRepository$1(gitHelper) {
+	const baseBranch = await gitHelper.clone();
+	await gitHelper.initSubmodule();
+	await gitHelper.updateSubmodule();
+	return baseBranch;
+}
+async function updateCssVariables(gitHelper, repo) {
+	await exec("npm", [
+		"run",
+		"api:css",
+		"all"
+	], { cwd: `./${repo}` });
+	if (await gitHelper.isNeedCommit()) {
+		await gitHelper.printDiff();
+		await gitHelper.commit(PR_TITLES.CSS_VARS);
+	}
+}
+async function createPrAndComment(targetRepoHelper, sourceGithubHelper, title, branchName, body, baseBranch, trigger, sourcePrNumber) {
+	const prData = await targetRepoHelper.createPR(title, branchName, body, baseBranch);
+	if (prData) {
+		const comment = `> ${trigger}\r\n\r\n创建 PR 成功，请查看 ${prData.html_url}`;
+		await sourceGithubHelper.addComment(sourcePrNumber, comment);
+	}
+}
+async function checkAndCommentUnmergedPr(githubHelper, prNumber) {
+	if (!(await githubHelper.getPrData(prNumber)).merged) {
+		info("PR has not been merged yet");
+		await githubHelper.addComment(prNumber, PR_NOT_MERGED_MESSAGE);
+		return false;
+	}
+	return true;
+}
+function isCssUpdateRequired(repo) {
+	return CSS_UPDATE_REPOS.includes(repo);
+}
 async function start$1(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
-		info(`错误的trigger: ${context.trigger}`);
+	const targetRepoName = getTargetRepo(context.trigger);
+	const owner = getOwner(context.trigger);
+	if (!targetRepoName || !owner) throw new ActionError(`Invalid trigger: ${context.trigger}`, { trigger: context.trigger });
+	const sourceGithubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	if (!await checkAndCommentUnmergedPr(sourceGithubHelper, context.pr_number)) return;
+	const prData = await sourceGithubHelper.getPrData(context.pr_number);
+	const body = preparePrBody(prData.body || "", prData.user.login, context.pr_number, targetRepoName);
+	const gitHelper = new GitHelper({
+		repo: targetRepoName,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const baseBranch = await prepareRepository$1(gitHelper);
+	const branchName = BRANCH_PATTERNS.SUBMODULE(context.pr_number);
+	const title = PR_TITLES.SUBMODULE;
+	await gitHelper.createBranch(branchName);
+	if (!await gitHelper.isNeedCommit()) {
+		info("Nothing to commit");
 		return;
 	}
+	await gitHelper.commit(title);
+	if (isCssUpdateRequired(targetRepoName)) await updateCssVariables(gitHelper, targetRepoName);
+	await gitHelper.push(branchName);
+	await createPrAndComment(new GithubHelper({
+		repo: targetRepoName,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	}), sourceGithubHelper, title, branchName, body, baseBranch, context.trigger, context.pr_number);
+}
+//#endregion
+//#region src/tdesign/icons.ts
+const CDN_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
+const CDN_ICONFONT_SOURCE = "https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx";
+async function getCdnIconfontVersion() {
+	return (await (await fetch(CDN_ICONFONT_SOURCE)).text()).match(CDN_ICONFONT_VERSION_REG)?.[1] || "";
+}
+async function getLatestVersion(packageName) {
+	return packageName === "cdn-iconfont" ? await getCdnIconfontVersion() : await getPkgLatestVersion(packageName);
+}
+async function runMiniprogramIconUpdate(repo, version) {
+	await exec("node", [
+		"./script/update-icons.mjs",
+		"--version",
+		version
+	], { cwd: `./${repo}` });
+	await exec("git", ["status"], { cwd: `./${repo}` });
+}
+function getSnapshotScriptName(packageName) {
+	return packageName === "cdn-iconfont" ? SNAPSHOT_SCRIPTS.MINIPROGRAM : SNAPSHOT_SCRIPTS.DEFAULT;
+}
+async function runSnapshotUpdate(gitHelper, packageManager, repo, packageName) {
+	const scriptName = getSnapshotScriptName(packageName);
+	if (repo === "tdesign-vue-next") await exec(packageManager, [
+		"-F",
+		"@tdesign/vue-next-test",
+		"run",
+		scriptName
+	], { cwd: `./${repo}` });
+	else await exec(packageManager, ["run", scriptName], { cwd: `./${repo}` });
+	if (await gitHelper.isNeedCommit()) await gitHelper.commit(PR_TITLES.SNAPSHOT);
+}
+async function installDependencies(gitHelper, repo, packageManager) {
+	if (packageManager === "pnpm") await corepackEnable();
+	await exec(packageManager, ["install"], { cwd: `./${repo}` });
+}
+async function prepareRepository(gitHelper) {
+	await gitHelper.clone();
+	await gitHelper.initSubmodule();
+}
+async function updateIconsDependencies(packageManager, repo, packageName) {
+	await bumpIconsVersion(packageManager, repo);
+	if (packageName === "cdn-iconfont") await runMiniprogramIconUpdate(repo, await getLatestVersion(packageName));
+}
+async function start(context) {
+	const targetRepoName = getTargetRepo(context.trigger);
+	const owner = getOwner(context.trigger);
+	const packageName = getIconsPackage(context.trigger);
+	if (!targetRepoName || !owner || !packageName) throw new ActionError(`Invalid trigger: ${context.trigger}`, { trigger: context.trigger });
+	const prData = await new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	}).getPrData(context.pr_number);
+	let body = addContributor(prData.body || "", prData.user.login);
+	body = adaptChangelogForRepo(body, targetRepoName);
+	const latestVersion = await getLatestVersion(packageName);
+	startGroup("PR Body");
+	info(body);
+	endGroup();
+	startGroup(`${packageName} Version`);
+	info(`Latest version: ${latestVersion}`);
+	endGroup();
+	const gitHelper = new GitHelper({
+		repo: targetRepoName,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	await prepareRepository(gitHelper);
+	const packageManager = getPackageManager(targetRepoName) || "npm";
+	await installDependencies(gitHelper, targetRepoName, packageManager);
+	const branchName = BRANCH_PATTERNS.ICON(packageName, latestVersion);
+	await gitHelper.createBranch(branchName);
+	await updateIconsDependencies(packageManager, targetRepoName, packageName);
+	if (!await gitHelper.isNeedCommit()) return;
+	const title = PR_TITLES.ICON(packageName, latestVersion);
+	await gitHelper.commit(title);
+	await runSnapshotUpdate(gitHelper, packageManager, targetRepoName, packageName);
+	await gitHelper.push(branchName);
+	await new GithubHelper({
+		repo: targetRepoName,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	}).createPR(title, branchName, body);
+}
+//#endregion
+//#region src/utils/trigger.ts
+const AUTO_PR_TRIGGERS = [
+	"/pr-vue",
+	"/pr-vue-next",
+	"/pr-react",
+	"/pr-mobile-vue",
+	"/pr-mobile-react",
+	"/pr-miniprogram",
+	"/pr-tdesign",
+	"/update-common",
+	"/update-snapshot"
+];
+const CNB_API_URL = "https://api.cnb.cool";
+const ERROR_MESSAGES = {
+	UNSUPPORTED_TRIGGER: (trigger) => `未支持的触发器: ${trigger}`,
+	INVALID_TRIGGER_SOURCE: (trigger) => `无法获取触发源: ${trigger}`,
+	UNKNOWN_TRIGGER_SOURCE: (source) => `未知的触发源: ${source}`,
+	MISSING_DEPS: "请指定需要升级的依赖",
+	INVALID_TOKEN: "token 无效",
+	DELETE_BRANCH_SUCCESS: (data) => `删除分支成功:${JSON.stringify(data)}`,
+	DELETE_BRANCH_FAILED: (err) => {
+		const response = err.response?.data;
+		const message = err.message;
+		return `删除分支失败: ${response ? JSON.stringify(response) : message}`;
+	}
+};
+function isAutoPrTrigger(trigger) {
+	return AUTO_PR_TRIGGERS.includes(trigger);
+}
+function isForkPr(prData) {
+	return prData.head.repo?.id !== prData.base.repo.id;
+}
+async function selfUpdate(context) {
 	const githubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -39339,192 +39730,156 @@ async function start$1(context) {
 	});
 	const prData = await githubHelper.getPrData(context.pr_number);
 	if (!prData.merged) {
-		info("pr has been merged");
-		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		info("PR has not been merged yet");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
-	const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`;
-	let body = addContributor(prData.body || "", prData.user.login, link);
-	const trigger = context.trigger;
-	body = adaptChangelogForRepo(body, repoMap[trigger]);
 	const gitHelper = new GitHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	const baseBranch = await gitHelper.clone();
-	await gitHelper.initSubmodule();
-	await gitHelper.updateSubmodule();
-	const branchName = `chore/submodule/common-pr-${context.pr_number}`;
-	await gitHelper.createBranch(branchName);
-	const title = `chore(submodule): update common`;
-	if (!await gitHelper.isNeedCommit()) {
-		info("nothing to commit");
-		return true;
-	}
-	await gitHelper.commit(title);
-	if (["tdesign-mobile-vue", "tdesign-mobile-react"].includes(repoMap[trigger])) {
-		await exec("npm", [
-			"run",
-			"api:css",
-			"all"
-		], { cwd: `./${repoMap[trigger]}` });
-		if (await gitHelper.isNeedCommit()) {
-			await gitHelper.printDiff();
-			await gitHelper.commit("docs: update css vars");
-		}
-	}
-	await gitHelper.push(branchName);
-	const newPrData = await new GithubHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
-		token: context.token,
-		dryRun: context.dry_run
-	}).createPR(title, branchName, body, baseBranch);
-	if (newPrData) githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
-}
-//#endregion
-//#region src/tdesign/icons.ts
-const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
-async function getCdnIconfontVersion() {
-	return (await (await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)).text()).match(CND_ICONFONT_VERSION_REG)?.[1] || "";
-}
-async function miniprogramUpdateIcons(repo, version) {
-	await exec("node", [
-		"./script/update-icons.mjs",
-		"--version",
-		version
-	], { cwd: `./${repo}` });
-	await exec("git", ["status"], { cwd: `./${repo}` });
-}
-async function start(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
-		info(`错误的trigger: ${context.trigger}`);
-		return;
-	}
-	const prData = await new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
 		token: context.token,
 		dryRun: context.dry_run
-	}).getPrData(context.pr_number);
-	let body = addContributor(prData.body || "", prData.user.login);
-	const trigger = context.trigger;
-	body = adaptChangelogForRepo(body, repoMap[trigger]);
-	startGroup("body");
-	info(`${body}`);
-	endGroup();
-	const packageName = iconsMap[trigger];
-	startGroup(packageName);
-	let latestVersion = "";
-	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
-	else latestVersion = await getPkgLatestVersion(packageName);
-	info(`latestVersion: ${latestVersion}`);
-	endGroup();
+	});
+	await gitHelper.clone();
+	const prBranch = prData.head.ref;
+	const forkOwner = prData.head.user.login;
+	const isFork = isForkPr(prData);
+	if (isFork) {
+		const forkRepoUrl = prData.head.repo?.clone_url || `https://github.com/${forkOwner}/${context.repo}.git`;
+		await gitHelper.addRemote(forkOwner, forkRepoUrl);
+		await gitHelper.checkoutPr(context.pr_number);
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`refs/remotes/${forkOwner}/${prBranch}`,
+			`pr-${context.pr_number}`
+		], { cwd: `./${context.repo}` });
+	} else await gitHelper.checkoutBranch(prBranch);
+	await gitHelper.initSubmodule();
+	await gitHelper.updateSubmodule();
+	await gitHelper.mergeDevelop();
+	await handleSnapshotConflicts(gitHelper, context.repo);
+	if (!await gitHelper.isNeedCommit()) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ common 子模块已是最新版本，无需更新`);
+		return;
+	}
+	const title = PR_TITLES.SUBMODULE;
+	await gitHelper.commit(title);
+	await gitHelper.push(prBranch, isFork ? forkOwner : void 0);
+	await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 已更新 common 子模块，请合并该分支`);
+}
+async function snapshotUpdate(context) {
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await githubHelper.getPrData(context.pr_number);
+	if (!prData.merged) {
+		info("PR has not been merged yet");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		return;
+	}
 	const gitHelper = new GitHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
+		repo: context.repo,
+		owner: context.owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
 	await gitHelper.clone();
-	await gitHelper.initSubmodule();
-	const packageManager = packageManagerMap[repoMap[trigger]];
-	if (packageManager === "pnpm") await corepackEnable();
-	await exec(packageManager, ["install"], { cwd: `./${repoMap[trigger]}` });
-	const branchName = `chore/icon/${packageName}/${latestVersion}`;
-	await gitHelper.createBranch(branchName);
-	await bumpIconsVersion(packageManager, repoMap[trigger]);
-	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(repoMap[trigger], latestVersion);
-	if (!await gitHelper.isNeedCommit()) return true;
-	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
-	await gitHelper.commit(title);
-	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	if (repoMap[trigger] === "tdesign-vue-next") await exec(packageManager, [
-		"-F",
-		"@tdesign/vue-next-test",
-		"run",
-		updateSnapScript
-	], { cwd: `./${repoMap[trigger]}` });
-	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[trigger]}` });
-	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
-	await gitHelper.push(branchName);
-	new GithubHelper({
-		repo: repoMap[trigger],
-		owner: ownerMap[trigger],
-		token: context.token,
-		dryRun: context.dry_run
-	}).createPR(title, branchName, body);
-}
-//#endregion
-//#region src/utils/trigger.ts
-const iconsMap = {
-	"/pr-vue": "tdesign-icons-vue",
-	"/pr-vue-next": "tdesign-icons-vue-next",
-	"/pr-react": "tdesign-icons-react",
-	"/pr-mobile-vue": "tdesign-icons-vue-next",
-	"/pr-mobile-react": "tdesign-icons-react",
-	"/pr-miniprogram": "cdn-iconfont"
-};
-const repoMap = {
-	"/pr-vue": "tdesign-vue",
-	"/pr-vue-next": "tdesign-vue-next",
-	"/pr-react": "tdesign-react",
-	"/pr-mobile-vue": "tdesign-mobile-vue",
-	"/pr-mobile-react": "tdesign-mobile-react",
-	"/pr-miniprogram": "tdesign-miniprogram"
-};
-const ownerMap = {
-	"/pr-vue": "Tencent",
-	"/pr-vue-next": "Tencent",
-	"/pr-react": "Tencent",
-	"/pr-mobile-vue": "Tencent",
-	"/pr-mobile-react": "Tencent",
-	"/pr-miniprogram": "Tencent"
-};
-const packageManagerMap = {
-	"tdesign-vue": "npm",
-	"tdesign-vue-next": "pnpm",
-	"tdesign-react": "pnpm",
-	"tdesign-mobile-vue": "npm",
-	"tdesign-mobile-react": "npm",
-	"tdesign-miniprogram": "pnpm"
-};
-function useTrigger(context) {
-	switch (context.trigger) {
-		case "/pr-vue":
-		case "/pr-vue-next":
-		case "/pr-react":
-		case "/pr-mobile-vue":
-		case "/pr-mobile-react":
-		case "/pr-miniprogram":
-			autoPR(context);
-			break;
-		case "/upgrade-deps":
-			upgradeDeps(context);
-			break;
-		case "/delete-cnb-branch":
-			deleteCnbBranch(context);
-			break;
-		default: throw new Error(`未支持的触发器: ${context.trigger}`);
+	const prBranch = prData.head.ref;
+	const forkOwner = prData.head.user.login;
+	const isFork = isForkPr(prData);
+	if (isFork) {
+		const forkRepoUrl = prData.head.repo?.clone_url || `https://github.com/${forkOwner}/${context.repo}.git`;
+		await gitHelper.addRemote(forkOwner, forkRepoUrl);
+		await gitHelper.checkoutPr(context.pr_number);
+		await exec("git", [
+			"branch",
+			"--set-upstream-to",
+			`refs/remotes/${forkOwner}/${prBranch}`,
+			`pr-${context.pr_number}`
+		], { cwd: `./${context.repo}` });
+	} else await gitHelper.checkoutBranch(prBranch);
+	await gitHelper.mergeDevelop();
+	await handleSnapshotConflicts(gitHelper, context.repo);
+	if (await runSnapshotScript(getSnapshotScript(context.repo), context.repo) !== 0) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n❌ 快照更新失败，请检查测试用例`);
+		return;
 	}
+	if (!await gitHelper.isNeedCommit()) {
+		await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 快照已是最新版本，无需更新`);
+		return;
+	}
+	const title = PR_TITLES.SNAPSHOT;
+	await gitHelper.commit(title);
+	await gitHelper.push(prBranch, isFork ? forkOwner : void 0);
+	await githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n\r\n✅ 已更新快照，请合并该分支`);
 }
-function autoPR(context) {
-	switch (context.repo) {
-		case "tdesign-icons":
-			start(context);
-			break;
-		case "tdesign-common":
+function getSnapshotScript(repo) {
+	return SNAPSHOT_SCRIPTS[repo] || SNAPSHOT_SCRIPTS.DEFAULT;
+}
+async function runSnapshotScript(script, repo) {
+	const cwd = `./${repo}`;
+	if (Array.isArray(script)) {
+		const [cmd, ...args] = script;
+		return exec(cmd, args, { cwd });
+	}
+	const match = script.match(PACKAGE_MANAGER_REG);
+	if (match) return exec(match[1], ["run", match[2]], { cwd });
+	return exec("npm", ["run", script], { cwd });
+}
+async function handleSnapshotConflicts(gitHelper, repo) {
+	const cwd = `./${repo}`;
+	const conflictFiles = await gitHelper.getConflictFiles();
+	if (conflictFiles.length === 0) return;
+	info(`Found ${conflictFiles.length} conflict files`);
+	if (conflictFiles.some((file) => !SNAPSHOT_CONFLICT_PATTERNS.some((pattern) => file.includes(pattern)))) throw new ActionError("发现未知的冲突文件，请手动处理", { conflictFiles });
+	for (const file of conflictFiles) if (file.includes("packages/common")) {
+		await exec("git", [
+			"checkout",
+			"--ours",
+			file
+		], { cwd });
+		await exec("git", ["add", file], { cwd });
+		info(`Resolved conflict for ${file} using --ours`);
+	} else {
+		await exec("git", [
+			"checkout",
+			"--theirs",
+			file
+		], { cwd });
+		await exec("git", ["add", file], { cwd });
+		info(`Resolved conflict for ${file} using --theirs`);
+	}
+	await exec("git", [
+		"commit",
+		"-am",
+		"chore: merge develop"
+	], { cwd });
+}
+function executeAutoPr(context) {
+	const source = getSource(context.trigger);
+	if (!source) throw new ActionError(ERROR_MESSAGES.INVALID_TRIGGER_SOURCE(context.trigger), { trigger: context.trigger });
+	switch (source) {
+		case "common":
 			start$1(context);
 			break;
-		default: throw new Error(`该仓库未适配: ${context.repo}`);
+		case "icons":
+			start(context);
+			break;
+		case "self":
+			if (context.trigger === "/update-snapshot") snapshotUpdate(context);
+			else selfUpdate(context);
+			break;
+		default: throw new ActionError(ERROR_MESSAGES.UNKNOWN_TRIGGER_SOURCE(source), { source });
 	}
 }
-async function upgradeDeps(context) {
+async function updateDependencies(context) {
 	const deps = getInput("deps");
 	const packageManager = getInput("package-manager") || "npm";
-	if (!deps) throw new Error("请指定需要升级的依赖");
+	if (!deps) throw new ActionError(ERROR_MESSAGES.MISSING_DEPS, { trigger: context.trigger });
 	const latestVersion = await getPkgLatestVersion(deps);
 	if (packageManager !== "npm") await corepackEnable();
 	const gitHelper = new GitHelper({
@@ -39534,23 +39889,29 @@ async function upgradeDeps(context) {
 		dryRun: context.dry_run
 	});
 	const baseBranch = await gitHelper.clone();
-	const branchName = `chore/deps/${deps}/${latestVersion}`;
+	const branchName = BRANCH_PATTERNS.DEPS(deps, latestVersion);
 	await gitHelper.createBranch(branchName);
+	await updatePackageDependencies(packageManager, deps, context.repo);
+	if (!await gitHelper.isNeedCommit()) return;
+	const title = PR_TITLES.DEPS(deps, latestVersion);
+	await gitHelper.commit(title);
+	await gitHelper.push(branchName);
+	await createDepsPr(gitHelper, title, branchName, baseBranch, context);
+}
+async function updatePackageDependencies(packageManager, deps, repo) {
 	if (packageManager === "pnpm") await exec("pnpm", [
 		"--recursive",
 		"update",
 		deps,
 		"--latest"
-	], { cwd: `./${context.repo}` });
+	], { cwd: `./${repo}` });
 	else await exec("npx", [
 		"npm-check-updates",
 		deps,
 		"-u"
-	], { cwd: `./${context.repo}` });
-	if (!await gitHelper.isNeedCommit()) return true;
-	const title = `chore(deps): upgrade ${deps} to ${latestVersion}`;
-	await gitHelper.commit(title);
-	await gitHelper.push(branchName);
+	], { cwd: `./${repo}` });
+}
+async function createDepsPr(gitHelper, title, branchName, baseBranch, context) {
 	const githubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -39558,24 +39919,61 @@ async function upgradeDeps(context) {
 		dryRun: context.dry_run
 	});
 	const prData = await githubHelper.createPR(title, branchName, title, baseBranch);
-	if (prData) await githubHelper.addLabels(prData.number, ["skip-changelog"]);
+	if (prData) await githubHelper.addLabels(prData.number, [PR_LABELS.SKIP_CHANGELOG]);
 }
 async function deleteCnbBranch(context) {
 	const branch = getInput("branch", { required: true });
-	const client = getClient("https://api.cnb.cool", context.token);
-	if (!client) error("token 无效");
+	const client = getClient(CNB_API_URL, context.token);
+	if (!client) throw new ActionError(ERROR_MESSAGES.INVALID_TOKEN, { trigger: context.trigger });
 	try {
 		const res = await client.repo.git.branches.delete({
 			repo: context.repo,
 			branch
 		});
-		info(`删除分支成功:${JSON.stringify(res)}`);
+		info(ERROR_MESSAGES.DELETE_BRANCH_SUCCESS(res));
 	} catch (err) {
-		throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`);
+		throw new ActionError(ERROR_MESSAGES.DELETE_BRANCH_FAILED(err), { trigger: context.trigger });
+	}
+}
+function useTrigger(context) {
+	switch (context.trigger) {
+		case isAutoPrTrigger(context.trigger) ? context.trigger : null:
+			executeAutoPr(context);
+			break;
+		case "/upgrade-deps":
+			updateDependencies(context);
+			break;
+		case "/delete-cnb-branch":
+			deleteCnbBranch(context);
+			break;
+		default: throw new ActionError(ERROR_MESSAGES.UNSUPPORTED_TRIGGER(context.trigger), { trigger: context.trigger });
 	}
 }
 //#endregion
 //#region src/index.ts
+const WHITELIST_FILE = ".comment-trigger-whitelist";
+function isUserInWhitelist(username) {
+	return readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), `../${WHITELIST_FILE}`), "utf-8").split("\n").map((item) => item.trim()).filter(Boolean).includes(username);
+}
+function shouldTriggerFromComment() {
+	if (context.eventName !== "issue_comment") return true;
+	info("pr comment trigger");
+	if (!context.payload.issue?.pull_request) {
+		info("issue_comment not a pull_request comment");
+		return false;
+	}
+	const username = context.payload.comment?.user.login;
+	if (!username) {
+		info("comment user login is missing");
+		return false;
+	}
+	if (!isUserInWhitelist(username)) {
+		info(`${username}不在白名单内，不触发`);
+		return false;
+	}
+	info("comment whitelist trigger");
+	return true;
+}
 async function run() {
 	const repo = getInput("repo") || context.repo.repo;
 	const owner = getInput("owner") || context.repo.owner;
@@ -39584,25 +39982,7 @@ async function run() {
 	const trigger = getInput("trigger") || context.payload.comment?.body || "";
 	const dryRun = getInput("dry-run", { trimWhitespace: true }) === "true";
 	info(`dryRun: ${dryRun}`);
-	if (context.eventName === "issue_comment") {
-		info("pr comment trigger");
-		if (!context.payload.issue?.pull_request) {
-			info("issue_comment not a pull_request comment");
-			return;
-		}
-		const whitelist = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../.comment-trigger-whitelist"), "utf-8");
-		let isWhitelist = false;
-		whitelist.split("\n").forEach((item) => {
-			if (item.trim() === context.payload.comment?.user.login) {
-				info("comment whitelist trigger");
-				isWhitelist = true;
-			}
-		});
-		if (!isWhitelist) {
-			info(`${context.payload.comment?.user.login}不在白名单内，不触发`);
-			return;
-		}
-	}
+	if (!shouldTriggerFromComment()) return;
 	useTrigger({
 		owner,
 		repo,
