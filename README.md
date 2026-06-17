@@ -1,4 +1,6 @@
-# tdesign-pr-trigger-action
+# tdesign-pr-trigger-action test
+
+test1
 
 通过评论 触发 CI 自动化, [使用小技巧](./docs/github_comment.md)
 
