@@ -37,7 +37,7 @@
     "node-cnb": "^1.30.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^9.0.0",
+    "@antfu/eslint-config": "^9.1.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@types/node": "^24.13.2",
     "@typescript/native-preview": "7.0.0-dev.20260704.1",
