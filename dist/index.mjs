@@ -1,17 +1,19 @@
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
 import process$1 from "node:process";
-import { fileURLToPath } from "node:url";
 import * as os$1 from "os";
 import os, { EOL } from "os";
 import * as fs$2 from "fs";
-import { constants, existsSync, promises, readFileSync as readFileSync$1 } from "fs";
+import { constants, existsSync, promises, readFileSync } from "fs";
 import * as path$1 from "path";
 import * as events from "events";
+import { fileURLToPath } from "node:url";
 import { StringDecoder } from "string_decoder";
 import * as child from "child_process";
 import { setTimeout as setTimeout$1 } from "timers";
+import { existsSync as existsSync$1, readFileSync as readFileSync$1, readdirSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
 //#region \0rolldown/runtime.js
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -16539,12 +16541,29 @@ function getInput(name, options) {
 	return val.trim();
 }
 /**
+* Sets the action status to failed.
+* When the action exits it will be with an exit code of 1
+* @param message add error issue message
+*/
+function setFailed(message) {
+	process.exitCode = ExitCode.Failure;
+	error(message);
+}
+/**
 * Adds an error issue
 * @param message error issue message. Errors will be converted to string via toString()
 * @param properties optional properties to add to the annotation.
 */
 function error(message, properties = {}) {
 	issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
+}
+/**
+* Adds a warning issue
+* @param message warning issue message. Errors will be converted to string via toString()
+* @param properties optional properties to add to the annotation.
+*/
+function warning(message, properties = {}) {
+	issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
 * Writes info to log with console.log.
@@ -16578,7 +16597,7 @@ var Context = class {
 	constructor() {
 		var _a, _b, _c;
 		this.payload = {};
-		if (process.env.GITHUB_EVENT_PATH) if (existsSync(process.env.GITHUB_EVENT_PATH)) this.payload = JSON.parse(readFileSync$1(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
+		if (process.env.GITHUB_EVENT_PATH) if (existsSync(process.env.GITHUB_EVENT_PATH)) this.payload = JSON.parse(readFileSync(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
 		else {
 			const path = process.env.GITHUB_EVENT_PATH;
 			process.stdout.write(`GITHUB_EVENT_PATH ${path} does not exist${EOL}`);
@@ -19633,9347 +19652,566 @@ function getOctokit(token, options, ...additionalPlugins) {
 	return new (GitHub.plugin(...additionalPlugins))(getOctokitOptions(token, options));
 }
 //#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js
-var HTTPError = class extends Error {
-	response;
-	request;
-	options;
-	constructor(response, request, options) {
-		const status = `${response.status || response.status === 0 ? response.status : ""} ${response.statusText ?? ""}`.trim();
-		const reason = status ? `status code ${status}` : "an unknown error";
-		super(`Request failed with ${reason}: ${request.method} ${request.url}`);
-		this.name = "HTTPError";
-		this.response = response;
-		this.request = request;
-		this.options = options;
-	}
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/NonError.js
-/**
-Wrapper for non-Error values that were thrown.
-
-In JavaScript, any value can be thrown (not just Error instances). This class wraps such values to ensure consistent error handling.
-*/
-var NonError = class extends Error {
-	name = "NonError";
-	value;
-	constructor(value) {
-		let message = "Non-error value was thrown";
-		try {
-			if (typeof value === "string") message = value;
-			else if (value && typeof value === "object" && "message" in value && typeof value.message === "string") message = value.message;
-		} catch {}
-		super(message);
-		this.value = value;
-	}
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/ForceRetryError.js
-/**
-Internal error used to signal a forced retry from afterResponse hooks.
-This is thrown when a user returns ky.retry() from an afterResponse hook.
-*/
-var ForceRetryError = class extends Error {
-	name = "ForceRetryError";
-	customDelay;
-	code;
-	customRequest;
-	constructor(options) {
-		const cause = options?.cause ? options.cause instanceof Error ? options.cause : new NonError(options.cause) : void 0;
-		super(options?.code ? `Forced retry: ${options.code}` : "Forced retry", cause ? { cause } : void 0);
-		this.customDelay = options?.delay;
-		this.code = options?.code;
-		this.customRequest = options?.request;
-	}
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/core/constants.js
-const supportsRequestStreams = (() => {
-	let duplexAccessed = false;
-	let hasContentType = false;
-	const supportsReadableStream = typeof globalThis.ReadableStream === "function";
-	const supportsRequest = typeof globalThis.Request === "function";
-	if (supportsReadableStream && supportsRequest) try {
-		hasContentType = new globalThis.Request("https://empty.invalid", {
-			body: new globalThis.ReadableStream(),
-			method: "POST",
-			get duplex() {
-				duplexAccessed = true;
-				return "half";
-			}
-		}).headers.has("Content-Type");
-	} catch (error) {
-		if (error instanceof Error && error.message === "unsupported BodyInit type") return false;
-		throw error;
-	}
-	return duplexAccessed && !hasContentType;
-})();
-const supportsAbortController = typeof globalThis.AbortController === "function";
-const supportsAbortSignal = typeof globalThis.AbortSignal === "function" && typeof globalThis.AbortSignal.any === "function";
-const supportsResponseStreams = typeof globalThis.ReadableStream === "function";
-const supportsFormData = typeof globalThis.FormData === "function";
-const requestMethods = [
-	"get",
-	"post",
-	"put",
-	"patch",
-	"head",
-	"delete"
-];
-const validate = () => void 0;
-validate();
-const responseTypes = {
-	json: "application/json",
-	text: "text/*",
-	formData: "multipart/form-data",
-	arrayBuffer: "*/*",
-	blob: "*/*",
-	bytes: "*/*"
-};
-const maxSafeTimeout = 2147483647;
-const usualFormBoundarySize = new TextEncoder().encode("------WebKitFormBoundaryaxpyiPgbbPti10Rw").length;
-const stop = Symbol("stop");
-/**
-Marker returned by ky.retry() to signal a forced retry from afterResponse hooks.
-*/
-var RetryMarker = class {
-	options;
-	constructor(options) {
-		this.options = options;
-	}
-};
-/**
-Force a retry from an `afterResponse` hook.
-
-This allows you to retry a request based on the response content, even if the response has a successful status code. The retry will respect the `retry.limit` option and skip the `shouldRetry` check. The forced retry is observable in `beforeRetry` hooks, where the error will be a `ForceRetryError`.
-
-@param options - Optional configuration for the retry.
-
-@example
-```
-import ky, {isForceRetryError} from 'ky';
-
-const api = ky.extend({
-hooks: {
-afterResponse: [
-async (request, options, response) => {
-// Retry based on response body content
-if (response.status === 200) {
-const data = await response.clone().json();
-
-// Simple retry with default delay
-if (data.error?.code === 'TEMPORARY_ERROR') {
-return ky.retry();
-}
-
-// Retry with custom delay from API response
-if (data.error?.code === 'RATE_LIMIT') {
-return ky.retry({
-delay: data.error.retryAfter * 1000,
-code: 'RATE_LIMIT'
-});
-}
-
-// Retry with a modified request (e.g., fallback endpoint)
-if (data.error?.code === 'FALLBACK_TO_BACKUP') {
-return ky.retry({
-request: new Request('https://backup-api.com/endpoint', {
-method: request.method,
-headers: request.headers,
-}),
-code: 'BACKUP_ENDPOINT'
-});
-}
-
-// Retry with refreshed authentication
-if (data.error?.code === 'TOKEN_REFRESH' && data.newToken) {
-return ky.retry({
-request: new Request(request, {
-headers: {
-...Object.fromEntries(request.headers),
-'Authorization': `Bearer ${data.newToken}`
-}
-}),
-code: 'TOKEN_REFRESHED'
-});
-}
-
-// Retry with cause to preserve error chain
-try {
-validateResponse(data);
-} catch (error) {
-return ky.retry({
-code: 'VALIDATION_FAILED',
-cause: error
-});
-}
-}
-}
-],
-beforeRetry: [
-({error, retryCount}) => {
-// Observable in beforeRetry hooks
-if (isForceRetryError(error)) {
-console.log(`Forced retry #${retryCount}: ${error.message}`);
-// Example output: "Forced retry #1: Forced retry: RATE_LIMIT"
-}
-}
-]
-}
-});
-
-const response = await api.get('https://example.com/api');
-```
-*/
-const retry = (options) => new RetryMarker(options);
-const kyOptionKeys = {
-	json: true,
-	parseJson: true,
-	stringifyJson: true,
-	searchParams: true,
-	prefixUrl: true,
-	retry: true,
-	timeout: true,
-	hooks: true,
-	throwHttpErrors: true,
-	onDownloadProgress: true,
-	onUploadProgress: true,
-	fetch: true,
-	context: true
-};
-const vendorSpecificOptions = { next: true };
-const requestOptionsRegistry = {
-	method: true,
-	headers: true,
-	body: true,
-	mode: true,
-	credentials: true,
-	cache: true,
-	redirect: true,
-	referrer: true,
-	referrerPolicy: true,
-	integrity: true,
-	keepalive: true,
-	signal: true,
-	window: true,
-	duplex: true
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/body.js
-const getBodySize = (body) => {
-	if (!body) return 0;
-	if (body instanceof FormData) {
-		let size = 0;
-		for (const [key, value] of body) {
-			size += usualFormBoundarySize;
-			size += new TextEncoder().encode(`Content-Disposition: form-data; name="${key}"`).length;
-			size += typeof value === "string" ? new TextEncoder().encode(value).length : value.size;
-		}
-		return size;
-	}
-	if (body instanceof Blob) return body.size;
-	if (body instanceof ArrayBuffer) return body.byteLength;
-	if (typeof body === "string") return new TextEncoder().encode(body).length;
-	if (body instanceof URLSearchParams) return new TextEncoder().encode(body.toString()).length;
-	if ("byteLength" in body) return body.byteLength;
-	if (typeof body === "object" && body !== null) try {
-		const jsonString = JSON.stringify(body);
-		return new TextEncoder().encode(jsonString).length;
-	} catch {
-		return 0;
-	}
-	return 0;
-};
-const withProgress = (stream, totalBytes, onProgress) => {
-	let previousChunk;
-	let transferredBytes = 0;
-	return stream.pipeThrough(new TransformStream({
-		transform(currentChunk, controller) {
-			controller.enqueue(currentChunk);
-			if (previousChunk) {
-				transferredBytes += previousChunk.byteLength;
-				let percent = totalBytes === 0 ? 0 : transferredBytes / totalBytes;
-				if (percent >= 1) percent = 1 - Number.EPSILON;
-				onProgress?.({
-					percent,
-					totalBytes: Math.max(totalBytes, transferredBytes),
-					transferredBytes
-				}, previousChunk);
-			}
-			previousChunk = currentChunk;
-		},
-		flush() {
-			if (previousChunk) {
-				transferredBytes += previousChunk.byteLength;
-				onProgress?.({
-					percent: 1,
-					totalBytes: Math.max(totalBytes, transferredBytes),
-					transferredBytes
-				}, previousChunk);
-			}
-		}
-	}));
-};
-const streamResponse = (response, onDownloadProgress) => {
-	if (!response.body) return response;
-	if (response.status === 204) return new Response(null, {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers
-	});
-	const totalBytes = Math.max(0, Number(response.headers.get("content-length")) || 0);
-	return new Response(withProgress(response.body, totalBytes, onDownloadProgress), {
-		status: response.status,
-		statusText: response.statusText,
-		headers: response.headers
-	});
-};
-const streamRequest = (request, onUploadProgress, originalBody) => {
-	if (!request.body) return request;
-	const totalBytes = getBodySize(originalBody ?? request.body);
-	return new Request(request, {
-		duplex: "half",
-		body: withProgress(request.body, totalBytes, onUploadProgress)
-	});
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/is.js
-const isObject = (value) => value !== null && typeof value === "object";
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/merge.js
-const validateAndMerge = (...sources) => {
-	for (const source of sources) if ((!isObject(source) || Array.isArray(source)) && source !== void 0) throw new TypeError("The `options` argument must be an object");
-	return deepMerge({}, ...sources);
-};
-const mergeHeaders = (source1 = {}, source2 = {}) => {
-	const result = new globalThis.Headers(source1);
-	const isHeadersInstance = source2 instanceof globalThis.Headers;
-	const source = new globalThis.Headers(source2);
-	for (const [key, value] of source.entries()) if (isHeadersInstance && value === "undefined" || value === void 0) result.delete(key);
-	else result.set(key, value);
-	return result;
-};
-function newHookValue(original, incoming, property) {
-	return Object.hasOwn(incoming, property) && incoming[property] === void 0 ? [] : deepMerge(original[property] ?? [], incoming[property] ?? []);
-}
-const mergeHooks = (original = {}, incoming = {}) => ({
-	beforeRequest: newHookValue(original, incoming, "beforeRequest"),
-	beforeRetry: newHookValue(original, incoming, "beforeRetry"),
-	afterResponse: newHookValue(original, incoming, "afterResponse"),
-	beforeError: newHookValue(original, incoming, "beforeError")
-});
-const appendSearchParameters = (target, source) => {
-	const result = new URLSearchParams();
-	for (const input of [target, source]) {
-		if (input === void 0) continue;
-		if (input instanceof URLSearchParams) for (const [key, value] of input.entries()) result.append(key, value);
-		else if (Array.isArray(input)) for (const pair of input) {
-			if (!Array.isArray(pair) || pair.length !== 2) throw new TypeError("Array search parameters must be provided in [[key, value], ...] format");
-			result.append(String(pair[0]), String(pair[1]));
-		}
-		else if (isObject(input)) {
-			for (const [key, value] of Object.entries(input)) if (value !== void 0) result.append(key, String(value));
-		} else {
-			const parameters = new URLSearchParams(input);
-			for (const [key, value] of parameters.entries()) result.append(key, value);
-		}
-	}
-	return result;
-};
-const deepMerge = (...sources) => {
-	let returnValue = {};
-	let headers = {};
-	let hooks = {};
-	let searchParameters;
-	const signals = [];
-	for (const source of sources) if (Array.isArray(source)) {
-		if (!Array.isArray(returnValue)) returnValue = [];
-		returnValue = [...returnValue, ...source];
-	} else if (isObject(source)) {
-		for (let [key, value] of Object.entries(source)) {
-			if (key === "signal" && value instanceof globalThis.AbortSignal) {
-				signals.push(value);
-				continue;
-			}
-			if (key === "context") {
-				if (value !== void 0 && value !== null && (!isObject(value) || Array.isArray(value))) throw new TypeError("The `context` option must be an object");
-				returnValue = {
-					...returnValue,
-					context: value === void 0 || value === null ? {} : {
-						...returnValue.context,
-						...value
-					}
-				};
-				continue;
-			}
-			if (key === "searchParams") {
-				if (value === void 0 || value === null) searchParameters = void 0;
-				else searchParameters = searchParameters === void 0 ? value : appendSearchParameters(searchParameters, value);
-				continue;
-			}
-			if (isObject(value) && key in returnValue) value = deepMerge(returnValue[key], value);
-			returnValue = {
-				...returnValue,
-				[key]: value
-			};
-		}
-		if (isObject(source.hooks)) {
-			hooks = mergeHooks(hooks, source.hooks);
-			returnValue.hooks = hooks;
-		}
-		if (isObject(source.headers)) {
-			headers = mergeHeaders(headers, source.headers);
-			returnValue.headers = headers;
-		}
-	}
-	if (searchParameters !== void 0) returnValue.searchParams = searchParameters;
-	if (signals.length > 0) if (signals.length === 1) returnValue.signal = signals[0];
-	else if (supportsAbortSignal) returnValue.signal = AbortSignal.any(signals);
-	else returnValue.signal = signals.at(-1);
-	if (returnValue.context === void 0) returnValue.context = {};
-	return returnValue;
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/normalize.js
-const normalizeRequestMethod = (input) => requestMethods.includes(input) ? input.toUpperCase() : input;
-const defaultRetryOptions = {
-	limit: 2,
-	methods: [
-		"get",
-		"put",
-		"head",
-		"delete",
-		"options",
-		"trace"
-	],
-	statusCodes: [
-		408,
-		413,
-		429,
-		500,
-		502,
-		503,
-		504
-	],
-	afterStatusCodes: [
-		413,
-		429,
-		503
-	],
-	maxRetryAfter: Number.POSITIVE_INFINITY,
-	backoffLimit: Number.POSITIVE_INFINITY,
-	delay: (attemptCount) => .3 * 2 ** (attemptCount - 1) * 1e3,
-	jitter: void 0,
-	retryOnTimeout: false
-};
-const normalizeRetryOptions = (retry = {}) => {
-	if (typeof retry === "number") return {
-		...defaultRetryOptions,
-		limit: retry
-	};
-	if (retry.methods && !Array.isArray(retry.methods)) throw new Error("retry.methods must be an array");
-	retry.methods &&= retry.methods.map((method) => method.toLowerCase());
-	if (retry.statusCodes && !Array.isArray(retry.statusCodes)) throw new Error("retry.statusCodes must be an array");
-	const normalizedRetry = Object.fromEntries(Object.entries(retry).filter(([, value]) => value !== void 0));
+//#region src/operations/comment.ts
+function addProgressComment(actionName) {
 	return {
-		...defaultRetryOptions,
-		...normalizedRetry
+		name: "添加运行状态评论",
+		async run({ github, prNumber }) {
+			const runUrl = `${process$1.env.GITHUB_SERVER_URL}/${process$1.env.GITHUB_REPOSITORY}/actions/runs/${process$1.env.GITHUB_RUN_ID}`;
+			await github.addComment(prNumber, `⏳ 正在运行${actionName}。CI: [Open](${runUrl})`);
+		}
 	};
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/TimeoutError.js
-var TimeoutError = class extends Error {
-	request;
-	constructor(request) {
-		super(`Request timed out: ${request.method} ${request.url}`);
-		this.name = "TimeoutError";
-		this.request = request;
-	}
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/timeout.js
-async function timeout(request, init, abortController, options) {
-	return new Promise((resolve, reject) => {
-		const timeoutId = setTimeout(() => {
-			if (abortController) abortController.abort();
-			reject(new TimeoutError(request));
-		}, options.timeout);
-		options.fetch(request, init).then(resolve).catch(reject).then(() => {
-			clearTimeout(timeoutId);
-		});
-	});
 }
 //#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/delay.js
-async function delay(ms, { signal }) {
-	return new Promise((resolve, reject) => {
-		if (signal) {
-			signal.throwIfAborted();
-			signal.addEventListener("abort", abortHandler, { once: true });
-		}
-		function abortHandler() {
-			clearTimeout(timeoutId);
-			reject(signal.reason);
-		}
-		const timeoutId = setTimeout(() => {
-			signal?.removeEventListener("abort", abortHandler);
-			resolve();
-		}, ms);
-	});
+//#region src/operations/git.ts
+const GLOB_SPECIAL_CHARACTER_REGEXP = /[.+^${}()|[\]\\]/g;
+const GLOBSTAR_DIRECTORY_TOKEN = "__GLOBSTAR_DIRECTORY__";
+const GLOBSTAR_TOKEN = "__GLOBSTAR__";
+function matchesPattern(file, pattern) {
+	const expression = pattern.replace(GLOB_SPECIAL_CHARACTER_REGEXP, "\\$&").replaceAll("**/", GLOBSTAR_DIRECTORY_TOKEN).replaceAll("**", GLOBSTAR_TOKEN).replaceAll("*", "[^/]*").replaceAll("?", "[^/]").replaceAll(GLOBSTAR_DIRECTORY_TOKEN, "(?:.*/)?").replaceAll(GLOBSTAR_TOKEN, ".*");
+	return new RegExp(`^${expression}$`).test(file);
 }
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/options.js
-const findUnknownOptions = (request, options) => {
-	const unknownOptions = {};
-	for (const key in options) {
-		if (!Object.hasOwn(options, key)) continue;
-		if (!(key in requestOptionsRegistry) && !(key in kyOptionKeys) && (!(key in request) || key in vendorSpecificOptions)) unknownOptions[key] = options[key];
+function resolveConflictStrategies(files, rules) {
+	const resolved = /* @__PURE__ */ new Map();
+	for (const file of files) {
+		const rule = rules.find((item) => matchesPattern(file, item.pattern));
+		if (rule) resolved.set(file, rule.strategy);
 	}
-	return unknownOptions;
-};
-const hasSearchParameters = (search) => {
-	if (search === void 0) return false;
-	if (Array.isArray(search)) return search.length > 0;
-	if (search instanceof URLSearchParams) return search.size > 0;
-	if (typeof search === "object") return Object.keys(search).length > 0;
-	if (typeof search === "string") return search.trim().length > 0;
-	return Boolean(search);
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/type-guards.js
-/**
-Type guard to check if an error is an HTTPError.
-
-@param error - The error to check
-@returns `true` if the error is an HTTPError, `false` otherwise
-
-@example
-```
-import ky, {isHTTPError} from 'ky';
-try {
-const response = await ky.get('/api/data');
-} catch (error) {
-if (isHTTPError(error)) {
-console.log('HTTP error status:', error.response.status);
+	return resolved;
 }
+async function hasChanges(cwd) {
+	const { stdout } = await getExecOutput("git", ["status", "--porcelain"], { cwd });
+	return stdout.trim().length > 0;
 }
-```
-*/
-function isHTTPError(error) {
-	return error instanceof HTTPError || error?.name === HTTPError.name;
-}
-/**
-Type guard to check if an error is a TimeoutError.
-
-@param error - The error to check
-@returns `true` if the error is a TimeoutError, `false` otherwise
-
-@example
-```
-import ky, {isTimeoutError} from 'ky';
-try {
-const response = await ky.get('/api/data', { timeout: 1000 });
-} catch (error) {
-if (isTimeoutError(error)) {
-console.log('Request timed out:', error.request.url);
-}
-}
-```
-*/
-function isTimeoutError(error) {
-	return error instanceof TimeoutError || error?.name === TimeoutError.name;
-}
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/core/Ky.js
-var Ky = class Ky {
-	static create(input, options) {
-		const ky = new Ky(input, options);
-		const function_ = async () => {
-			if (typeof ky.#options.timeout === "number" && ky.#options.timeout > 2147483647) throw new RangeError(`The \`timeout\` option cannot be greater than ${maxSafeTimeout}`);
-			await Promise.resolve();
-			let response = await ky.#fetch();
-			for (const hook of ky.#options.hooks.afterResponse) {
-				const clonedResponse = ky.#decorateResponse(response.clone());
-				let modifiedResponse;
-				try {
-					modifiedResponse = await hook(ky.request, ky.#getNormalizedOptions(), clonedResponse, { retryCount: ky.#retryCount });
-				} catch (error) {
-					ky.#cancelResponseBody(clonedResponse);
-					ky.#cancelResponseBody(response);
-					throw error;
-				}
-				if (modifiedResponse instanceof RetryMarker) {
-					ky.#cancelResponseBody(clonedResponse);
-					ky.#cancelResponseBody(response);
-					throw new ForceRetryError(modifiedResponse.options);
-				}
-				const nextResponse = modifiedResponse instanceof globalThis.Response ? modifiedResponse : response;
-				if (clonedResponse !== nextResponse) ky.#cancelResponseBody(clonedResponse);
-				if (response !== nextResponse) ky.#cancelResponseBody(response);
-				response = nextResponse;
+function commitChanges(message) {
+	return {
+		name: `提交变更: ${message}`,
+		async run({ cwd }) {
+			if (!await hasChanges(cwd)) {
+				info("没有需要提交的变更");
+				return;
 			}
-			ky.#decorateResponse(response);
-			if (!response.ok && (typeof ky.#options.throwHttpErrors === "function" ? ky.#options.throwHttpErrors(response.status) : ky.#options.throwHttpErrors)) {
-				let error = new HTTPError(response, ky.request, ky.#getNormalizedOptions());
-				for (const hook of ky.#options.hooks.beforeError) error = await hook(error, { retryCount: ky.#retryCount });
-				throw error;
-			}
-			if (ky.#options.onDownloadProgress) {
-				if (typeof ky.#options.onDownloadProgress !== "function") throw new TypeError("The `onDownloadProgress` option must be a function");
-				if (!supportsResponseStreams) throw new Error("Streams are not supported in your environment. `ReadableStream` is missing.");
-				const progressResponse = response.clone();
-				ky.#cancelResponseBody(response);
-				return streamResponse(progressResponse, ky.#options.onDownloadProgress);
-			}
-			return response;
-		};
-		const result = ky.#retry(function_).finally(() => {
-			const originalRequest = ky.#originalRequest;
-			ky.#cancelBody(originalRequest?.body ?? void 0);
-			ky.#cancelBody(ky.request.body ?? void 0);
-		});
-		for (const [type, mimeType] of Object.entries(responseTypes)) {
-			if (type === "bytes" && typeof globalThis.Response?.prototype?.bytes !== "function") continue;
-			result[type] = async () => {
-				ky.request.headers.set("accept", ky.request.headers.get("accept") || mimeType);
-				const response = await result;
-				if (type === "json") {
-					if (response.status === 204) return "";
-					const text = await response.text();
-					if (text === "") return "";
-					if (options.parseJson) return options.parseJson(text);
-					return JSON.parse(text);
-				}
-				return response[type]();
-			};
+			await exec("git", ["add", "-A"], { cwd });
+			await exec("git", [
+				"commit",
+				"-m",
+				message,
+				"--no-verify"
+			], { cwd });
 		}
-		return result;
-	}
-	static #normalizeSearchParams(searchParams) {
-		if (searchParams && typeof searchParams === "object" && !Array.isArray(searchParams) && !(searchParams instanceof URLSearchParams)) return Object.fromEntries(Object.entries(searchParams).filter(([, value]) => value !== void 0));
-		return searchParams;
-	}
-	request;
-	#abortController;
-	#retryCount = 0;
-	#input;
-	#options;
-	#originalRequest;
-	#userProvidedAbortSignal;
-	#cachedNormalizedOptions;
-	constructor(input, options = {}) {
-		this.#input = input;
-		this.#options = {
-			...options,
-			headers: mergeHeaders(this.#input.headers, options.headers),
-			hooks: mergeHooks({
-				beforeRequest: [],
-				beforeRetry: [],
-				beforeError: [],
-				afterResponse: []
-			}, options.hooks),
-			method: normalizeRequestMethod(options.method ?? this.#input.method ?? "GET"),
-			prefixUrl: String(options.prefixUrl || ""),
-			retry: normalizeRetryOptions(options.retry),
-			throwHttpErrors: options.throwHttpErrors ?? true,
-			timeout: options.timeout ?? 1e4,
-			fetch: options.fetch ?? globalThis.fetch.bind(globalThis),
-			context: options.context ?? {}
-		};
-		if (typeof this.#input !== "string" && !(this.#input instanceof URL || this.#input instanceof globalThis.Request)) throw new TypeError("`input` must be a string, URL, or Request");
-		if (this.#options.prefixUrl && typeof this.#input === "string") {
-			if (this.#input.startsWith("/")) throw new Error("`input` must not begin with a slash when using `prefixUrl`");
-			if (!this.#options.prefixUrl.endsWith("/")) this.#options.prefixUrl += "/";
-			this.#input = this.#options.prefixUrl + this.#input;
-		}
-		if (supportsAbortController && supportsAbortSignal) {
-			this.#userProvidedAbortSignal = this.#options.signal ?? this.#input.signal;
-			this.#abortController = new globalThis.AbortController();
-			this.#options.signal = this.#userProvidedAbortSignal ? AbortSignal.any([this.#userProvidedAbortSignal, this.#abortController.signal]) : this.#abortController.signal;
-		}
-		if (supportsRequestStreams) this.#options.duplex = "half";
-		if (this.#options.json !== void 0) {
-			this.#options.body = this.#options.stringifyJson?.(this.#options.json) ?? JSON.stringify(this.#options.json);
-			this.#options.headers.set("content-type", this.#options.headers.get("content-type") ?? "application/json");
-		}
-		const userProvidedContentType = options.headers && new globalThis.Headers(options.headers).has("content-type");
-		if (this.#input instanceof globalThis.Request && (supportsFormData && this.#options.body instanceof globalThis.FormData || this.#options.body instanceof URLSearchParams) && !userProvidedContentType) this.#options.headers.delete("content-type");
-		this.request = new globalThis.Request(this.#input, this.#options);
-		if (hasSearchParameters(this.#options.searchParams)) {
-			const searchParams = "?" + (typeof this.#options.searchParams === "string" ? this.#options.searchParams.replace(/^\?/, "") : new URLSearchParams(Ky.#normalizeSearchParams(this.#options.searchParams)).toString());
-			const url = this.request.url.replace(/(?:\?.*?)?(?=#|$)/, searchParams);
-			this.request = new globalThis.Request(url, this.#options);
-		}
-		if (this.#options.onUploadProgress) {
-			if (typeof this.#options.onUploadProgress !== "function") throw new TypeError("The `onUploadProgress` option must be a function");
-			if (!supportsRequestStreams) throw new Error("Request streams are not supported in your environment. The `duplex` option for `Request` is not available.");
-			this.request = this.#wrapRequestWithUploadProgress(this.request, this.#options.body ?? void 0);
-		}
-	}
-	#calculateDelay() {
-		const retryDelay = this.#options.retry.delay(this.#retryCount);
-		let jitteredDelay = retryDelay;
-		if (this.#options.retry.jitter === true) jitteredDelay = Math.random() * retryDelay;
-		else if (typeof this.#options.retry.jitter === "function") {
-			jitteredDelay = this.#options.retry.jitter(retryDelay);
-			if (!Number.isFinite(jitteredDelay) || jitteredDelay < 0) jitteredDelay = retryDelay;
-		}
-		const backoffLimit = this.#options.retry.backoffLimit ?? Number.POSITIVE_INFINITY;
-		return Math.min(backoffLimit, jitteredDelay);
-	}
-	async #calculateRetryDelay(error) {
-		this.#retryCount++;
-		if (this.#retryCount > this.#options.retry.limit) throw error;
-		const errorObject = error instanceof Error ? error : new NonError(error);
-		if (errorObject instanceof ForceRetryError) return errorObject.customDelay ?? this.#calculateDelay();
-		if (!this.#options.retry.methods.includes(this.request.method.toLowerCase())) throw error;
-		if (this.#options.retry.shouldRetry !== void 0) {
-			const result = await this.#options.retry.shouldRetry({
-				error: errorObject,
-				retryCount: this.#retryCount
-			});
-			if (result === false) throw error;
-			if (result === true) return this.#calculateDelay();
-		}
-		if (isTimeoutError(error) && !this.#options.retry.retryOnTimeout) throw error;
-		if (isHTTPError(error)) {
-			if (!this.#options.retry.statusCodes.includes(error.response.status)) throw error;
-			const retryAfter = error.response.headers.get("Retry-After") ?? error.response.headers.get("RateLimit-Reset") ?? error.response.headers.get("X-RateLimit-Retry-After") ?? error.response.headers.get("X-RateLimit-Reset") ?? error.response.headers.get("X-Rate-Limit-Reset");
-			if (retryAfter && this.#options.retry.afterStatusCodes.includes(error.response.status)) {
-				let after = Number(retryAfter) * 1e3;
-				if (Number.isNaN(after)) after = Date.parse(retryAfter) - Date.now();
-				else if (after >= Date.parse("2024-01-01")) after -= Date.now();
-				const max = this.#options.retry.maxRetryAfter ?? after;
-				return after < max ? after : max;
-			}
-			if (error.response.status === 413) throw error;
-		}
-		return this.#calculateDelay();
-	}
-	#decorateResponse(response) {
-		if (this.#options.parseJson) response.json = async () => this.#options.parseJson(await response.text());
-		return response;
-	}
-	#cancelBody(body) {
-		if (!body) return;
-		body.cancel().catch(() => void 0);
-	}
-	#cancelResponseBody(response) {
-		this.#cancelBody(response.body ?? void 0);
-	}
-	async #retry(function_) {
-		try {
-			return await function_();
-		} catch (error) {
-			const ms = Math.min(await this.#calculateRetryDelay(error), maxSafeTimeout);
-			if (this.#retryCount < 1) throw error;
-			await delay(ms, this.#userProvidedAbortSignal ? { signal: this.#userProvidedAbortSignal } : {});
-			if (error instanceof ForceRetryError && error.customRequest) {
-				const managedRequest = this.#options.signal ? new globalThis.Request(error.customRequest, { signal: this.#options.signal }) : new globalThis.Request(error.customRequest);
-				this.#assignRequest(managedRequest);
-			}
-			for (const hook of this.#options.hooks.beforeRetry) {
-				const hookResult = await hook({
-					request: this.request,
-					options: this.#getNormalizedOptions(),
-					error,
-					retryCount: this.#retryCount
-				});
-				if (hookResult instanceof globalThis.Request) {
-					this.#assignRequest(hookResult);
-					break;
-				}
-				if (hookResult instanceof globalThis.Response) return hookResult;
-				if (hookResult === stop) return;
-			}
-			return this.#retry(function_);
-		}
-	}
-	async #fetch() {
-		if (this.#abortController?.signal.aborted) {
-			this.#abortController = new globalThis.AbortController();
-			this.#options.signal = this.#userProvidedAbortSignal ? AbortSignal.any([this.#userProvidedAbortSignal, this.#abortController.signal]) : this.#abortController.signal;
-			this.request = new globalThis.Request(this.request, { signal: this.#options.signal });
-		}
-		for (const hook of this.#options.hooks.beforeRequest) {
-			const result = await hook(this.request, this.#getNormalizedOptions(), { retryCount: this.#retryCount });
-			if (result instanceof Response) return result;
-			if (result instanceof globalThis.Request) {
-				this.#assignRequest(result);
-				break;
-			}
-		}
-		const nonRequestOptions = findUnknownOptions(this.request, this.#options);
-		this.#originalRequest = this.request;
-		this.request = this.#originalRequest.clone();
-		if (this.#options.timeout === false) return this.#options.fetch(this.#originalRequest, nonRequestOptions);
-		return timeout(this.#originalRequest, nonRequestOptions, this.#abortController, this.#options);
-	}
-	#getNormalizedOptions() {
-		if (!this.#cachedNormalizedOptions) {
-			const { hooks, ...normalizedOptions } = this.#options;
-			this.#cachedNormalizedOptions = Object.freeze(normalizedOptions);
-		}
-		return this.#cachedNormalizedOptions;
-	}
-	#assignRequest(request) {
-		this.#cachedNormalizedOptions = void 0;
-		this.request = this.#wrapRequestWithUploadProgress(request);
-	}
-	#wrapRequestWithUploadProgress(request, originalBody) {
-		if (!this.#options.onUploadProgress || !request.body) return request;
-		return streamRequest(request, this.#options.onUploadProgress, originalBody ?? this.#options.body ?? void 0);
-	}
-};
-//#endregion
-//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/index.js
-/*! MIT License © Sindre Sorhus */
-const createInstance = (defaults) => {
-	const ky = (input, options) => Ky.create(input, validateAndMerge(defaults, options));
-	for (const method of requestMethods) ky[method] = (input, options) => Ky.create(input, validateAndMerge(defaults, options, { method }));
-	ky.create = (newDefaults) => createInstance(validateAndMerge(newDefaults));
-	ky.extend = (newDefaults) => {
-		if (typeof newDefaults === "function") newDefaults = newDefaults(defaults ?? {});
-		return createInstance(validateAndMerge(defaults, newDefaults));
 	};
-	ky.stop = stop;
-	ky.retry = retry;
-	return ky;
-};
-const ky = createInstance();
-//#endregion
-//#region node_modules/.pnpm/node-cnb@1.23.0/node_modules/node-cnb/dist/index.mjs
-var paths_default = {
-	"events.repo.get": {
-		"tags": ["Event"],
-		"summary": "获取仓库动态预签名地址，并返回内容。Get events pre-signed URL and return content.",
-		"operationId": "GetEvents",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "动态日期,支持按天或小时为维度获取,格式为yy-mm-dd-h or yy-mm-dd, eg:2025-09-11-5",
-			"name": "date",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"path": "/events/{repo}/-/{date}",
-		"method": "get"
-	},
-	"groups.post": {
-		"tags": ["Organizations"],
-		"summary": "创建新组织。Create new organization.",
-		"operationId": "CreateOrganization",
-		"parameters": [{
-			"description": "group information",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.CreateGroupReq" }
-		}],
-		"responses": { "201": { "description": "Created" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/groups",
-		"method": "post"
-	},
-	"user.get": {
-		"tags": ["Users"],
-		"summary": "获取指定用户的详情信息。Get detailed information for a specified user.",
-		"operationId": "GetUserInfo",
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UsersResultForSelf" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
-		"path": "/user",
-		"method": "get"
-	},
-	"user.post": {
-		"tags": ["Users"],
-		"summary": "更新指定用户的详情信息。Updates the specified user's profile information.",
-		"operationId": "UpdateUserInfo",
-		"parameters": [{
-			"description": "user info",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UpdateUserInfoPayload" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:rw",
-		"path": "/user",
-		"method": "post"
-	},
-	"user.autocompleteSource.list": {
-		"tags": ["Users"],
-		"summary": "查询当前用户用户拥有指定权限的所有资源列表。List resources that the current user has specified permissions for.",
-		"operationId": "AutoCompleteSource",
-		"parameters": [
-			{
-				"enum": ["Group", "Repo"],
-				"type": "string",
-				"default": "Group",
-				"description": "Source type",
-				"name": "source_type",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter by resources.",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"default": "Owner",
-				"description": "最小仓库权限，默认owner。Minima repository permissions",
-				"name": "access",
-				"in": "query"
-			},
-			{
-				"enum": ["created_at", "slug_path"],
-				"type": "string",
-				"default": "created_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序。Ordering.",
-				"name": "desc",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "type": "string" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/user/autocomplete_source",
-		"method": "get"
-	},
-	"user.gpgKeys.get": {
-		"tags": ["Users"],
-		"summary": "获取用户 GPG keys 列表。List GPG Keys.",
-		"operationId": "ListGPGKeys",
-		"parameters": [
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "gpg search key",
-				"name": "keyword",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.GPGPublicKey" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
-		"path": "/user/gpg-keys",
-		"method": "get"
-	},
-	"user.groups.list": {
-		"tags": ["Organizations"],
-		"summary": "获取当前用户拥有权限的顶层组织列表。Get top-level organizations list that the current user has access to.",
-		"operationId": "ListTopGroups",
-		"parameters": [
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter by organizations.",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Filter by role.",
-				"name": "role",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.OrganizationAccess" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/user/groups",
-		"method": "get"
-	},
-	"user.groups.listByGroup": {
-		"tags": ["Organizations"],
-		"summary": "查询当前用户在指定组织下拥有指定权限的子组织列表。Get the list of sub-organizations that the current user has access to in the specified organization.",
-		"operationId": "ListGroups",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Group slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"description": "access level",
-				"name": "access",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.OrganizationAccess" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/user/groups/{slug}",
-		"method": "get"
-	},
-	"user.repos.list": {
-		"tags": ["Repositories"],
-		"summary": "获取当前用户拥有指定权限及其以上权限的仓库。List repositories owned by the current user with the specified permissions or higher.",
-		"operationId": "GetRepos",
-		"parameters": [
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter by repositories",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"private",
-					"public",
-					"secret"
-				],
-				"type": "string",
-				"description": "RType",
-				"name": "filter_type",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"default": "Owner",
-				"description": "最小仓库权限，默认owner。Minima repository permissions",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"enum": ["KnowledgeBase"],
-				"type": "string",
-				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
-				"name": "flags",
-				"in": "query"
-			},
-			{
-				"enum": ["active", "archived"],
-				"type": "string",
-				"description": "仓库状态。Repository status",
-				"name": "status",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"last_updated_at",
-					"stars",
-					"slug_path",
-					"forks"
-				],
-				"type": "string",
-				"default": "last_updated_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序。Ordering.",
-				"name": "desc",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/user/repos",
-		"method": "get"
-	},
-	"user.staredRepos.list": {
-		"tags": ["Starring"],
-		"summary": "获取当前用户 star 的仓库列表。List all stared repositories.",
-		"operationId": "GetUserAllStaredRepos",
-		"parameters": [
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter by repositories",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序。Ordering.",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"last_updated_at",
-					"stared_time",
-					"stars",
-					"forks"
-				],
-				"type": "string",
-				"default": "last_updated_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/user/stared-repos",
-		"method": "get"
-	},
-	"users.get": {
-		"tags": ["Users"],
-		"summary": "获取指定用户的详情信息。Get detailed information for a specified user.",
-		"operationId": "GetUserInfoByName",
-		"parameters": [{
-			"type": "string",
-			"description": "User Name",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UsersResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
-		"path": "/users/{username}",
-		"method": "get"
-	},
-	"users.activities.get": {
-		"tags": ["Activities"],
-		"summary": "获取个人动态活跃详情汇总。Get user activities by date.",
-		"operationId": "GetUserActivitiesByDate",
-		"parameters": [{
-			"type": "string",
-			"description": "UserName",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "查询日期，格式 yyyyMM，或者 yyyyMMdd",
-			"name": "date",
-			"in": "query"
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.ActivityDate" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/activities",
-		"method": "get"
-	},
-	"users.followers.list": {
-		"tags": ["Followers"],
-		"summary": "获取指定用户的粉丝列表。Get the followers list of specified user.",
-		"operationId": "GetFollowersByUserID",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UserFollowResult" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/followers",
-		"method": "get"
-	},
-	"users.following.list": {
-		"tags": ["Followers"],
-		"summary": "获取指定用户的关注人列表。Get the list of users that the specified user is following.",
-		"operationId": "GetFollowingByUserID",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UserFollowResult" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/following",
-		"method": "get"
-	},
-	"users.groups.get": {
-		"tags": ["Organizations"],
-		"summary": "获取指定用户拥有权限的顶层组织列表。 Get a list of top-level organizations that the specified user has permissions to access.",
-		"operationId": "GetGroupsByUserID",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "UserName",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter organizations.",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.OrganizationUnion" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/groups",
-		"method": "get"
-	},
-	"users.pinnedRepos.list": {
-		"tags": ["Repositories"],
-		"summary": "获取指定用户的用户仓库墙。 Get a list of repositories that the specified user has pinned.",
-		"operationId": "GetPinnedRepoByID",
-		"parameters": [{
-			"type": "string",
-			"description": "User Name",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/pinned-repos",
-		"method": "get"
-	},
-	"users.repoActivities.list": {
-		"tags": ["Activities"],
-		"summary": "个人仓库动态详情列表。List of personal repository activity details.",
-		"operationId": "GetUserRepoActivityDetails",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "UserName",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"issue",
-					"pull_request",
-					"code_review"
-				],
-				"type": "string",
-				"description": "activity type",
-				"name": "activityType",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "仓库路径",
-				"name": "slug",
-				"in": "query",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "查询日期，格式 yyyyMM，或者 yyyyMMdd",
-				"name": "date",
-				"in": "query",
-				"required": true
-			}
-		],
-		"responses": { "200": {
-			"description": "返回 []dto.ActivityPullRequestDetail|[]dto.ActivityIssueDetail",
-			"schema": {
-				"type": "array",
-				"items": {}
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/repo-activities/{activityType}",
-		"method": "get"
-	},
-	"users.repos.list": {
-		"tags": ["Repositories"],
-		"summary": "获取指定用户有指定以上权限并且客人态可见的仓库。List repositories where the specified user has the specified permission level or higher and are visible to guests.",
-		"operationId": "GetReposByUserName",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "UserName",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter by repositories",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"private",
-					"public",
-					"secret"
-				],
-				"type": "string",
-				"description": "Repositories type",
-				"name": "filter_type",
-				"in": "query"
-			},
-			{
-				"enum": ["KnowledgeBase"],
-				"type": "string",
-				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
-				"name": "flags",
-				"in": "query"
-			},
-			{
-				"enum": ["active", "archived"],
-				"type": "string",
-				"description": "仓库状态。Repository status",
-				"name": "status",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"default": "Owner",
-				"description": "最小仓库权限，默认owner。Minima repository permissions.",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序。Ordering.",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"last_updated_at",
-					"stars",
-					"slug_path",
-					"forks"
-				],
-				"type": "string",
-				"default": "last_updated_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/repos",
-		"method": "get"
-	},
-	"users.staredRepos.list": {
-		"tags": ["Starring"],
-		"summary": "获取指定用户的 star 仓库列表。Get the list of repositories starred by the specified user.",
-		"operationId": "GetUserStaredRepos",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "UserName",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤仓库。Filter by repositories",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "Ordering",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"last_updated_at",
-					"stars",
-					"forks"
-				],
-				"type": "string",
-				"default": "last_updated_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/users/{username}/stared-repos",
-		"method": "get"
-	},
-	"workspace.delete.post": {
-		"tags": ["Workspace"],
-		"summary": "删除我的云原生开发环境。Delete my workspace.",
-		"operationId": "DeleteWorkspace",
-		"parameters": [{
-			"description": "params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.WorkspaceDeleteReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.WorkspaceDeleteResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:rw",
-		"path": "/workspace/delete",
-		"method": "post"
-	},
-	"workspace.list.get": {
-		"tags": ["Workspace"],
-		"summary": "获取我的云原生开发环境列表。List my workspaces.",
-		"operationId": "ListWorkspaces",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Git branch name, e.g. \"main\"",
-				"name": "branch",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "查询结束时间。Query end time. format YYYY-MM-DD HH:mm:ssZZ, e.g. 2024-12-01 00:00:00+0800",
-				"name": "end",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"description": "Pagination page number, default(1)",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"description": "Pagination page size, default(20), max(100)",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Repository path, e.g. \"groupname/reponame\"",
-				"name": "slug",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "查询开始时间。Query start time. format YYYY-MM-DD HH:mm:ssZZ, e.g. 2024-12-01 00:00:00+0800",
-				"name": "start",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "开发环境状态，running: 开发环境已启动，closed：开发环境已关闭。Workspace status: \"running\" for started, \"closed\" for stopped.",
-				"name": "status",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.WorkspaceListResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
-		"path": "/workspace/list",
-		"method": "get"
-	},
-	"workspace.stop.post": {
-		"tags": ["Workspace"],
-		"summary": "停止/关闭我的云原生开发环境。Stop/close my workspace.",
-		"operationId": "WorkspaceStop",
-		"parameters": [{
-			"description": "params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.WorkspaceStopReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.WorkspaceStopResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:rw",
-		"path": "/workspace/stop",
-		"method": "post"
-	},
-	"group.get": {
-		"tags": ["Organizations"],
-		"summary": "获取指定组织信息。Get information for the specified organization.",
-		"operationId": "GetGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "group path",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "group",
-			"schema": { "$ref": "#/definitions/dto.OrganizationAccess" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"path": "/{group}",
-		"method": "get"
-	},
-	"group.put": {
-		"tags": ["Organizations"],
-		"summary": "更新组织信息, 可更新的内容为: 组织描述, 组织展示名称, 组织网站, 组织联系邮箱。Updates organization information including: description, display name, website URL and contact email.",
-		"operationId": "UpdateOrganization",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "group information to update",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UpdateGroupReq" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}",
-		"method": "put"
-	},
-	"group.delete": {
-		"tags": ["Organizations"],
-		"summary": "删除指定组织。Delete the specified organization.",
-		"operationId": "DeleteOrganization",
-		"parameters": [{
-			"type": "string",
-			"description": "group path",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
-			"name": "x-cnb-identity-ticket",
-			"in": "header"
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-delete:rw",
-		"path": "/{group}",
-		"method": "delete"
-	},
-	"group.inheritMembers.list": {
-		"tags": ["Members"],
-		"summary": "获取指定组织的继承成员。List inherited members within specified organization",
-		"operationId": "ListInheritMembersOfGroup",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "group",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.ListInheritMembers" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{group}/-/inherit-members",
-		"method": "get"
-	},
-	"group.members.list": {
-		"tags": ["Members"],
-		"summary": "获取指定组织内的所有直接成员。List all direct members within specified organization.",
-		"operationId": "ListMembersOfGroup",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "group",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member.",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{group}/-/members",
-		"method": "get"
-	},
-	"group.members.accessLevel.get": {
-		"tags": ["Members"],
-		"summary": "获取指定组织内, 访问成员在当前层级内的权限信息。Get permission information for accessing members at current level.",
-		"operationId": "GetMemberAccessLevelOfGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "boolean",
-			"default": true,
-			"description": "是否包含继承的权限。If inherited permissions are included.",
-			"name": "include_inherit",
-			"in": "query"
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.MemberAccessLevelInSlugUnion" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{group}/-/members/access-level",
-		"method": "get"
-	},
-	"group.members.put": {
-		"tags": ["Members"],
-		"summary": "更新指定组织的直接成员权限信息。Update permission information for direct members in specified organization.",
-		"operationId": "UpdateMembersOfGroup",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "group",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}/-/members/{username}",
-		"method": "put"
-	},
-	"group.members.post": {
-		"tags": ["Members"],
-		"summary": "添加成员。Add members.",
-		"operationId": "AddMembersOfGroup",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "group",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}/-/members/{username}",
-		"method": "post"
-	},
-	"group.members.delete": {
-		"tags": ["Members"],
-		"summary": "删除指定组织的直接成员。Remove direct members from specified organization.",
-		"operationId": "DeleteMembersOfGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "username",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}/-/members/{username}",
-		"method": "delete"
-	},
-	"group.members.accessLevel.list": {
-		"tags": ["Members"],
-		"summary": "获取指定组织内指定成员的权限信息, 结果按组织层级来展示, 包含上层组织的权限继承信息。Get specified member's permissions with organizational hierarchy.",
-		"operationId": "ListMemberAccessLevelOfGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "username",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.MemberAccessLevel" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{group}/-/members/{username}/access-level",
-		"method": "get"
-	},
-	"group.transfer.post": {
-		"tags": ["Organizations"],
-		"summary": "转移组织。Transfer an organization.",
-		"operationId": "TransferGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "request",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.TransferSlugReq" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}/-/transfer",
-		"method": "post"
-	},
-	"group.upload.logos.post": {
-		"tags": ["Organizations"],
-		"summary": "发起一个上传 logo 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload logo,returns upload URL.Use PUT to initiate a stream upload.",
-		"operationId": "UploadLogos",
-		"parameters": [{
-			"type": "string",
-			"description": "group",
-			"name": "group",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "UploadRequestParams",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{group}/-/upload/logos",
-		"method": "post"
-	},
-	"mission.delete": {
-		"tags": ["Missions"],
-		"summary": "删除指定任务集。Delete the specified mission.",
-		"operationId": "DeleteMission",
-		"parameters": [{
-			"type": "string",
-			"description": "mission path",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
-			"name": "x-cnb-identity-ticket",
-			"in": "header"
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-delete:rw",
-		"path": "/{mission}",
-		"method": "delete"
-	},
-	"mission.members.post": {
-		"tags": ["Members"],
-		"summary": "添加成员。Add members.",
-		"operationId": "AddMembersOfMission",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "mission",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
-		"path": "/{mission}/-/members/{username}",
-		"method": "post"
-	},
-	"mission.mission.view.get": {
-		"tags": ["Missions"],
-		"summary": "查询任务集视图配置信息。Get mission view config.",
-		"operationId": "GetMissionViewConfig",
-		"parameters": [{
-			"type": "string",
-			"description": "Mission slug",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "View ID",
-			"name": "id",
-			"in": "query",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
-		"path": "/{mission}/-/mission/view",
-		"method": "get"
-	},
-	"mission.mission.view.post": {
-		"tags": ["Missions"],
-		"summary": "设置任务集视图配置信息。Set mission view config.",
-		"operationId": "PostMissionViewConfig",
-		"parameters": [{
-			"type": "string",
-			"description": "Mission slug",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
-		"path": "/{mission}/-/mission/view",
-		"method": "post"
-	},
-	"mission.mission.viewList.list": {
-		"tags": ["Missions"],
-		"summary": "获取任务集视图列表。Get view list of a mission.",
-		"operationId": "GetMissionViewList",
-		"parameters": [{
-			"type": "string",
-			"description": "mission",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.MissionView" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
-		"path": "/{mission}/-/mission/view-list",
-		"method": "get"
-	},
-	"mission.mission.viewList.put": {
-		"tags": ["Missions"],
-		"summary": "添加、修改任务集视图。Update a mission view or add a new one.",
-		"operationId": "PutMissionViewList",
-		"parameters": [{
-			"type": "string",
-			"description": "Mission slug",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.MissionView" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
-		"path": "/{mission}/-/mission/view-list",
-		"method": "put"
-	},
-	"mission.mission.viewList.post": {
-		"tags": ["Missions"],
-		"summary": "排序任务集视图。Sort mission view list.",
-		"operationId": "PostMissionViewList",
-		"parameters": [{
-			"type": "string",
-			"description": "Mission slug",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.MissionPostViewReq" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
-		"path": "/{mission}/-/mission/view-list",
-		"method": "post"
-	},
-	"mission.settings.setVisibility.post": {
-		"tags": ["Missions"],
-		"summary": "改变任务集可见性。Update the visibility of a mission.",
-		"operationId": "SetMissionVisibility",
-		"parameters": [{
-			"type": "string",
-			"description": "mission path",
-			"name": "mission",
-			"in": "path",
-			"required": true
-		}, {
-			"enum": ["Private", "Public"],
-			"type": "string",
-			"description": "任务集可见性",
-			"name": "visibility",
-			"in": "query",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
-		"path": "/{mission}/-/settings/set_visibility",
-		"method": "post"
-	},
-	"registry.delete": {
-		"tags": ["Registries"],
-		"summary": "删除制品库。Delete the registry.",
-		"operationId": "DeleteRegistry",
-		"parameters": [{
-			"type": "string",
-			"description": "制品库路径。Registry path.",
-			"name": "registry",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
-			"name": "x-cnb-identity-ticket",
-			"in": "header"
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-delete:rw",
-		"path": "/{registry}",
-		"method": "delete"
-	},
-	"registry.members.post": {
-		"tags": ["Members"],
-		"summary": "添加成员。Add members.",
-		"operationId": "AddMembersOfRegistry",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "registry",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-manage:rw",
-		"path": "/{registry}/-/members/{username}",
-		"method": "post"
-	},
-	"registry.settings.setVisibility.post": {
-		"tags": ["Registries"],
-		"summary": "改变制品仓库可见性。Update visibility of registry.",
-		"operationId": "SetRegistryVisibility",
-		"parameters": [{
-			"type": "string",
-			"description": "制品库路径。Registry path.",
-			"name": "registry",
-			"in": "path",
-			"required": true
-		}, {
-			"enum": ["Private", "Public"],
-			"type": "string",
-			"description": "可见性。Visibility",
-			"name": "visibility",
-			"in": "query",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-manage:rw",
-		"path": "/{registry}/-/settings/set_visibility",
-		"method": "post"
-	},
-	"repo.get": {
-		"tags": ["Repositories"],
-		"summary": "获取指定仓库信息。Get information for the specified repository.",
-		"operationId": "GetByID",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "repo",
-			"schema": { "$ref": "#/definitions/dto.Repos4User" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-basic-info:r",
-		"path": "/{repo}",
-		"method": "get"
-	},
-	"repo.delete": {
-		"tags": ["Repositories"],
-		"summary": "删除指定仓库。Delete the specified repository.",
-		"operationId": "DeleteRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
-			"name": "x-cnb-identity-ticket",
-			"in": "header"
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-delete:rw",
-		"path": "/{repo}",
-		"method": "delete"
-	},
-	"repo.patch": {
-		"tags": ["Repositories"],
-		"summary": "更新仓库信息, 可更新的内容为: 仓库简介, 仓库站点, 仓库主题, 开源许可证。updates repository details including description, website URL,topics and license type.",
-		"operationId": "UpdateRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "request body",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.RepoPatch" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}",
-		"method": "patch"
-	},
-	"repo.ai.chat.completions.post": {
-		"tags": ["AI"],
-		"summary": "AI 对话。调用者需有代码写权限（CI 中使用 CNB_TOKEN 不检查写权限）。AI chat completions. Requires caller to have repo write permission (except when using CNB_TOKEN in CI).",
-		"operationId": "AiChatCompletions",
-		"parameters": [{
-			"type": "string",
-			"description": "仓库完整路径",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "AI chat completions params. The params may differ by model.",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/ai/chat/completions",
-		"method": "post"
-	},
-	"repo.assets.delete": {
-		"description": "通过 asset 记录 id 删除一个 asset，release和commit附件不能通过该接口删除\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"tags": ["Assets"],
-		"summary": "通过 asset 记录 id 删除一个 asset",
-		"operationId": "DeleteAsset",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "integer",
-			"format": "int64",
-			"description": "asset id",
-			"name": "assetID",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"422": {
-				"description": "release和commit附件不能通过该接口删除",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"path": "/{repo}/-/assets/{assetID}",
-		"method": "delete"
-	},
-	"repo.badge.git.get": {
-		"tags": ["Badge"],
-		"summary": "获取徽章 svg 或 JSON 数据。Get badge svg or JSON data.",
-		"operationId": "GetBadge",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "仓库完整路径",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "latest 或 commit 8 位短 hash（例如 89d48c07）",
-				"name": "sha",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "徽章名，例如 pr 事件徽章名为：ci/status/pull_request, 如需获取 JSON 数据，可加上 .json 后缀，如：ci/status/pull_request.json",
-				"name": "badge",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "GetBadge params",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.GetBadgeReq" }
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.GetBadgeResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:r",
-		"path": "/{repo}/-/badge/git/{sha}/{badge}",
-		"method": "get"
-	},
-	"repo.badge.list.get": {
-		"tags": ["Badge"],
-		"summary": "获取徽章列表数据。List badge data",
-		"operationId": "ListBadge",
-		"parameters": [{
-			"type": "string",
-			"description": "仓库完整路径",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "ListBadge params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.ListBadgeReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.ListBadgeResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:r",
-		"path": "/{repo}/-/badge/list",
-		"method": "get"
-	},
-	"repo.badge.upload.post": {
-		"tags": ["Badge"],
-		"summary": "上传徽章数据。Upload badge data",
-		"operationId": "UploadBadge",
-		"parameters": [{
-			"type": "string",
-			"description": "仓库完整路径",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "UploadBadge params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UploadBadgeReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UploadBadgeResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:rw",
-		"path": "/{repo}/-/badge/upload",
-		"method": "post"
-	},
-	"repo.build.ai.autoPr.post": {
-		"tags": ["AI"],
-		"summary": "根据传入的需求内容和需求标题借助 AI 自动编码并提 PR。Automatically code and create a PR with AI based on the input requirement content and title.",
-		"operationId": "AiAutoPr",
-		"parameters": [{
-			"type": "string",
-			"description": "仓库完整路径",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "AI auto PR params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.AiAutoPrReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.AiAutoPrResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/build/ai/auto-pr",
-		"method": "post"
-	},
-	"repo.build.crontab.sync.post": {
-		"tags": ["Build"],
-		"summary": "同步仓库分支下的定时任务。 Synchronize the content under the repository branch.",
-		"operationId": "BuildCrontabSync",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Branch",
-			"name": "branch",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildCommonResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
-		"path": "/{repo}/-/build/crontab/sync/{branch}",
-		"method": "post"
-	},
-	"repo.build.logs.get": {
-		"tags": ["Build"],
-		"summary": "查询流水线构建列表。List pipeline builds.",
-		"operationId": "GetBuildLogs",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Repo path",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Start date in \"YYYY-MM-DD\" format, e.g. \"2024-12-01\"",
-				"name": "createTime",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "End date in \"YYYY-MM-DD\" format, e.g. \"2024-12-01\"",
-				"name": "endTime",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Event name, e.g. \"push\"",
-				"name": "event",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"description": "Pagination page number, default(1)",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"description": "Pagination page size, default(30), max(100)",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Commit ID, e.g. \"2221d4535ec0c921bcd0858627c5025a871dd2b5\"",
-				"name": "sha",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Build SN, e.g. \"cnb-1qa-1i3f5ecau",
-				"name": "sn",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Source branch name, e.g. \"dev\"",
-				"name": "sourceRef",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Build status: \"pending\", \"success\", \"error\", \"cancel\"",
-				"name": "status",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Target branch name, e.g. \"main\"",
-				"name": "targetRef",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "User ID",
-				"name": "userId",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Username",
-				"name": "userName",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildLogsResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
-		"path": "/{repo}/-/build/logs",
-		"method": "get"
-	},
-	"repo.build.logs.stage.get": {
-		"tags": ["Build"],
-		"summary": "查询流水线Stage详情。Get pipeline build stage detail.",
-		"operationId": "GetBuildStage",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Repo path",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "SN",
-				"name": "sn",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "PipelineId",
-				"name": "pipelineId",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "stageId",
-				"name": "stageId",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildStageResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
-		"path": "/{repo}/-/build/logs/stage/{sn}/{pipelineId}/{stageId}",
-		"method": "get"
-	},
-	"repo.build.logs.delete": {
-		"tags": ["Build"],
-		"summary": "删除流水线日志内容。Delete pipeline logs content.",
-		"operationId": "BuildLogsDelete",
-		"parameters": [{
-			"type": "string",
-			"description": "Repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Sn",
-			"name": "sn",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildCommonResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
-		"path": "/{repo}/-/build/logs/{sn}",
-		"method": "delete"
-	},
-	"repo.build.runner.download.log.get": {
-		"tags": ["Build"],
-		"summary": "流水线runner日志下载。Pipeline runner log download.",
-		"operationId": "BuildRunnerDownloadLog",
-		"parameters": [{
-			"type": "string",
-			"description": "Repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "PipelineId",
-			"name": "pipelineId",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
-		"path": "/{repo}/-/build/runner/download/log/{pipelineId}",
-		"method": "get"
-	},
-	"repo.build.start.post": {
-		"tags": ["Build"],
-		"summary": "开始一个构建。Start a build.",
-		"operationId": "StartBuild",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Build params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.StartBuildReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
-		"path": "/{repo}/-/build/start",
-		"method": "post"
-	},
-	"repo.build.status.get": {
-		"tags": ["Build"],
-		"summary": "查询流水线构建状态。Get pipeline build status.",
-		"operationId": "GetBuildStatus",
-		"parameters": [{
-			"type": "string",
-			"description": "Repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "SN",
-			"name": "sn",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildStatusResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
-		"path": "/{repo}/-/build/status/{sn}",
-		"method": "get"
-	},
-	"repo.build.stop.post": {
-		"tags": ["Build"],
-		"summary": "停止一个构建。 Stop a build.",
-		"operationId": "StopBuild",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "SN",
-			"name": "sn",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.BuildResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
-		"path": "/{repo}/-/build/stop/{sn}",
-		"method": "post"
-	},
-	"repo.commitAssets.download.get": {
-		"tags": ["Git"],
-		"summary": "发起一个获取 commits 附件的请求， 302到有一定效期的下载地址。Get a request to fetch a commit assets and returns 302 redirect to the assets URL with specific valid time.",
-		"operationId": "GetCommitAssets",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "commit_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "文件名称。示例：`test.png`",
-				"name": "filename",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "是否可以下载，true表示302的下载地址有效期12小时，最多下载10次。",
-				"name": "share",
-				"in": "query"
-			}
-		],
-		"responses": { "302": { "description": "Found" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
-		"path": "/{repo}/-/commit-assets/download/{commit_id}/{filename}",
-		"method": "get"
-	},
-	"repo.files.delete": {
-		"description": "删除 UploadFiles 上传的附件\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"tags": ["Pulls", "Issues"],
-		"summary": "删除 UploadFiles 上传的附件",
-		"operationId": "DeleteRepoFiles",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "文件访问链接的files后半部分，比如链接是 https://cnb.cool/cnb/feedback/-/files/abc/1234abcd/test.zip，filePath 就是 abc/1234abcd/test.zip。",
-			"name": "filePath",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"path": "/{repo}/-/files/{filePath}",
-		"method": "delete"
-	},
-	"repo.forks.get": {
-		"tags": ["Repositories"],
-		"summary": "获取指定仓库的 fork 列表。Get fork list for specified repository.",
-		"operationId": "ListForksRepos",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "仓库路径。Repository path.",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "是否从fork根节点开始展示。Whether to start from the root node of the fork.",
-				"name": "start_from_root",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "页码。Pagination page number.",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "每页大小。Pagination page size.",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.ListForks" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-base-info:r",
-		"path": "/{repo}/-/forks",
-		"method": "get"
-	},
-	"repo.git.archiveCommitChangedFiles.get": {
-		"tags": ["Git"],
-		"summary": "打包下载 commit 变更文件。Download archive of changed files for a commit.",
-		"operationId": "GetArchiveCommitChangedFiles",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "提交的哈希值。",
-			"name": "sha1",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/archive-commit-changed-files/{sha1}",
-		"method": "get"
-	},
-	"repo.git.archiveCompareChangedFiles.get": {
-		"tags": ["Git"],
-		"summary": "打包下载两次 ref 之间的变更文件。Download archive of changed files for a compare.",
-		"operationId": "GetArchiveCompareChangedFiles",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "用于Git比较操作的基准和头部分支或提交的SHA值。格式：`base...head`",
-			"name": "base_head",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/archive-compare-changed-files/{base_head}",
-		"method": "get"
-	},
-	"repo.git.archive.get": {
-		"tags": ["Git"],
-		"summary": "下载仓库内容",
-		"operationId": "GetArchive",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "包含路径的Git引用。格式：`分支名`,`标签名`,`提交哈希`,`分支名/文件路径`",
-			"name": "ref_with_path",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/archive/{ref_with_path}",
-		"method": "get"
-	},
-	"repo.git.blobs.post": {
-		"tags": ["Git"],
-		"summary": "创建一个 blob。Create a blob.",
-		"operationId": "CreateBlob",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "PostBlobForm",
-			"name": "post_blob_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PostBlobForm" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Blob" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/blobs",
-		"method": "post"
-	},
-	"repo.git.branchLocks.post": {
-		"tags": ["Git"],
-		"summary": "锁定分支",
-		"operationId": "CreateBranchLock",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "分支名称",
-			"name": "branch",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"201": { "description": "Created" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/branch-locks/{branch}",
-		"method": "post"
-	},
-	"repo.git.branchLocks.delete": {
-		"tags": ["Git"],
-		"summary": "解除锁定分支",
-		"operationId": "DeleteBranchLock",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "分支名称",
-			"name": "branch",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/branch-locks/{branch}",
-		"method": "delete"
-	},
-	"repo.git.branches.list": {
-		"tags": ["Git"],
-		"summary": "查询分支列表。List branches.",
-		"operationId": "ListBranches",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Branch" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/branches",
-		"method": "get"
-	},
-	"repo.git.branches.post": {
-		"tags": ["Git"],
-		"summary": "创建新分支。Create a new branch based on a start point.",
-		"operationId": "CreateBranch",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Create Branch Form",
-			"name": "create_branch_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/openapi.CreateBranchForm" }
-		}],
-		"responses": {
-			"201": { "description": "Created" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/branches",
-		"method": "post"
-	},
-	"repo.git.branches.get": {
-		"tags": ["Git"],
-		"summary": "查询指定分支。Get a branch.",
-		"operationId": "GetBranch",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "分支名称。",
-			"name": "branch",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.BranchDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/branches/{branch}",
-		"method": "get"
-	},
-	"repo.git.branches.delete": {
-		"tags": ["Git"],
-		"summary": "删除指定分支。Delete the specified branch.",
-		"operationId": "DeleteBranch",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "分支名称。",
-			"name": "branch",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/branches/{branch}",
-		"method": "delete"
-	},
-	"repo.git.commitAnnotationsInBatch.post": {
-		"tags": ["Git"],
-		"summary": "查询指定 commit 的元数据。Get commit annotations in batch.",
-		"operationId": "GetCommitAnnotationsInBatch",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Get Commit Annotations In Batch Form",
-			"name": "get_commit_annotations_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/web.GetCommitAnnotationsInBatchForm" }
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/web.CommitAnnotationInBatch" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commit-annotations-in-batch",
-		"method": "post"
-	},
-	"repo.git.commitAnnotations.list": {
-		"tags": ["Git"],
-		"summary": "查询指定 commit 的元数据。Get commit annotations.",
-		"operationId": "GetCommitAnnotations",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "提交的哈希值。",
-			"name": "sha",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/web.CommitAnnotation" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commit-annotations/{sha}",
-		"method": "get"
-	},
-	"repo.git.commitAnnotations.put": {
-		"tags": ["Git"],
-		"summary": "设定指定 commit 的元数据。Put commit annotations.",
-		"operationId": "PutCommitAnnotations",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "sha",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Put Commit Annotations Form",
-				"name": "put_commit_annotations_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.PutCommitAnnotationsForm" }
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/commit-annotations/{sha}",
-		"method": "put"
-	},
-	"repo.git.commitAnnotations.delete": {
-		"tags": ["Git"],
-		"summary": "删除指定 commit 的元数据。Delete commit annotation.",
-		"operationId": "DeleteCommitAnnotation",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "sha",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的元数据键名。",
-				"name": "key",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/commit-annotations/{sha}/{key}",
-		"method": "delete"
-	},
-	"repo.git.commitAssets.list": {
-		"tags": ["Git"],
-		"summary": "查询指定 commit 的附件。List commit assets.",
-		"operationId": "GetCommitAssetsBySha",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "提交的哈希值。",
-			"name": "sha1",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.CommitAsset" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commit-assets/{sha1}",
-		"method": "get"
-	},
-	"repo.git.commitAssets.assetUploadConfirmation.post": {
-		"tags": ["Git"],
-		"summary": "确认 commit 附件上传完成。Confirm commit asset upload.",
-		"operationId": "PostCommitAssetUploadConfirmation",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "sha1",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "PostCommitAssetUploadURL接口返回值verify_url字段提取的upload_token。",
-				"name": "upload_token",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "PostCommitAssetUploadURL接口返回值verify_url字段提取的asset_path。",
-				"name": "asset_path",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"description": "附件保持的天数。0 表示永久，最大不能超过 180 天",
-				"name": "ttl",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/commit-assets/{sha1}/asset-upload-confirmation/{upload_token}/{asset_path}",
-		"method": "post"
-	},
-	"repo.git.commitAssets.assetUploadUrl.post": {
-		"tags": ["Git"],
-		"summary": "新增一个 commit 附件。Create a commit asset.",
-		"operationId": "PostCommitAssetUploadURL",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "sha1",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Commit Asset Upload URL Form",
-				"name": "create_commit_asset_upload_url_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.PostCommitAssetUploadURLForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/openapi.CommitAssetUploadURL" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/commit-assets/{sha1}/asset-upload-url",
-		"method": "post"
-	},
-	"repo.git.commitAssets.delete": {
-		"tags": ["Git"],
-		"summary": "删除指定 commit 的附件。Delete commit asset.",
-		"operationId": "DeleteCommitAsset",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值。",
-				"name": "sha1",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "附件唯一标识符。",
-				"name": "asset_id",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/commit-assets/{sha1}/{asset_id}",
-		"method": "delete"
-	},
-	"repo.git.commitStatuses.list": {
-		"tags": ["Git"],
-		"summary": "查询指定 commit 的提交状态。List commit check statuses.",
-		"operationId": "GetCommitStatuses",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Git引用标识符。格式：`分支名称`,`提交哈希值`,`标签名称`",
-			"name": "commitish",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_git_service_bff_api.CommitStatus" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commit-statuses/{commitish}",
-		"method": "get"
-	},
-	"repo.git.commits.list": {
-		"tags": ["Git"],
-		"summary": "查询 commit 列表。List commits.",
-		"operationId": "ListCommits",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交标识符。格式：`分支名称`,`提交哈希值`",
-				"name": "sha",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "作者匹配模式，支持Git原生正则表达式匹配作者信息。",
-				"name": "author",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "提交者匹配模式，支持Git原生正则表达式匹配提交者信息。",
-				"name": "committer",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "提交时间起始范围。示例：`2025-01-01T00:00:00Z`",
-				"name": "since",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "提交时间结束范围。示例：`2025-12-31T23:59:59Z`",
-				"name": "until",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Commit" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commits",
-		"method": "get"
-	},
-	"repo.git.commits.get": {
-		"tags": ["Git"],
-		"summary": "查询指定 commit。Get a commit.",
-		"operationId": "GetCommit",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "提交的哈希值或分支名称。",
-			"name": "ref",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Commit" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/commits/{ref}",
-		"method": "get"
-	},
-	"repo.git.compare.get": {
-		"tags": ["Git"],
-		"summary": "比较两个提交、分支或标签之间差异的接口。Compare two commits, branches, or tags.",
-		"operationId": "GetCompareCommits",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "用于Git比较操作的基准和头部分支或提交的SHA值。格式：`base...head`",
-			"name": "base_head",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.CompareResponse" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/compare/{base_head}",
-		"method": "get"
-	},
-	"repo.git.contents.getWithoutPath": {
-		"tags": ["Git"],
-		"summary": "查询仓库文件和目录内容。List repository files and directories.",
-		"operationId": "GetContentWithoutPath",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "提交的哈希值或分支名称。",
-			"name": "ref",
-			"in": "query"
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Content" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/contents",
-		"method": "get"
-	},
-	"repo.git.contents.get": {
-		"tags": ["Git"],
-		"summary": "查询仓库文件列表或文件。List repository files or file.",
-		"operationId": "GetContent",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "文件路径。",
-				"name": "file_path",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "提交的哈希值或分支名称。",
-				"name": "ref",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Content" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/contents/{file_path}",
-		"method": "get"
-	},
-	"repo.git.head.get": {
-		"tags": ["Git"],
-		"summary": "获取仓库默认分支。Get the default branch of the repository.",
-		"operationId": "GetHead",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/openapi.HeadRef" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/head",
-		"method": "get"
-	},
-	"repo.git.raw.get": {
-		"tags": ["Git"],
-		"summary": "获得仓库指定文件内容",
-		"operationId": "GetRaw",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "包含路径的Git引用。格式：`分支名`,`标签名`,`提交哈希`,`分支名/文件路径`",
-				"name": "ref_with_path",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 0,
-				"description": "获得文件内容大小限制（字节），0表示使用gitConfig.RawFileLimitInByte配置值。",
-				"name": "max_in_byte",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "type": "string" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/git/raw/{ref_with_path}",
-		"method": "get"
-	},
-	"repo.git.tagAnnotations.delete": {
-		"tags": ["Git"],
-		"summary": "删除指定 tag 的元数据。Delete the metadata of the specified tag.",
-		"operationId": "DeleteTagAnnotation",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "tag元数据名称。格式：`标签名称/元数据key`",
-			"name": "tag_with_key",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
-		"path": "/{repo}/-/git/tag-annotations/{tag_with_key}",
-		"method": "delete"
-	},
-	"repo.git.tagAnnotations.list": {
-		"tags": ["Git"],
-		"summary": "查询指定 tag 的元数据。Query the metadata of the specified tag.",
-		"operationId": "GetTagAnnotations",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "标签名称。示例：`v1.0.0`",
-			"name": "tag",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/web.TagAnnotation" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
-		"path": "/{repo}/-/git/tag-annotations/{tag}",
-		"method": "get"
-	},
-	"repo.git.tagAnnotations.put": {
-		"tags": ["Git"],
-		"summary": "设定指定 tag 的元数据。Set the metadata of the specified tag.",
-		"operationId": "PutTagAnnotations",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "标签名称。示例：`v1.0.0`",
-				"name": "tag",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Put Tag Annotations Form",
-				"name": "put_tag_annotations_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.PutTagAnnotationsForm" }
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
-		"path": "/{repo}/-/git/tag-annotations/{tag}",
-		"method": "put"
-	},
-	"repo.git.tags.list": {
-		"tags": ["Git"],
-		"summary": "查询 tag 列表。List tags.",
-		"operationId": "ListTags",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Tag" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
-		"path": "/{repo}/-/git/tags",
-		"method": "get"
-	},
-	"repo.git.tags.post": {
-		"tags": ["Git"],
-		"summary": "创建一个 tag。Create a tag.",
-		"operationId": "CreateTag",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "PostTagFrom",
-			"name": "post_tag_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PostTagFrom" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Tag" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/git/tags",
-		"method": "post"
-	},
-	"repo.git.tags.get": {
-		"tags": ["Git"],
-		"summary": "查询指定 tag。Get a tag.",
-		"operationId": "GetTag",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "标签名称。示例：`v1.0.0`",
-			"name": "tag",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Tag" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
-		"path": "/{repo}/-/git/tags/{tag}",
-		"method": "get"
-	},
-	"repo.git.tags.delete": {
-		"tags": ["Git"],
-		"summary": "删除指定 tag。Delete the specified tag.",
-		"operationId": "DeleteTag",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "标签名称。示例：`v1.0.0`",
-			"name": "tag",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
-		"path": "/{repo}/-/git/tags/{tag}",
-		"method": "delete"
-	},
-	"repo.imgs.delete": {
-		"description": "删除 UploadImgs 上传的图片\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"tags": ["Pulls", "Issues"],
-		"summary": "删除 UploadImgs 上传的图片",
-		"operationId": "DeleteRepoImgs",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "图片访问链接的imgs后半部分，比如链接是 https://cnb.cool/cnb/feedback/-/imgs/abc/1234abcd.png，imgPath 就是 abc/1234abcd.png。",
-			"name": "imgPath",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"path": "/{repo}/-/imgs/{imgPath}",
-		"method": "delete"
-	},
-	"repo.inheritMembers.list": {
-		"tags": ["Members"],
-		"summary": "获取指定仓库内的继承成员。List inherited members within specified repository。",
-		"operationId": "ListInheritMembersOfRepo",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.ListInheritMembers" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/inherit-members",
-		"method": "get"
-	},
-	"repo.issues.list": {
-		"tags": ["Issues"],
-		"summary": "查询仓库的 Issues。List issues.",
-		"operationId": "ListIssues",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码，输入值小于1，则调整为1。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小，输入值小于0，则调整为10;输入值大于100，则调整为100。",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue状态过滤。可选值：`open`、`closed`",
-				"name": "state",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue搜索关键词，支持在标题和内容中模糊搜索。",
-				"name": "keyword",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue优先级过滤。示例：`-2P,-1P,P0,P1,P2,P3`",
-				"name": "priority",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue标签过滤。示例：`git,bug,feature`",
-				"name": "labels",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "contains_any",
-				"description": "标签过滤操作符。可选值：`contains_any`,`contains_all`",
-				"name": "labels_operator",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue创建者过滤，多个作者用英文逗号分隔。示例：`张三,李四`",
-				"name": "authors",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue处理人过滤，多个处理人用英文逗号分隔，-表示未分配处理人。示例：`张三,李四`,`-`",
-				"name": "assignees",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue更新时间范围开始。示例：`2022-01-31`",
-				"name": "updated_time_begin",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue更新时间范围结束。示例：`2022-02-16`",
-				"name": "updated_time_end",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue关闭时间范围开始。示例：`2022-01-31`",
-				"name": "close_time_begin",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue关闭时间范围结束。示例：`2022-02-16`",
-				"name": "close_time_end",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Issue排序字段，-前缀表示倒序。可选值：`created_at`,`-created_at`,`-updated_at`,`-last_acted_at`",
-				"name": "order_by",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Issue" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
-		"path": "/{repo}/-/issues",
-		"method": "get"
-	},
-	"repo.issues.post": {
-		"tags": ["Issues"],
-		"summary": "创建一个 Issue。Create an issue.",
-		"operationId": "CreateIssue",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Post Issue Form",
-			"name": "post_issue_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PostIssueForm" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues",
-		"method": "post"
-	},
-	"repo.issues.get": {
-		"tags": ["Issues"],
-		"summary": "查询指定的 Issues。Get an issue.",
-		"operationId": "GetIssue",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "integer",
-			"description": "Issue唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
-		"path": "/{repo}/-/issues/{number}",
-		"method": "get"
-	},
-	"repo.issues.patch": {
-		"tags": ["Issues"],
-		"summary": "更新一个 Issue。Update an issue.",
-		"operationId": "UpdateIssue",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Patch Issue Form",
-				"name": "patch_issue_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchIssueForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}",
-		"method": "patch"
-	},
-	"repo.issues.assignees.list": {
-		"tags": ["Issues"],
-		"summary": "查询指定 issue 的处理人。 List repository issue assignees.",
-		"operationId": "ListIssueAssignees",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Issue唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_vcs_service_bff_api.UserInfo" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
-		"path": "/{repo}/-/issues/{number}/assignees",
-		"method": "get"
-	},
-	"repo.issues.assignees.post": {
-		"tags": ["Issues"],
-		"summary": "添加处理人到指定的 issue。  Adds up to assignees to a issue, Users already assigned to an issue are not replaced.",
-		"operationId": "PostIssueAssignees",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Issue Assignees Form",
-				"name": "post_issue_assignees_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostIssueAssigneesForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/assignees",
-		"method": "post"
-	},
-	"repo.issues.assignees.delete": {
-		"tags": ["Issues"],
-		"summary": "删除 issue 中的处理人。 Removes one or more assignees from an issue.",
-		"operationId": "DeleteIssueAssignees",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Delete Issue Assignees Form",
-				"name": "delete_issue_assignees_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.DeleteIssueAssigneesForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/assignees",
-		"method": "delete"
-	},
-	"repo.issues.assignees.patch": {
-		"tags": ["Issues"],
-		"summary": "更新 issue 中的处理人。 Updates the assignees of an issue.",
-		"operationId": "PatchIssueAssignees",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Patch Issue Assignees Form",
-				"name": "patch_issue_assignees_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchIssueAssigneesForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueDetail" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/assignees",
-		"method": "patch"
-	},
-	"repo.issues.assignees.get": {
-		"tags": ["Issues"],
-		"summary": "检查用户是否可以被添加到 issue 的处理人中。 Checks if a user can be assigned to an issue.",
-		"operationId": "CanUserBeAssignedToIssue",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Issue处理人用户名。",
-				"name": "assignee",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
-		"path": "/{repo}/-/issues/{number}/assignees/{assignee}",
-		"method": "get"
-	},
-	"repo.issues.comments.list": {
-		"tags": ["Issues"],
-		"summary": "查询仓库的 issue 评论列表。List repository issue comments.",
-		"operationId": "ListIssueComments",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "created",
-				"description": "排序方式。支持 created, updated 升序; -created, -updated 降序",
-				"name": "sort",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.IssueComment" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/issues/{number}/comments",
-		"method": "get"
-	},
-	"repo.issues.comments.post": {
-		"tags": ["Issues"],
-		"summary": "创建一个 issue 评论。Create an issue comment.",
-		"operationId": "PostIssueComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Issue Comment Form",
-				"name": "post_issue_comment_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostIssueCommentForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.IssueComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/issues/{number}/comments",
-		"method": "post"
-	},
-	"repo.issues.comments.get": {
-		"tags": ["Issues"],
-		"summary": "获取指定 issue 评论。Get an issue comment.",
-		"operationId": "GetIssueComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue评论唯一标识编号。",
-				"name": "comment_id",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/issues/{number}/comments/{comment_id}",
-		"method": "get"
-	},
-	"repo.issues.comments.patch": {
-		"tags": ["Issues"],
-		"summary": "修改一个 issue 评论。Update an issue comment.",
-		"operationId": "PatchIssueComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue评论唯一标识编号。",
-				"name": "comment_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Patch Issue Comment Form",
-				"name": "patch_issue_comment_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchIssueCommentForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssueComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/issues/{number}/comments/{comment_id}",
-		"method": "patch"
-	},
-	"repo.issues.labels.list": {
-		"tags": ["Issues"],
-		"summary": "查询 issue 的标签列表。List labels for an issue.",
-		"operationId": "ListIssueLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Label" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
-		"path": "/{repo}/-/issues/{number}/labels",
-		"method": "get"
-	},
-	"repo.issues.labels.put": {
-		"tags": ["Issues"],
-		"summary": "设置 issue 标签。 Set the new labels for an issue.",
-		"operationId": "PutIssueLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Put Issue Labels Form",
-				"name": "put_issue_labels_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PutIssueLabelsForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/labels",
-		"method": "put"
-	},
-	"repo.issues.labels.post": {
-		"tags": ["Issues"],
-		"summary": "新增 issue 标签。Add labels to an issue.",
-		"operationId": "PostIssueLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Issue Labels Form",
-				"name": "post_issue_labels_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostIssueLabelsForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/labels",
-		"method": "post"
-	},
-	"repo.issues.labels.delete": {
-		"tags": ["Issues"],
-		"summary": "清空 issue 标签。Remove all labels from an issue.",
-		"operationId": "DeleteIssueLabels",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "integer",
-			"description": "Issue唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/labels",
-		"method": "delete"
-	},
-	"repo.issues.labels.deleteByName": {
-		"tags": ["Issues"],
-		"summary": "删除 issue 标签。Remove a label from an issue.",
-		"operationId": "DeleteIssueLabel",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "标签名称。",
-				"name": "name",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"path": "/{repo}/-/issues/{number}/labels/{name}",
-		"method": "delete"
-	},
-	"repo.issues.property.patch": {
-		"description": "为指定Issue批量更新多个自定义属性的值，要求属性 key 必须已存在，允许部分失败\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
-		"tags": ["Issues"],
-		"summary": "批量更新Issue自定义属性值",
-		"operationId": "UpdateIssueProperties",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Issue唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Issue Properties Form",
-				"name": "issue_properties_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.IssuePropertiesForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.IssuePropertyUpdateResult" }
-			},
-			"400": {
-				"description": "Bad Request",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"path": "/{repo}/-/issues/{number}/property",
-		"method": "patch"
-	},
-	"repo.knowledge.base.get": {
-		"tags": ["KnowledgeBase"],
-		"summary": "获取知识库信息",
-		"operationId": "GetKnowledgeBaseInfo",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/dto.KnowledgeBaseInfoRes" }
-			},
-			"404": { "description": "Not Found" },
-			"500": { "description": "Internal Server Error" }
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/knowledge/base",
-		"method": "get"
-	},
-	"repo.knowledge.base.delete": {
-		"tags": ["KnowledgeBase"],
-		"summary": "删除知识库",
-		"operationId": "DeleteKnowledgeBase",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": { "description": "Not Found" },
-			"500": { "description": "Internal Server Error" }
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/knowledge/base",
-		"method": "delete"
-	},
-	"repo.knowledge.base.query.post": {
-		"tags": ["KnowledgeBase"],
-		"summary": "查询知识库，使用文档：https://docs.cnb.cool/zh/ai/knowledge-base.html",
-		"operationId": "QueryKnowledgeBase",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "查询内容",
-			"name": "query",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.QueryKnowledgeBaseReq" }
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/dto.QueryKnowledgeBaseRes" }
-				}
-			},
-			"400": { "description": "Bad Request" },
-			"500": { "description": "Internal Server Error" }
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/knowledge/base/query",
-		"method": "post"
-	},
-	"repo.knowledge.embedding.models.list": {
-		"tags": ["KnowledgeBase"],
-		"summary": "获取当前支持的 Embedding 模型列表",
-		"operationId": "GetModels",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/dto.EmbeddingModel" }
-				}
-			},
-			"400": { "description": "Bad Request" },
-			"500": { "description": "Internal Server Error" }
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/knowledge/embedding/models",
-		"method": "get"
-	},
-	"repo.labels.list": {
-		"tags": ["RepoLabels"],
-		"summary": "查询仓库的标签列表。List repository labels.",
-		"operationId": "ListLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "repo",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "label search key",
-				"name": "keyword",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Label" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/labels",
-		"method": "get"
-	},
-	"repo.labels.post": {
-		"tags": ["RepoLabels"],
-		"summary": "创建一个 标签。Create a label.",
-		"operationId": "PostLabel",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Post Label Form",
-			"name": "post_label_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PostLabelForm" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/labels",
-		"method": "post"
-	},
-	"repo.labels.delete": {
-		"tags": ["RepoLabels"],
-		"summary": "删除指定的仓库标签。Delete the specified repository label.",
-		"operationId": "DeleteLabel",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "label name",
-			"name": "name",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/labels/{name}",
-		"method": "delete"
-	},
-	"repo.labels.patch": {
-		"tags": ["RepoLabels"],
-		"summary": "更新标签信息。Update label information.",
-		"operationId": "PatchLabel",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "repo",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "label name",
-				"name": "name",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Patch Label Form",
-				"name": "patch_label_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchLabelForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/labels/{name}",
-		"method": "patch"
-	},
-	"repo.members.list": {
-		"tags": ["Members"],
-		"summary": "获取指定仓库内的所有直接成员。List all direct members within specified repository.",
-		"operationId": "ListMembersOfRepo",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member.",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/members",
-		"method": "get"
-	},
-	"repo.members.accessLevel.get": {
-		"tags": ["Members"],
-		"summary": "获取指定仓库内, 访问成员在当前层级内的权限信息。Get permission information for accessing members at current level.",
-		"operationId": "GetMemberAccessLevelOfRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "boolean",
-			"default": true,
-			"description": "是否包含继承的权限。If inherited permissions are included.",
-			"name": "include_inherit",
-			"in": "query"
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.MemberAccessLevelInSlugUnion" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/members/access-level",
-		"method": "get"
-	},
-	"repo.members.put": {
-		"tags": ["Members"],
-		"summary": "更新指定仓库内的直接成员权限信息。Update permission information for direct members in specified repository.",
-		"operationId": "UpdateMembersOfRepo",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/members/{username}",
-		"method": "put"
-	},
-	"repo.members.post": {
-		"tags": ["Members"],
-		"summary": "添加成员。Add members.",
-		"operationId": "AddMembersOfRepo",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "member information",
-				"name": "request",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/members/{username}",
-		"method": "post"
-	},
-	"repo.members.delete": {
-		"tags": ["Members"],
-		"summary": "删除指定仓库的直接成员。Remove direct members from specified repository.",
-		"operationId": "DeleteMembersOfRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "username",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/members/{username}",
-		"method": "delete"
-	},
-	"repo.members.accessLevel.list": {
-		"tags": ["Members"],
-		"summary": "获取指定仓库内指定成员的权限信息, 结果按组织层级来展示, 包含上层组织的权限继承信息。Get specified member's permissions with organizational hierarchy.",
-		"operationId": "ListMemberAccessLevelOfRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "username",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.MemberAccessLevel" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/members/{username}/access-level",
-		"method": "get"
-	},
-	"repo.pullInBatch.list": {
-		"tags": ["Pulls"],
-		"summary": "根据 number 列表查询合并请求列表。List pull requests by numbers.",
-		"operationId": "ListPullsByNumbers",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "array",
-			"items": { "type": "integer" },
-			"collectionFormat": "csv",
-			"description": "Pull唯一标识编号",
-			"name": "n",
-			"in": "query",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullRequestInfo" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pull-in-batch",
-		"method": "get"
-	},
-	"repo.pulls.list": {
-		"tags": ["Pulls"],
-		"summary": "查询合并请求列表。List pull requests.",
-		"operationId": "ListPulls",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "open",
-				"description": "合并请求状态过滤。可选值：`open`,`closed`,`all`",
-				"name": "state",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "作者名称过滤。示例值：`张三,李四`",
-				"name": "authors",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "评审人名称过滤，-表示无评审人。示例值：`张三,李四`,`-`",
-				"name": "reviewers",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "contains_any",
-				"description": "评审者操作符。示例值：`contains_any`,`contains_all`",
-				"name": "reviewers_operator",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "处理人名称过滤，-表示无处理人。示例值：`张三,李四`,`-`",
-				"name": "assignees",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "contains_any",
-				"description": "处理人操作符。示例值：`contains_any`,`contains_all`",
-				"name": "assignees_operator",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "标签过滤。示例值：`git,bug,feature`",
-				"name": "labels",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "contains_any",
-				"description": "标签操作符。示例值：`contains_any`,`contains_all`",
-				"name": "labels_operator",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "目标分支引用。示例值：`master`",
-				"name": "base_ref",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullRequest" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls",
-		"method": "get"
-	},
-	"repo.pulls.post": {
-		"tags": ["Pulls"],
-		"summary": "新增一个合并请求。Create a pull request.",
-		"operationId": "PostPull",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Post Pull Request Form",
-			"name": "post_pull_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PullCreationForm" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Pull" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls",
-		"method": "post"
-	},
-	"repo.pulls.get": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求。Get a pull request.",
-		"operationId": "GetPull",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Pull唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Pull" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}",
-		"method": "get"
-	},
-	"repo.pulls.patch": {
-		"tags": ["Pulls"],
-		"summary": "更新一个合并请求。Update a pull request.",
-		"operationId": "PatchPull",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Update Pull Request Form",
-				"name": "update_pull_request_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchPullRequest" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Pull" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}",
-		"method": "patch"
-	},
-	"repo.pulls.assignees.list": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求的处理人。List repository pull request assignees.",
-		"operationId": "ListPullAssignees",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Pull唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_git_service_bff_api.UserInfo" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/assignees",
-		"method": "get"
-	},
-	"repo.pulls.assignees.post": {
-		"tags": ["Pulls"],
-		"summary": "添加处理人到指定的合并请求。 Adds up to assignees to a pull request. Users already assigned to an issue are not replaced.",
-		"operationId": "PostPullAssignees",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Pull Assignees Form",
-				"name": "post_pull_assignees_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostPullAssigneesForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Pull" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/assignees",
-		"method": "post"
-	},
-	"repo.pulls.assignees.delete": {
-		"tags": ["Pulls"],
-		"summary": "删除合并请求中的处理人 Removes one or more assignees from a pull request.",
-		"operationId": "DeletePullAssignees",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Delete Pull Assignees Form",
-				"name": "delete_pull_assignees_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.DeletePullAssigneesForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Pull" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/assignees",
-		"method": "delete"
-	},
-	"repo.pulls.assignees.get": {
-		"tags": ["Pulls"],
-		"summary": "检查用户是否可以被添加到合并请求的处理人中。 Checks if a user can be assigned to a pull request.",
-		"operationId": "CanUserBeAssignedToPull",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "待检查的处理人用户名。",
-				"name": "assignee",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/assignees/{assignee}",
-		"method": "get"
-	},
-	"repo.pulls.comments.list": {
-		"tags": ["Pulls"],
-		"summary": "查询合并请求评论列表。List pull comments requests.",
-		"operationId": "ListPullComments",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullRequestComment" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/pulls/{number}/comments",
-		"method": "get"
-	},
-	"repo.pulls.comments.post": {
-		"tags": ["Pulls"],
-		"summary": "新增一个合并请求评论。Create a pull comment.",
-		"operationId": "PostPullComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Pull Request Comment Form",
-				"name": "post_pull_comment_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PullCommentCreationForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/pulls/{number}/comments",
-		"method": "post"
-	},
-	"repo.pulls.comments.get": {
-		"tags": ["Pulls"],
-		"summary": "获取一个合并请求评论。Get a pull comment.",
-		"operationId": "GetPullComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "PullComment唯一标识编号。",
-				"name": "comment_id",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/pulls/{number}/comments/{comment_id}",
-		"method": "get"
-	},
-	"repo.pulls.comments.patch": {
-		"tags": ["Pulls"],
-		"summary": "更新一个合并请求评论。Update a pull comment.",
-		"operationId": "PatchPullComment",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "PullComment唯一标识编号。",
-				"name": "comment_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Patch Pull Comment Form",
-				"name": "patch_pull_comment_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PatchPullCommentForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/pulls/{number}/comments/{comment_id}",
-		"method": "patch"
-	},
-	"repo.pulls.commitStatuses.get": {
-		"tags": ["Pulls"],
-		"summary": "查询 Pull Request 的状态检查",
-		"operationId": "ListPullCommitStatuses",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "integer",
-			"description": "Pull唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.CommitStatuses" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/commit-statuses",
-		"method": "get"
-	},
-	"repo.pulls.commits.list": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求的提交列表。Lists the commits in a specified pull request.",
-		"operationId": "ListPullCommits",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Commit" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/commits",
-		"method": "get"
-	},
-	"repo.pulls.files.list": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求的文件列表。Lists the files in a specified pull request.",
-		"operationId": "ListPullFiles",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Pull唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullFile" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/files",
-		"method": "get"
-	},
-	"repo.pulls.labels.list": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求的标签列表。List labels for a pull.",
-		"operationId": "ListPullLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Label" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
-		"path": "/{repo}/-/pulls/{number}/labels",
-		"method": "get"
-	},
-	"repo.pulls.labels.put": {
-		"tags": ["Pulls"],
-		"summary": "设置合并请求标签。Set the new labels for a pull.",
-		"operationId": "PutPullLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Put Pull Labels Form",
-				"name": "put_pull_labels_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PutPullLabelsForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/labels",
-		"method": "put"
-	},
-	"repo.pulls.labels.post": {
-		"tags": ["Pulls"],
-		"summary": "新增合并请求标签。Add labels to a pull.",
-		"operationId": "PostPullLabels",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Pull Labels Form",
-				"name": "post_pull_labels_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostPullLabelsForm" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/labels",
-		"method": "post"
-	},
-	"repo.pulls.labels.delete": {
-		"tags": ["Pulls"],
-		"summary": "清空合并请求标签。Remove all labels from a pull.",
-		"operationId": "DeletePullLabels",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "Pull唯一标识编号。",
-			"name": "number",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"204": { "description": "No Content" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/labels",
-		"method": "delete"
-	},
-	"repo.pulls.labels.deleteByName": {
-		"tags": ["Pulls"],
-		"summary": "删除合并请求标签。Remove a label from a pull.",
-		"operationId": "DeletePullLabel",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "标签名称。",
-				"name": "name",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Label" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/labels/{name}",
-		"method": "delete"
-	},
-	"repo.pulls.merge.put": {
-		"tags": ["Pulls"],
-		"summary": "合并一个合并请求。Merge a pull request.",
-		"operationId": "MergePull",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Merge Pull Request Form",
-				"name": "merge_pull_request_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.MergePullRequest" }
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.MergePullResponse" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
-		"path": "/{repo}/-/pulls/{number}/merge",
-		"method": "put"
-	},
-	"repo.pulls.reviews.list": {
-		"tags": ["Pulls"],
-		"summary": "查询特定合并请求的评审列表。List pull reviews.",
-		"operationId": "ListPullReviews",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullReview" }
-				}
-			},
-			"403": {
-				"description": "Forbidden",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/pulls/{number}/reviews",
-		"method": "get"
-	},
-	"repo.pulls.reviews.post": {
-		"tags": ["Pulls"],
-		"summary": "新增一次合并请求评审。Create a pull review.",
-		"operationId": "PostPullReview",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Pull Review Form",
-				"name": "post_pull_review_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PullReviewCreationForm" }
-			}
-		],
-		"responses": {
-			"201": { "description": "Created" },
-			"403": {
-				"description": "Forbidden",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/pulls/{number}/reviews",
-		"method": "post"
-	},
-	"repo.pulls.reviews.comments.list": {
-		"tags": ["Pulls"],
-		"summary": "查询指定合并请求评审评论列表。List pull review comments.",
-		"operationId": "ListPullReviewComments",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "PullReview唯一标识编号。",
-				"name": "review_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.PullReviewComment" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
-		"path": "/{repo}/-/pulls/{number}/reviews/{review_id}/comments",
-		"method": "get"
-	},
-	"repo.pulls.reviews.replies.post": {
-		"tags": ["Pulls"],
-		"summary": "回复一个 review 评审",
-		"operationId": "PostPullRequestReviewReply",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "Pull唯一标识编号。",
-				"name": "number",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"description": "PullReview唯一标识编号。",
-				"name": "review_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "post pull request review reply form",
-				"name": "post_pull_request_review_reply_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.PostPullRequestReviewReplyForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.PullReviewComment" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
-		"path": "/{repo}/-/pulls/{number}/reviews/{review_id}/replies",
-		"method": "post"
-	},
-	"repo.releases.list": {
-		"tags": ["Releases"],
-		"summary": "查询 release 列表。List releases.",
-		"operationId": "ListReleases",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "分页页码。",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 30,
-				"description": "分页页大小。",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.Release" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/releases",
-		"method": "get"
-	},
-	"repo.releases.post": {
-		"tags": ["Releases"],
-		"summary": "新增一个 release。Create a release.",
-		"operationId": "PostRelease",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Post Release Form, attachment is optional",
-			"name": "create_release_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/openapi.PostReleaseForm" }
-		}],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/api.Release" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases",
-		"method": "post"
-	},
-	"repo.releases.download.get": {
-		"tags": ["Releases"],
-		"summary": "发起一个获取 release 附件的请求， 302到有一定效期的下载地址。Get a request to fetch a release assets and returns 302 redirect to the assets URL with specific valid time.",
-		"operationId": "GetReleasesAsset",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "标签名称。示例：`v1.0.0`",
-				"name": "tag",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "文件名称。示例：`test.png`",
-				"name": "filename",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "是否可以下载，true表示302的下载地址有效期12小时，最多下载10次。",
-				"name": "share",
-				"in": "query"
-			}
-		],
-		"responses": { "302": { "description": "Found" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
-		"path": "/{repo}/-/releases/download/{tag}/{filename}",
-		"method": "get"
-	},
-	"repo.releases.latest.get": {
-		"tags": ["Releases"],
-		"summary": "查询最新的 release。Query the latest release.",
-		"operationId": "GetLatestRelease",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Release" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/releases/latest",
-		"method": "get"
-	},
-	"repo.releases.tags.get": {
-		"tags": ["Releases"],
-		"summary": "通过 tag 查询指定 release,包含附件信息。Get a release by tag, include assets information.",
-		"operationId": "GetReleaseByTag",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "标签名称。",
-			"name": "tag",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Release" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/releases/tags/{tag}",
-		"method": "get"
-	},
-	"repo.releases.get": {
-		"tags": ["Releases"],
-		"summary": "根据 id	查询指定 release, 包含附件信息。Get a release by id, include assets information.",
-		"operationId": "GetReleaseByID",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "版本唯一标识符。",
-			"name": "release_id",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.Release" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/releases/{release_id}",
-		"method": "get"
-	},
-	"repo.releases.delete": {
-		"tags": ["Releases"],
-		"summary": "删除指定的 release。Delete a release.",
-		"operationId": "DeleteRelease",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "版本唯一标识符。",
-			"name": "release_id",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases/{release_id}",
-		"method": "delete"
-	},
-	"repo.releases.patch": {
-		"tags": ["Releases"],
-		"summary": "更新 release。Update a release.",
-		"operationId": "PatchRelease",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "版本唯一标识符。",
-				"name": "release_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "patch release form",
-				"name": "patch_release_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.PatchReleaseForm" }
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases/{release_id}",
-		"method": "patch"
-	},
-	"repo.releases.assetUploadConfirmation.post": {
-		"tags": ["Releases"],
-		"summary": "确认  release 附件上传完成。Confirm release asset upload.",
-		"operationId": "PostReleaseAssetUploadConfirmation",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "版本唯一标识符。",
-				"name": "release_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "PostReleaseAssetUploadURL接口返回值verify_url字段提取的upload_token。",
-				"name": "upload_token",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "PostReleaseAssetUploadURL接口返回值verify_url字段提取的asset_path。",
-				"name": "asset_path",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"description": "附件保持的天数。0 表示永久，最大不能超过 180 天",
-				"name": "ttl",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases/{release_id}/asset-upload-confirmation/{upload_token}/{asset_path}",
-		"method": "post"
-	},
-	"repo.releases.assetUploadUrl.post": {
-		"tags": ["Releases"],
-		"summary": "新增一个 release 附件。Create a release asset.",
-		"operationId": "PostReleaseAssetUploadURL",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "版本唯一标识符。",
-				"name": "release_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Post Release Asset Upload URL Form",
-				"name": "create_release_asset_upload_url_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/openapi.PostReleaseAssetUploadURLForm" }
-			}
-		],
-		"responses": {
-			"201": {
-				"description": "Created",
-				"schema": { "$ref": "#/definitions/openapi.ReleaseAssetUploadURL" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases/{release_id}/asset-upload-url",
-		"method": "post"
-	},
-	"repo.releases.assets.get": {
-		"tags": ["Releases"],
-		"summary": "查询指定的 release 附件 the specified release asset.",
-		"operationId": "GetReleaseAsset",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "版本唯一标识符。",
-				"name": "release_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "附件唯一标识符。",
-				"name": "asset_id",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.ReleaseAsset" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{repo}/-/releases/{release_id}/assets/{asset_id}",
-		"method": "get"
-	},
-	"repo.releases.assets.delete": {
-		"tags": ["Releases"],
-		"summary": "删除指定的 release 附件 the specified release asset.",
-		"operationId": "DeleteReleaseAsset",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "版本唯一标识符。",
-				"name": "release_id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "附件唯一标识符。",
-				"name": "asset_id",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
-		"path": "/{repo}/-/releases/{release_id}/assets/{asset_id}",
-		"method": "delete"
-	},
-	"repo.security.overview.get": {
-		"tags": ["Security"],
-		"summary": "查询仓库安全模块概览数据。Query the security overview data of a repository",
-		"operationId": "GetRepoSecurityOverview",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "仓库名称",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "类型，多个类型用逗号分隔code_sensitive,code_vulnerability,code_issue，为空默认查询所有类型",
-				"name": "types",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "查询类型下开启或忽略的各风险类型概览数量,可选值：open,ignore,all，默认all",
-				"name": "tab",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/dto.RepoSecurityOverview" }
-			},
-			"400": {
-				"description": "Bad Request",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-security:r",
-		"path": "/{repo}/-/security/overview",
-		"method": "get"
-	},
-	"repo.settings.branchProtections.list": {
-		"tags": ["GitSettings"],
-		"summary": "查询仓库保护分支规则列表。List branch protection rules.",
-		"operationId": "ListBranchProtections",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/api.BranchProtection" }
-				}
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/settings/branch-protections",
-		"method": "get"
-	},
-	"repo.settings.branchProtections.post": {
-		"tags": ["GitSettings"],
-		"summary": "新增仓库保护分支规则。Create branch protection rule.",
-		"operationId": "PostBranchProtection",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Branch Protection Form",
-			"name": "branch_protection_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.BranchProtection" }
-		}],
-		"responses": {
-			"201": { "description": "Created" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/branch-protections",
-		"method": "post"
-	},
-	"repo.settings.branchProtections.get": {
-		"tags": ["GitSettings"],
-		"summary": "查询仓库保护分支规则。Get branch protection rule.",
-		"operationId": "GetBranchProtection",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "保护分支规则唯一标识符。",
-			"name": "id",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.BranchProtection" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/settings/branch-protections/{id}",
-		"method": "get"
-	},
-	"repo.settings.branchProtections.delete": {
-		"tags": ["GitSettings"],
-		"summary": "删除仓库保护分支规则。 Delete branch protection rule.",
-		"operationId": "DeleteBranchProtection",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "保护分支规则唯一标识符。",
-			"name": "id",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/branch-protections/{id}",
-		"method": "delete"
-	},
-	"repo.settings.branchProtections.patch": {
-		"tags": ["GitSettings"],
-		"summary": "更新仓库保护分支规则。Update branch protection rule.",
-		"operationId": "PatchBranchProtection",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-				"name": "repo",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "保护分支规则唯一标识符。",
-				"name": "id",
-				"in": "path",
-				"required": true
-			},
-			{
-				"description": "Branch Protection Form",
-				"name": "branch_protection_form",
-				"in": "body",
-				"required": true,
-				"schema": { "$ref": "#/definitions/api.BranchProtection" }
-			}
-		],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/branch-protections/{id}",
-		"method": "patch"
-	},
-	"repo.settings.cloudNativeBuild.get": {
-		"tags": ["GitSettings"],
-		"summary": "查询仓库云原生构建设置。List pipeline settings.",
-		"operationId": "GetPipelineSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.PipelineSettings" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/settings/cloud-native-build",
-		"method": "get"
-	},
-	"repo.settings.cloudNativeBuild.put": {
-		"tags": ["GitSettings"],
-		"summary": "更新仓库云原生构建设置。Update pipeline settings.",
-		"operationId": "PutPipelineSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Cloud Native Build Form",
-			"name": "pipeline_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PipelineSettings" }
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/cloud-native-build",
-		"method": "put"
-	},
-	"repo.settings.pullRequest.get": {
-		"tags": ["GitSettings"],
-		"summary": "查询仓库合并请求设置。List pull request settings.",
-		"operationId": "GetPullRequestSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.PullRequestSettings" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/settings/pull-request",
-		"method": "get"
-	},
-	"repo.settings.pullRequest.put": {
-		"tags": ["GitSettings"],
-		"summary": "更新仓库合并请求设置。Set pull request settings.",
-		"operationId": "PutPullRequestSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Pull Request Form",
-			"name": "pull_request_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PullRequestSettings" }
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/pull-request",
-		"method": "put"
-	},
-	"repo.settings.pushLimit.get": {
-		"tags": ["GitSettings"],
-		"summary": "查询仓库推送设置。List push limit settings.",
-		"operationId": "GetPushLimitSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/api.PushLimitSettings" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{repo}/-/settings/push-limit",
-		"method": "get"
-	},
-	"repo.settings.pushLimit.put": {
-		"tags": ["GitSettings"],
-		"summary": "设置仓库推送设置。Set push limit settings.",
-		"operationId": "PutPushLimitSettings",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "Push Limit Form",
-			"name": "push_limit_form",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/api.PushLimitSettings" }
-		}],
-		"responses": {
-			"200": { "description": "OK" },
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/push-limit",
-		"method": "put"
-	},
-	"repo.settings.setVisibility.post": {
-		"tags": ["Repositories"],
-		"summary": "改变仓库可见性。Update visibility of repository.",
-		"operationId": "SetRepoVisibility",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"enum": [
-				"Private",
-				"Public",
-				"Secret"
-			],
-			"type": "string",
-			"description": "仓库可见性",
-			"name": "visibility",
-			"in": "query",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{repo}/-/settings/set_visibility",
-		"method": "post"
-	},
-	"repo.topActivityUsers.list": {
-		"tags": ["Activities"],
-		"summary": "获取仓库 top 活跃用户。List the top active users",
-		"operationId": "TopContributors",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"maximum": 10,
-			"minimum": 1,
-			"type": "integer",
-			"default": 5,
-			"description": "返回的用户个数",
-			"name": "top",
-			"in": "query"
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UsersResult" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-base-info:r",
-		"path": "/{repo}/-/top-activity-users",
-		"method": "get"
-	},
-	"repo.transfer.post": {
-		"tags": ["Repositories"],
-		"summary": "转移仓库。Transfer a repository.",
-		"operationId": "TransferRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "request",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.TransferSlugReq" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
-		"path": "/{repo}/-/transfer",
-		"method": "post"
-	},
-	"repo.upload.files.post": {
-		"tags": ["Pulls", "Issues"],
-		"summary": "发起一个上传 files 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload files,returns upload URL.Use PUT to initiate a stream upload.",
-		"operationId": "UploadFiles",
-		"parameters": [{
-			"type": "string",
-			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "UploadRequestParams",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
-		"path": "/{repo}/-/upload/files",
-		"method": "post"
-	},
-	"repo.upload.imgs.post": {
-		"tags": ["Pulls", "Issues"],
-		"summary": "发起一个上传 imgs 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload images,returns upload URL.Use PUT to initiate a stream upload.",
-		"operationId": "UploadImgs",
-		"parameters": [{
-			"type": "string",
-			"description": "repo",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "UploadRequestParams",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
-		"path": "/{repo}/-/upload/imgs",
-		"method": "post"
-	},
-	"repo.workspace.detail.get": {
-		"tags": ["Workspace"],
-		"summary": "根据流水线sn查询云原生开发访问地址。Query cloud-native development access address by pipeline SN.",
-		"operationId": "GetWorkspaceDetail",
-		"parameters": [{
-			"type": "string",
-			"description": "Repo path",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "SN",
-			"name": "sn",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.WorkspaceDetailResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-detail:r",
-		"path": "/{repo}/-/workspace/detail/{sn}",
-		"method": "get"
-	},
-	"repo.workspace.start.post": {
-		"tags": ["Workspace"],
-		"summary": "启动云原生开发环境，已存在环境则直接打开，否则重新创建开发环境。Start cloud-native dev. Opens existing env or creates a new one.",
-		"operationId": "StartWorkspace",
-		"parameters": [{
-			"type": "string",
-			"description": "仓库完整路径",
-			"name": "repo",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "StartWorkspace params",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.StartWorkspaceReq" }
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.StartWorkspaceResult" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
-		"path": "/{repo}/-/workspace/start",
-		"method": "post"
-	},
-	"slug.charge.specialAmount.get": {
-		"description": "查看根组织的特权额度，需要根组织的 master 以上权限才可以查看\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"tags": ["Charge"],
-		"summary": "查看特权额度",
-		"operationId": "GetSpecialAmount",
-		"parameters": [{
-			"type": "string",
-			"description": "group slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.SpecialAmount" }
-		} },
-		"path": "/{slug}/-/charge/special-amount",
-		"method": "get"
-	},
-	"slug.contributor.trend.get": {
-		"tags": ["RepoContributor"],
-		"summary": "查询仓库贡献者前 100 名的详细趋势数据。Query detailed trend data for top 100 contributors of the repository.",
-		"operationId": "GetRepoContributorTrend",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 14,
-				"description": "limit, 0~100",
-				"name": "limit",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "exclude_external_users, true|false",
-				"name": "exclude_external_users",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": { "$ref": "#/definitions/web.RepoContribTrend" }
-			},
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{slug}/-/contributor/trend",
-		"method": "get"
-	},
-	"slug.lfs.get": {
-		"tags": ["Git"],
-		"summary": "获取 git lfs 文件下载链接",
-		"operationId": "GetPresignedLFSDownloadLink",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "仓库标识符。格式：`组织名称/仓库名称`",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "LFS文件的唯一标识符。",
-				"name": "oid",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "LFS文件名称。",
-				"name": "name",
-				"in": "query",
-				"required": true
-			}
-		],
-		"responses": {
-			"404": {
-				"description": "Not Found",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			},
-			"500": {
-				"description": "Internal Server Error",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
-		"path": "/{slug}/-/lfs/{oid}",
-		"method": "get"
-	},
-	"slug.listAssets.list": {
-		"tags": ["Assets"],
-		"summary": "仓库的 asset 记录列表",
-		"operationId": "ListAssets",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "第几页，从1开始",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "每页多少条数据",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.AssetRecords" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{slug}/-/list-assets",
-		"method": "get"
-	},
-	"slug.listMembers.list": {
-		"tags": ["Members"],
-		"summary": "获取指定仓库内的有效成员列表，包含继承成员。List active members in specified repository including inherited members.",
-		"operationId": "ListAllMembers",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master",
-					"Owner"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "精准匹配用户名,多个用户名用逗号间隔。Exact username matching, multiple usernames separated by commas.",
-				"name": "names",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"stars",
-					"follower"
-				],
-				"type": "string",
-				"default": "created_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "Ordering",
-				"name": "desc",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{slug}/-/list-members",
-		"method": "get"
-	},
-	"slug.missions.list": {
-		"tags": ["Missions"],
-		"summary": "查询组织下面用户有权限查看到的任务集。Query all missions that the user has permission to see under the specific organization.",
-		"operationId": "GetGroupSubMissions",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "组织 slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 1,
-				"description": "页码",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 10,
-				"description": "每页数量",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": ["private", "public"],
-				"type": "string",
-				"description": "任务集类型",
-				"name": "filter_type",
-				"in": "query"
-			},
-			{
-				"enum": ["created_at", "name"],
-				"type": "string",
-				"description": "排序类型，默认created_at",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"all",
-					"sub",
-					"grand"
-				],
-				"type": "string",
-				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的仓库",
-				"name": "descendant",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "搜索关键字",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Missions4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"path": "/{slug}/-/missions",
-		"method": "get"
-	},
-	"slug.missions.post": {
-		"tags": ["Missions"],
-		"summary": "创建任务集。Create a mission.",
-		"operationId": "CreateMission",
-		"parameters": [{
-			"type": "string",
-			"description": "Group slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "mission information",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.CreateMissionReq" }
-		}],
-		"responses": { "201": { "description": "Created" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:rw",
-		"path": "/{slug}/-/missions",
-		"method": "post"
-	},
-	"slug.outsideCollaborators.list": {
-		"tags": ["Members", "Collaborators"],
-		"summary": "获取指定仓库内的外部贡献者。List external contributors in specified repository.",
-		"operationId": "ListOutsideCollaborators",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer",
-					"Master"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "过滤成员。Filter by member.",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.OutsideCollaboratorInRepo" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
-		"path": "/{slug}/-/outside-collaborators",
-		"method": "get"
-	},
-	"slug.outsideCollaborators.put": {
-		"tags": ["Members", "Collaborators"],
-		"summary": "更新指定仓库的外部贡献者权限信息。 Update permission information for external contributors in specified repository.",
-		"operationId": "UpdateOutsideCollaborators",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "username",
-				"name": "username",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"Guest",
-					"Reporter",
-					"Developer"
-				],
-				"type": "string",
-				"description": "Role",
-				"name": "role",
-				"in": "query",
-				"required": true
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{slug}/-/outside-collaborators/{username}",
-		"method": "put"
-	},
-	"slug.outsideCollaborators.delete": {
-		"tags": ["Members", "Collaborators"],
-		"summary": "删除指定仓库的外部贡献者。Removes external contributors from specified repository.",
-		"operationId": "DeleteOutsideCollaborators",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}, {
-			"type": "string",
-			"description": "username",
-			"name": "username",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
-		"path": "/{slug}/-/outside-collaborators/{username}",
-		"method": "delete"
-	},
-	"slug.packages.list": {
-		"description": "制品首页\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
-		"tags": ["Registries"],
-		"summary": "查询制品列表。 List all packages.",
-		"operationId": "ListPackages",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "资源路径。Slug.",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"all",
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "制品类型。Type.",
-				"name": "type",
-				"in": "query",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "页码。Pagination page number.",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "页数。Pagination page size.",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"pull_count",
-					"last_push_at",
-					"name_ascend",
-					"name_descend"
-				],
-				"type": "string",
-				"description": "顺序类型。Ordering type.",
-				"name": "ordering",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "关键字。Key word to search package name.",
-				"name": "name",
-				"in": "query"
-			}
-		],
-		"responses": {
-			"200": {
-				"description": "OK",
-				"schema": {
-					"type": "array",
-					"items": { "$ref": "#/definitions/dto.Package" }
-				}
-			},
-			"400": {
-				"description": "Bad Request",
-				"schema": { "$ref": "#/definitions/die.WebError" }
-			}
-		},
-		"path": "/{slug}/-/packages",
-		"method": "get"
-	},
-	"slug.packages.get": {
-		"description": "制品详情页\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
-		"tags": ["Registries"],
-		"summary": "获取指定制品的详细信息。 Get the package detail.",
-		"operationId": "GetPackage",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "资源路径。Slug.",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "制品类型。Type",
-				"name": "type",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "制品名称。Name",
-				"name": "name",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.PackageDetail" }
-		} },
-		"path": "/{slug}/-/packages/{type}/{name}",
-		"method": "get"
-	},
-	"slug.packages.delete": {
-		"description": "制品详情页-删除制品\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package-delete:rw",
-		"tags": ["Registries"],
-		"summary": "删除制品。 Delete the specific package.",
-		"operationId": "DeletePackage",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "资源路径。 Slug.",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "制品类型。Type.",
-				"name": "type",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "制品名称。Package name.",
-				"name": "name",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"path": "/{slug}/-/packages/{type}/{name}",
-		"method": "delete"
-	},
-	"slug.packages.name.tag.get": {
-		"description": "制品详情页-版本详情\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
-		"tags": ["Registries"],
-		"summary": "获取制品标签详情。 Get the specific tag under specific package.",
-		"operationId": "GetPackageTagDetail",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "Type",
-				"name": "type",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Name",
-				"name": "name",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Tag",
-				"name": "tag",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "摘要",
-				"name": "sha256",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "架构，docker制品必需，例: linux/amd64/v3。required for docker artifacts",
-				"name": "arch",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.TagDetail" }
-		} },
-		"path": "/{slug}/-/packages/{type}/{name}/-/tag/{tag}",
-		"method": "get"
-	},
-	"slug.packages.name.tag.delete": {
-		"description": "制品详情页-版本详情-删除标签\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package-delete:rw",
-		"tags": ["Registries"],
-		"summary": "删除制品标签。 Delete the specific tag under specific package",
-		"operationId": "DeletePackageTag",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "Type",
-				"name": "type",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Name",
-				"name": "name",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "Tag",
-				"name": "tag",
-				"in": "path",
-				"required": true
-			}
-		],
-		"responses": { "200": { "description": "OK" } },
-		"path": "/{slug}/-/packages/{type}/{name}/-/tag/{tag}",
-		"method": "delete"
-	},
-	"slug.packages.name.tags.get": {
-		"description": "制品详情页-版本列表\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
-		"tags": ["Registries"],
-		"summary": "查询制品标签列表。 List all tags under specific package.",
-		"operationId": "ListPackageTags",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "资源路径。Slug.",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": [
-					"docker",
-					"helm",
-					"docker-model",
-					"maven",
-					"npm",
-					"ohpm",
-					"pypi",
-					"nuget",
-					"composer",
-					"conan",
-					"cargo"
-				],
-				"type": "string",
-				"description": "制品类型。Type.",
-				"name": "type",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"description": "制品名称。Package name.",
-				"name": "name",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "页码。Pagination page number.",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "页数。Pagination page size.",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": ["pull_count", "last_push_at"],
-				"type": "string",
-				"description": "顺序。Ordering type.",
-				"name": "ordering",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "关键字。Key word to search tag name.",
-				"name": "tag_name",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_platform_service-api_internal_models_artifactory_dto.Tag" }
-		} },
-		"path": "/{slug}/-/packages/{type}/{name}/-/tags",
-		"method": "get"
-	},
-	"slug.pinnedRepos.list": {
-		"tags": ["Repositories"],
-		"summary": "获取指定组织的仓库墙列表。List the pinned repositories of a group.",
-		"operationId": "GetPinnedRepoByGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4UserBase" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{slug}/-/pinned-repos",
-		"method": "get"
-	},
-	"slug.pinnedRepos.put": {
-		"tags": ["Repositories"],
-		"summary": "更新指定组织仓库墙。Update the pinned repositories of a group.",
-		"operationId": "SetPinnedRepoByGroup",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "repo path",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": {
-				"type": "array",
-				"items": { "type": "string" }
-			}
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4UserBase" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{slug}/-/pinned-repos",
-		"method": "put"
-	},
-	"slug.registries.list": {
-		"tags": ["Registries"],
-		"summary": "查询组织下面用户有权限查看到的制品仓库。Query all registries that the user has permission to see under specific organization.",
-		"operationId": "GetGroupSubRegistries",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "组织 slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 1,
-				"description": "页码",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 10,
-				"description": "每页数量",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"npm",
-					"maven",
-					"ohpm"
-				],
-				"type": "string",
-				"description": "制品仓库类型",
-				"name": "registry_type",
-				"in": "query"
-			},
-			{
-				"enum": ["private", "public"],
-				"type": "string",
-				"description": "制品仓库可见性类型",
-				"name": "filter_type",
-				"in": "query"
-			},
-			{
-				"enum": ["created_at", "name"],
-				"type": "string",
-				"description": "排序类型，默认created_at",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "排序顺序",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"all",
-					"sub",
-					"grand"
-				],
-				"type": "string",
-				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的制品仓库",
-				"name": "descendant",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "搜索关键字",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Registry4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"path": "/{slug}/-/registries",
-		"method": "get"
-	},
-	"slug.repos.list": {
-		"tags": ["Repositories"],
-		"summary": "查询组织下访问用户有权限查看到仓库。List the repositories that the user has access to.",
-		"operationId": "GetGroupSubRepos",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"format": "int64",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"private",
-					"public",
-					"secret"
-				],
-				"type": "string",
-				"description": "Repositories type",
-				"name": "filter_type",
-				"in": "query"
-			},
-			{
-				"enum": ["KnowledgeBase"],
-				"type": "string",
-				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
-				"name": "flags",
-				"in": "query"
-			},
-			{
-				"enum": ["active", "archived"],
-				"type": "string",
-				"description": "仓库状态。Repository status",
-				"name": "status",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"created_at",
-					"last_updated_at",
-					"stars",
-					"slug_path",
-					"forks"
-				],
-				"type": "string",
-				"default": "last_updated_at",
-				"description": "Order field",
-				"name": "order_by",
-				"in": "query"
-			},
-			{
-				"type": "boolean",
-				"default": false,
-				"description": "Ordering",
-				"name": "desc",
-				"in": "query"
-			},
-			{
-				"enum": [
-					"all",
-					"sub",
-					"grand"
-				],
-				"type": "string",
-				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的仓库。Get all/Get repos belong to current org or sub-organization",
-				"name": "descendant",
-				"in": "query"
-			},
-			{
-				"type": "string",
-				"description": "Key word",
-				"name": "search",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.Repos4User" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"path": "/{slug}/-/repos",
-		"method": "get"
-	},
-	"slug.repos.post": {
-		"tags": ["Repositories"],
-		"summary": "创建仓库。Create repositories.",
-		"operationId": "CreateRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "Group slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "repo information",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.CreateRepoReq" }
-		}],
-		"responses": { "201": { "description": "Created" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:rw",
-		"path": "/{slug}/-/repos",
-		"method": "post"
-	},
-	"slug.settings.get": {
-		"tags": ["Organizations"],
-		"summary": "获取指定组织的配置详情。Get the configuration details for the specified organization.",
-		"operationId": "GetGroupSetting",
-		"parameters": [{
-			"type": "string",
-			"description": "group path",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.OrganizationSettingWithParent" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
-		"path": "/{slug}/-/settings",
-		"method": "get"
-	},
-	"slug.settings.put": {
-		"tags": ["Organizations"],
-		"summary": "更新指定组织的配置。Updates the configuration for the specified organization.",
-		"operationId": "UpdateGroupSetting",
-		"parameters": [{
-			"type": "string",
-			"description": "slug",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}, {
-			"description": "group information to update",
-			"name": "request",
-			"in": "body",
-			"required": true,
-			"schema": { "$ref": "#/definitions/dto.GroupSettingReq" }
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
-		"path": "/{slug}/-/settings",
-		"method": "put"
-	},
-	"slug.settings.archive.post": {
-		"tags": ["Repositories"],
-		"summary": "仓库归档。Archive a repository.",
-		"operationId": "ArchiveRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
-		"path": "/{slug}/-/settings/archive",
-		"method": "post"
-	},
-	"slug.settings.unarchive.post": {
-		"tags": ["Repositories"],
-		"summary": "解除仓库归档。Unarchive a repository.",
-		"operationId": "UnArchiveRepo",
-		"parameters": [{
-			"type": "string",
-			"description": "repo path",
-			"name": "slug",
-			"in": "path",
-			"required": true
-		}],
-		"responses": { "200": { "description": "OK" } },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
-		"path": "/{slug}/-/settings/unarchive",
-		"method": "post"
-	},
-	"slug.stars.get": {
-		"tags": ["Starring"],
-		"summary": "获取指定仓库的star用户列表。Get the list of users who starred the specified repository.",
-		"operationId": "ListStarUsers",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"enum": ["all", "followed"],
-				"type": "string",
-				"description": "Filter type",
-				"name": "filter_type",
-				"in": "query",
-				"required": true
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "page",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "page",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": { "$ref": "#/definitions/dto.RepoStarUsers" }
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-basic-info:r",
-		"path": "/{slug}/-/stars",
-		"method": "get"
-	},
-	"slug.subGroups.list": {
-		"tags": ["Organizations"],
-		"summary": "获取指定组织下的子组织列表。Get the list of sub-organizations under the specified organization.",
-		"operationId": "ListSubgroups",
-		"parameters": [
-			{
-				"type": "string",
-				"description": "Slug",
-				"name": "slug",
-				"in": "path",
-				"required": true
-			},
-			{
-				"type": "string",
-				"default": "",
-				"description": "Filter organization",
-				"name": "search",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 1,
-				"description": "Pagination page number",
-				"name": "page",
-				"in": "query"
-			},
-			{
-				"type": "integer",
-				"default": 10,
-				"description": "Pagination page size",
-				"name": "page_size",
-				"in": "query"
-			}
-		],
-		"responses": { "200": {
-			"description": "OK",
-			"schema": {
-				"type": "array",
-				"items": { "$ref": "#/definitions/dto.OrganizationUnion" }
-			}
-		} },
-		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
-		"path": "/{slug}/-/sub-groups",
-		"method": "get"
-	}
-};
-const callApi = (baseUrl, token, methodPath, params) => {
-	const methodValue = paths_default[methodPath];
-	if (!methodValue) throw new Error("未能找出对应api路径");
-	const { parameters, method } = methodValue;
-	let { path } = methodValue;
-	parameters?.filter((item) => item.in === "path").forEach((item) => {
-		path = path.replace(`{${item.name}}`, params[item.name]);
-	});
-	const queryParams = {};
-	parameters?.filter((item) => item.in === "query").forEach((item) => {
-		queryParams[item.name] = params?.[item.name];
-	});
-	const bodyParams = {};
-	parameters?.filter((item) => item.in === "body").forEach((item) => {
-		Object.assign(bodyParams, params?.[item.name] || {});
-	});
-	return ky(`${baseUrl}${path}`, {
-		method,
-		headers: { Authorization: `Bearer ${token}` },
-		searchParams: queryParams,
-		json: Object.keys(bodyParams).length ? bodyParams : void 0
-	}).json();
-};
-const getClient = (baseUrl, token) => {
-	function getProxyForPath(path) {
-		if (paths_default[path]) return (params) => callApi(baseUrl, token, path, params);
-		else return new Proxy({}, { get(target, prop) {
-			return getProxyForPath(path + "." + String(prop));
-		} });
-	}
-	function getProxyForTagMethod(tag) {
-		return new Proxy({}, { get(target, method) {
-			const path = Object.keys(paths_default).find((path) => {
-				const item = paths_default[path];
-				return item.tags[0] === tag && item.operationId === method;
+}
+function mergeBranch(branch, conflictRules, options = {}) {
+	return {
+		name: `合并 ${branch}`,
+		async run(context) {
+			const { cwd, gitEnv } = context;
+			await exec("git", [
+				"fetch",
+				"origin",
+				branch
+			], {
+				cwd,
+				env: gitEnv
 			});
-			if (!paths_default[path]) throw new Error(`未能找到对应的api路径: ${tag} ${String(method)}`);
-			return (params) => callApi(baseUrl, token, path, params);
-		} });
-	}
-	return new Proxy({}, { get: (target, prop) => {
-		if (/^[A-Z]/.test(prop.charAt(0))) return getProxyForTagMethod(prop);
-		else return getProxyForPath(String(prop));
-	} });
+			const exitCode = await exec("git", [
+				"merge",
+				`origin/${branch}`,
+				"--no-commit"
+			], {
+				cwd,
+				ignoreReturnCode: true
+			});
+			const { stdout } = await getExecOutput("git", [
+				"diff",
+				"--name-only",
+				"--diff-filter=U"
+			], { cwd });
+			const conflicts = stdout.split("\n").map((file) => file.trim()).filter(Boolean);
+			if (exitCode !== 0 && conflicts.length === 0) throw new Error(`合并 origin/${branch} 失败`);
+			if (conflicts.length === 0 && options.skipWhenNoConflicts) {
+				info("没有需要处理的合并冲突，结束流水线");
+				context.skipRemaining = true;
+				return;
+			}
+			const strategies = resolveConflictStrategies(conflicts, conflictRules);
+			const unknownConflicts = conflicts.filter((file) => !strategies.has(file));
+			if (unknownConflicts.length > 0) throw new Error(`存在未适配的合并冲突: ${unknownConflicts.join(", ")}`);
+			for (const [file, strategy] of strategies) {
+				info(`使用 ${strategy} 解决冲突: ${file}`);
+				await exec("git", [
+					"checkout",
+					`--${strategy}`,
+					"--",
+					file
+				], { cwd });
+				await exec("git", [
+					"add",
+					"--",
+					file
+				], { cwd });
+			}
+			if (await exec("git", [
+				"rev-parse",
+				"--verify",
+				"-q",
+				"MERGE_HEAD"
+			], {
+				cwd,
+				ignoreReturnCode: true,
+				silent: true
+			}) === 0 && options.commit !== false) await exec("git", [
+				"commit",
+				"-m",
+				`chore: merge ${branch}`,
+				"--no-verify"
+			], { cwd });
+		}
+	};
+}
+function pushChanges() {
+	return {
+		name: "推送 PR 分支",
+		async run({ cwd, dryRun, gitEnv, headRef }) {
+			if (dryRun) {
+				info("dry-run 模式，不运行 git push");
+				return;
+			}
+			await exec("git", [
+				"push",
+				"origin",
+				`HEAD:${headRef}`
+			], {
+				cwd,
+				env: gitEnv
+			});
+		}
+	};
+}
+//#endregion
+//#region src/operations/package.ts
+function enableCorepack() {
+	return {
+		name: "启用 Corepack",
+		async run({ cwd, env }) {
+			await exec("corepack", ["enable"], {
+				cwd,
+				env
+			});
+			const packageManager = JSON.parse(readFileSync$1(join(cwd, "package.json"), "utf8")).packageManager;
+			if (!packageManager) throw new Error("package.json 未声明 packageManager");
+			await exec("corepack", [
+				"prepare",
+				packageManager,
+				"--activate"
+			], {
+				cwd,
+				env
+			});
+		}
+	};
+}
+function installDependencies(packageManager) {
+	return {
+		name: `使用 ${packageManager} 安装依赖`,
+		async run({ cwd, env }) {
+			await exec(packageManager, ["install"], {
+				cwd,
+				env
+			});
+		}
+	};
+}
+function runPackageScript(packageManager, script, options = {}) {
+	return {
+		name: `运行 ${script}`,
+		async run({ cwd, env }) {
+			await exec(packageManager, options.recursive && packageManager === "pnpm" ? [
+				"-r",
+				"run",
+				script
+			] : ["run", script], {
+				cwd,
+				env
+			});
+		}
+	};
+}
+//#endregion
+//#region src/operations/submodule.ts
+function updateSubmodule(path, options = {}) {
+	return {
+		name: `更新子模块 ${path}`,
+		async run({ cwd }) {
+			const args = [
+				"submodule",
+				"update",
+				"--init",
+				"--remote"
+			];
+			if (options.merge) args.push("--merge");
+			args.push("--", path);
+			await exec("git", args, { cwd });
+		}
+	};
+}
+//#endregion
+//#region src/operations/toolchain.ts
+const NODE_VERSION_PREFIX_REGEXP = /^v/;
+function resolveNodeBin(cwd, toolCache) {
+	const version = readFileSync$1(join(cwd, ".node-version"), "utf8").trim().replace(NODE_VERSION_PREFIX_REGEXP, "");
+	const nodeCache = join(toolCache, "node");
+	const cachedVersion = readdirSync(nodeCache, { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => entry.name).filter((candidate) => candidate === version || candidate.startsWith(`${version}.`)).sort((left, right) => right.localeCompare(left, void 0, { numeric: true }))[0];
+	if (!cachedVersion) throw new Error(`Runner 工具缓存中找不到 Node.js ${version}`);
+	const nodeBin = join(nodeCache, cachedVersion, process$1.arch === "arm64" ? "arm64" : "x64", "bin");
+	if (!existsSync$1(join(nodeBin, "node"))) throw new Error(`Node.js 工具目录无效: ${nodeBin}`);
+	return nodeBin;
+}
+function setupNode() {
+	return {
+		name: "设置 Node.js 工具链",
+		async run({ cwd, env }) {
+			const toolCache = process$1.env.RUNNER_TOOL_CACHE;
+			if (!toolCache) throw new Error("RUNNER_TOOL_CACHE 未配置，无法加载 .node-version");
+			env.PATH = `${resolveNodeBin(cwd, toolCache)}:${env.PATH || ""}`;
+		}
+	};
+}
+//#endregion
+//#region src/tdesign/api.ts
+const UPLOAD_API_SCRIPT = `
+pnpm run dev > /tmp/tdesign-api.log 2>&1 &
+server_pid=$!
+trap 'kill $server_pid 2>/dev/null || true' EXIT
+
+for attempt in $(seq 1 12); do
+  if ! kill -0 $server_pid 2>/dev/null; then
+    cat /tmp/tdesign-api.log
+    exit 1
+  fi
+  if pnpm api:upload; then
+    exit 0
+  fi
+  sleep 5
+done
+
+cat /tmp/tdesign-api.log
+exit 1
+`;
+function uploadApiData() {
+	return {
+		name: "重新生成并上传 API 数据",
+		async run({ cwd, env }) {
+			await exec("pnpm", ["ci"], {
+				cwd,
+				env
+			});
+			await exec("bash", [
+				"-eo",
+				"pipefail",
+				"-c",
+				UPLOAD_API_SCRIPT
+			], {
+				cwd,
+				env
+			});
+		}
+	};
+}
+const apiAdapter = { "/resolve-conflict": [
+	mergeBranch("main", [{
+		pattern: "db/TDesign.db",
+		strategy: "theirs"
+	}], {
+		commit: false,
+		skipWhenNoConflicts: true
+	}),
+	setupNode(),
+	enableCorepack(),
+	uploadApiData(),
+	commitChanges("chore: resolve conflict"),
+	pushChanges()
+] };
+//#endregion
+//#region src/tdesign/miniprogram.ts
+const miniprogramAdapter = {
+	"/update-common": [
+		updateSubmodule("packages/common", { merge: true }),
+		commitChanges("chore: update common"),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		setupNode(),
+		enableCorepack(),
+		installDependencies("pnpm"),
+		runPackageScript("npm", "test:snap-update"),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	]
 };
+//#endregion
+//#region src/tdesign/mobile-react.ts
+const mobileReactAdapter = {
+	"/update-common": [
+		updateSubmodule("src/_common"),
+		commitChanges("chore: update common"),
+		mergeBranch("develop", [{
+			pattern: "src/_common",
+			strategy: "ours"
+		}]),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		mergeBranch("develop", [
+			{
+				pattern: "**/csr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "**/ssr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "src/_common",
+				strategy: "theirs"
+			}
+		]),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "test:update"),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	],
+	"/update-coverage": [
+		addProgressComment("coverage badge 更新"),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "generate:coverage-badge"),
+		commitChanges("chore: update coverage badge"),
+		pushChanges()
+	]
+};
+//#endregion
+//#region src/tdesign/mobile-vue.ts
+const mobileVueAdapter = {
+	"/update-common": [
+		updateSubmodule("src/_common"),
+		commitChanges("chore: update common"),
+		mergeBranch("develop", [{
+			pattern: "src/_common",
+			strategy: "ours"
+		}]),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		mergeBranch("develop", [
+			{
+				pattern: "**/csr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "**/ssr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "src/_common",
+				strategy: "theirs"
+			}
+		]),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "test:update"),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	],
+	"/update-coverage": [
+		addProgressComment("coverage badge 更新"),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "generate:coverage-badge"),
+		commitChanges("chore: update coverage badge"),
+		pushChanges()
+	]
+};
+//#endregion
+//#region src/tdesign/react.ts
+function updateSnapshot() {
+	return [
+		setupNode(),
+		enableCorepack(),
+		installDependencies("pnpm"),
+		runPackageScript("pnpm", "test:update")
+	];
+}
+function updateCoverage() {
+	return [
+		setupNode(),
+		enableCorepack(),
+		installDependencies("pnpm"),
+		runPackageScript("pnpm", "generate:coverage-badge")
+	];
+}
+const reactAdapter = {
+	"/update-common": [
+		updateSubmodule("packages/common"),
+		commitChanges("chore: update common"),
+		mergeBranch("develop", [{
+			pattern: "packages/common",
+			strategy: "ours"
+		}, {
+			pattern: "packages/ai-core",
+			strategy: "theirs"
+		}]),
+		pushChanges()
+	],
+	"/update-ai-core": [
+		updateSubmodule("packages/ai-core"),
+		commitChanges("chore: update ai-core"),
+		mergeBranch("develop", [{
+			pattern: "packages/common",
+			strategy: "theirs"
+		}, {
+			pattern: "packages/ai-core",
+			strategy: "ours"
+		}]),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		mergeBranch("develop", [
+			{
+				pattern: "**/csr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "**/ssr.test.jsx.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "packages/common",
+				strategy: "theirs"
+			},
+			{
+				pattern: "packages/ai-core",
+				strategy: "theirs"
+			}
+		]),
+		...updateSnapshot(),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	],
+	"/update-coverage": [
+		addProgressComment("coverage badge 更新"),
+		...updateCoverage(),
+		commitChanges("chore: update coverage badge"),
+		pushChanges()
+	]
+};
+//#endregion
+//#region src/tdesign/vue.ts
+const vueAdapter = {
+	"/update-common": [
+		updateSubmodule("src/_common"),
+		commitChanges("chore: update common"),
+		mergeBranch("develop", [{
+			pattern: "src/_common",
+			strategy: "ours"
+		}]),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		mergeBranch("develop", [
+			{
+				pattern: "**/csr.test.js.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "**/ssr.test.js.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "src/_common",
+				strategy: "theirs"
+			}
+		]),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "test:update"),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	],
+	"/update-coverage": [
+		addProgressComment("coverage badge 更新"),
+		setupNode(),
+		installDependencies("npm"),
+		runPackageScript("npm", "generate:coverage-badge"),
+		commitChanges("chore: update coverage badge"),
+		pushChanges()
+	]
+};
+//#endregion
+//#region src/tdesign/vue-next.ts
+const vueNextAdapter = {
+	"/update-common": [
+		updateSubmodule("packages/common"),
+		commitChanges("chore: update common"),
+		mergeBranch("develop", [{
+			pattern: "packages/common",
+			strategy: "ours"
+		}]),
+		pushChanges()
+	],
+	"/update-snapshot": [
+		addProgressComment("快照更新"),
+		mergeBranch("develop", [
+			{
+				pattern: "**/csr.test.ts.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "**/ssr.test.ts.snap",
+				strategy: "theirs"
+			},
+			{
+				pattern: "packages/common",
+				strategy: "theirs"
+			}
+		]),
+		setupNode(),
+		enableCorepack(),
+		installDependencies("pnpm"),
+		runPackageScript("pnpm", "test:update", { recursive: true }),
+		commitChanges("chore: update snapshot"),
+		pushChanges()
+	],
+	"/update-coverage": [
+		addProgressComment("coverage badge 更新"),
+		setupNode(),
+		enableCorepack(),
+		installDependencies("pnpm"),
+		runPackageScript("pnpm", "generate:coverage-badge", { recursive: true }),
+		commitChanges("chore: update coverage badge"),
+		pushChanges()
+	]
+};
+//#endregion
+//#region src/config/repository-adapters.ts
+const REPOSITORY_ADAPTERS = {
+	"tdesign-api": apiAdapter,
+	"tdesign-vue": vueAdapter,
+	"tdesign-vue-next": vueNextAdapter,
+	"tdesign-react": reactAdapter,
+	"tdesign-mobile-vue": mobileVueAdapter,
+	"tdesign-mobile-react": mobileReactAdapter,
+	"tdesign-miniprogram": miniprogramAdapter
+};
+function getRepositoryOperations(repo, trigger) {
+	return REPOSITORY_ADAPTERS[repo]?.[trigger];
+}
 //#endregion
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
 var require_lib$6 = /* @__PURE__ */ __commonJSMin(((exports) => {
@@ -39211,9 +30449,10 @@ var GitHelper = class {
 		], { cwd: this.repoPath });
 	}
 	async commit(message) {
+		await exec("git", ["add", "-A"], { cwd: this.repoPath });
 		await exec("git", [
 			"commit",
-			"-am",
+			"-m",
 			message,
 			"--no-verify"
 		], { cwd: this.repoPath });
@@ -39245,8 +30484,8 @@ var GitHelper = class {
 		], { cwd: this.repoPath });
 	}
 	async isNeedCommit() {
-		const { stdout } = await getExecOutput("git", ["status"], { cwd: this.repoPath });
-		return !stdout.includes("nothing to commit, working tree clean");
+		const { stdout } = await getExecOutput("git", ["status", "--porcelain"], { cwd: this.repoPath });
+		return stdout.trim().length > 0;
 	}
 	async printDiff() {
 		await exec("git", ["diff"], { cwd: this.repoPath });
@@ -39323,14 +30562,9365 @@ var GithubHelper = class {
 		});
 		return data;
 	}
+	async addReaction(commentId, content) {
+		if (this.dryRun) {
+			info(`dry-run 模式，不添加 ${content} reaction`);
+			return;
+		}
+		await this.octokit.rest.reactions.createForIssueComment({
+			owner: this.context.owner,
+			repo: this.context.repo,
+			comment_id: commentId,
+			content
+		});
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js
+var HTTPError = class extends Error {
+	response;
+	request;
+	options;
+	constructor(response, request, options) {
+		const status = `${response.status || response.status === 0 ? response.status : ""} ${response.statusText ?? ""}`.trim();
+		const reason = status ? `status code ${status}` : "an unknown error";
+		super(`Request failed with ${reason}: ${request.method} ${request.url}`);
+		this.name = "HTTPError";
+		this.response = response;
+		this.request = request;
+		this.options = options;
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/NonError.js
+/**
+Wrapper for non-Error values that were thrown.
+
+In JavaScript, any value can be thrown (not just Error instances). This class wraps such values to ensure consistent error handling.
+*/
+var NonError = class extends Error {
+	name = "NonError";
+	value;
+	constructor(value) {
+		let message = "Non-error value was thrown";
+		try {
+			if (typeof value === "string") message = value;
+			else if (value && typeof value === "object" && "message" in value && typeof value.message === "string") message = value.message;
+		} catch {}
+		super(message);
+		this.value = value;
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/ForceRetryError.js
+/**
+Internal error used to signal a forced retry from afterResponse hooks.
+This is thrown when a user returns ky.retry() from an afterResponse hook.
+*/
+var ForceRetryError = class extends Error {
+	name = "ForceRetryError";
+	customDelay;
+	code;
+	customRequest;
+	constructor(options) {
+		const cause = options?.cause ? options.cause instanceof Error ? options.cause : new NonError(options.cause) : void 0;
+		super(options?.code ? `Forced retry: ${options.code}` : "Forced retry", cause ? { cause } : void 0);
+		this.customDelay = options?.delay;
+		this.code = options?.code;
+		this.customRequest = options?.request;
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/core/constants.js
+const supportsRequestStreams = (() => {
+	let duplexAccessed = false;
+	let hasContentType = false;
+	const supportsReadableStream = typeof globalThis.ReadableStream === "function";
+	const supportsRequest = typeof globalThis.Request === "function";
+	if (supportsReadableStream && supportsRequest) try {
+		hasContentType = new globalThis.Request("https://empty.invalid", {
+			body: new globalThis.ReadableStream(),
+			method: "POST",
+			get duplex() {
+				duplexAccessed = true;
+				return "half";
+			}
+		}).headers.has("Content-Type");
+	} catch (error) {
+		if (error instanceof Error && error.message === "unsupported BodyInit type") return false;
+		throw error;
+	}
+	return duplexAccessed && !hasContentType;
+})();
+const supportsAbortController = typeof globalThis.AbortController === "function";
+const supportsAbortSignal = typeof globalThis.AbortSignal === "function" && typeof globalThis.AbortSignal.any === "function";
+const supportsResponseStreams = typeof globalThis.ReadableStream === "function";
+const supportsFormData = typeof globalThis.FormData === "function";
+const requestMethods = [
+	"get",
+	"post",
+	"put",
+	"patch",
+	"head",
+	"delete"
+];
+const validate = () => void 0;
+validate();
+const responseTypes = {
+	json: "application/json",
+	text: "text/*",
+	formData: "multipart/form-data",
+	arrayBuffer: "*/*",
+	blob: "*/*",
+	bytes: "*/*"
+};
+const maxSafeTimeout = 2147483647;
+const usualFormBoundarySize = new TextEncoder().encode("------WebKitFormBoundaryaxpyiPgbbPti10Rw").length;
+const stop = Symbol("stop");
+/**
+Marker returned by ky.retry() to signal a forced retry from afterResponse hooks.
+*/
+var RetryMarker = class {
+	options;
+	constructor(options) {
+		this.options = options;
+	}
+};
+/**
+Force a retry from an `afterResponse` hook.
+
+This allows you to retry a request based on the response content, even if the response has a successful status code. The retry will respect the `retry.limit` option and skip the `shouldRetry` check. The forced retry is observable in `beforeRetry` hooks, where the error will be a `ForceRetryError`.
+
+@param options - Optional configuration for the retry.
+
+@example
+```
+import ky, {isForceRetryError} from 'ky';
+
+const api = ky.extend({
+hooks: {
+afterResponse: [
+async (request, options, response) => {
+// Retry based on response body content
+if (response.status === 200) {
+const data = await response.clone().json();
+
+// Simple retry with default delay
+if (data.error?.code === 'TEMPORARY_ERROR') {
+return ky.retry();
+}
+
+// Retry with custom delay from API response
+if (data.error?.code === 'RATE_LIMIT') {
+return ky.retry({
+delay: data.error.retryAfter * 1000,
+code: 'RATE_LIMIT'
+});
+}
+
+// Retry with a modified request (e.g., fallback endpoint)
+if (data.error?.code === 'FALLBACK_TO_BACKUP') {
+return ky.retry({
+request: new Request('https://backup-api.com/endpoint', {
+method: request.method,
+headers: request.headers,
+}),
+code: 'BACKUP_ENDPOINT'
+});
+}
+
+// Retry with refreshed authentication
+if (data.error?.code === 'TOKEN_REFRESH' && data.newToken) {
+return ky.retry({
+request: new Request(request, {
+headers: {
+...Object.fromEntries(request.headers),
+'Authorization': `Bearer ${data.newToken}`
+}
+}),
+code: 'TOKEN_REFRESHED'
+});
+}
+
+// Retry with cause to preserve error chain
+try {
+validateResponse(data);
+} catch (error) {
+return ky.retry({
+code: 'VALIDATION_FAILED',
+cause: error
+});
+}
+}
+}
+],
+beforeRetry: [
+({error, retryCount}) => {
+// Observable in beforeRetry hooks
+if (isForceRetryError(error)) {
+console.log(`Forced retry #${retryCount}: ${error.message}`);
+// Example output: "Forced retry #1: Forced retry: RATE_LIMIT"
+}
+}
+]
+}
+});
+
+const response = await api.get('https://example.com/api');
+```
+*/
+const retry = (options) => new RetryMarker(options);
+const kyOptionKeys = {
+	json: true,
+	parseJson: true,
+	stringifyJson: true,
+	searchParams: true,
+	prefixUrl: true,
+	retry: true,
+	timeout: true,
+	hooks: true,
+	throwHttpErrors: true,
+	onDownloadProgress: true,
+	onUploadProgress: true,
+	fetch: true,
+	context: true
+};
+const vendorSpecificOptions = { next: true };
+const requestOptionsRegistry = {
+	method: true,
+	headers: true,
+	body: true,
+	mode: true,
+	credentials: true,
+	cache: true,
+	redirect: true,
+	referrer: true,
+	referrerPolicy: true,
+	integrity: true,
+	keepalive: true,
+	signal: true,
+	window: true,
+	duplex: true
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/body.js
+const getBodySize = (body) => {
+	if (!body) return 0;
+	if (body instanceof FormData) {
+		let size = 0;
+		for (const [key, value] of body) {
+			size += usualFormBoundarySize;
+			size += new TextEncoder().encode(`Content-Disposition: form-data; name="${key}"`).length;
+			size += typeof value === "string" ? new TextEncoder().encode(value).length : value.size;
+		}
+		return size;
+	}
+	if (body instanceof Blob) return body.size;
+	if (body instanceof ArrayBuffer) return body.byteLength;
+	if (typeof body === "string") return new TextEncoder().encode(body).length;
+	if (body instanceof URLSearchParams) return new TextEncoder().encode(body.toString()).length;
+	if ("byteLength" in body) return body.byteLength;
+	if (typeof body === "object" && body !== null) try {
+		const jsonString = JSON.stringify(body);
+		return new TextEncoder().encode(jsonString).length;
+	} catch {
+		return 0;
+	}
+	return 0;
+};
+const withProgress = (stream, totalBytes, onProgress) => {
+	let previousChunk;
+	let transferredBytes = 0;
+	return stream.pipeThrough(new TransformStream({
+		transform(currentChunk, controller) {
+			controller.enqueue(currentChunk);
+			if (previousChunk) {
+				transferredBytes += previousChunk.byteLength;
+				let percent = totalBytes === 0 ? 0 : transferredBytes / totalBytes;
+				if (percent >= 1) percent = 1 - Number.EPSILON;
+				onProgress?.({
+					percent,
+					totalBytes: Math.max(totalBytes, transferredBytes),
+					transferredBytes
+				}, previousChunk);
+			}
+			previousChunk = currentChunk;
+		},
+		flush() {
+			if (previousChunk) {
+				transferredBytes += previousChunk.byteLength;
+				onProgress?.({
+					percent: 1,
+					totalBytes: Math.max(totalBytes, transferredBytes),
+					transferredBytes
+				}, previousChunk);
+			}
+		}
+	}));
+};
+const streamResponse = (response, onDownloadProgress) => {
+	if (!response.body) return response;
+	if (response.status === 204) return new Response(null, {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers
+	});
+	const totalBytes = Math.max(0, Number(response.headers.get("content-length")) || 0);
+	return new Response(withProgress(response.body, totalBytes, onDownloadProgress), {
+		status: response.status,
+		statusText: response.statusText,
+		headers: response.headers
+	});
+};
+const streamRequest = (request, onUploadProgress, originalBody) => {
+	if (!request.body) return request;
+	const totalBytes = getBodySize(originalBody ?? request.body);
+	return new Request(request, {
+		duplex: "half",
+		body: withProgress(request.body, totalBytes, onUploadProgress)
+	});
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/is.js
+const isObject = (value) => value !== null && typeof value === "object";
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/merge.js
+const validateAndMerge = (...sources) => {
+	for (const source of sources) if ((!isObject(source) || Array.isArray(source)) && source !== void 0) throw new TypeError("The `options` argument must be an object");
+	return deepMerge({}, ...sources);
+};
+const mergeHeaders = (source1 = {}, source2 = {}) => {
+	const result = new globalThis.Headers(source1);
+	const isHeadersInstance = source2 instanceof globalThis.Headers;
+	const source = new globalThis.Headers(source2);
+	for (const [key, value] of source.entries()) if (isHeadersInstance && value === "undefined" || value === void 0) result.delete(key);
+	else result.set(key, value);
+	return result;
+};
+function newHookValue(original, incoming, property) {
+	return Object.hasOwn(incoming, property) && incoming[property] === void 0 ? [] : deepMerge(original[property] ?? [], incoming[property] ?? []);
+}
+const mergeHooks = (original = {}, incoming = {}) => ({
+	beforeRequest: newHookValue(original, incoming, "beforeRequest"),
+	beforeRetry: newHookValue(original, incoming, "beforeRetry"),
+	afterResponse: newHookValue(original, incoming, "afterResponse"),
+	beforeError: newHookValue(original, incoming, "beforeError")
+});
+const appendSearchParameters = (target, source) => {
+	const result = new URLSearchParams();
+	for (const input of [target, source]) {
+		if (input === void 0) continue;
+		if (input instanceof URLSearchParams) for (const [key, value] of input.entries()) result.append(key, value);
+		else if (Array.isArray(input)) for (const pair of input) {
+			if (!Array.isArray(pair) || pair.length !== 2) throw new TypeError("Array search parameters must be provided in [[key, value], ...] format");
+			result.append(String(pair[0]), String(pair[1]));
+		}
+		else if (isObject(input)) {
+			for (const [key, value] of Object.entries(input)) if (value !== void 0) result.append(key, String(value));
+		} else {
+			const parameters = new URLSearchParams(input);
+			for (const [key, value] of parameters.entries()) result.append(key, value);
+		}
+	}
+	return result;
+};
+const deepMerge = (...sources) => {
+	let returnValue = {};
+	let headers = {};
+	let hooks = {};
+	let searchParameters;
+	const signals = [];
+	for (const source of sources) if (Array.isArray(source)) {
+		if (!Array.isArray(returnValue)) returnValue = [];
+		returnValue = [...returnValue, ...source];
+	} else if (isObject(source)) {
+		for (let [key, value] of Object.entries(source)) {
+			if (key === "signal" && value instanceof globalThis.AbortSignal) {
+				signals.push(value);
+				continue;
+			}
+			if (key === "context") {
+				if (value !== void 0 && value !== null && (!isObject(value) || Array.isArray(value))) throw new TypeError("The `context` option must be an object");
+				returnValue = {
+					...returnValue,
+					context: value === void 0 || value === null ? {} : {
+						...returnValue.context,
+						...value
+					}
+				};
+				continue;
+			}
+			if (key === "searchParams") {
+				if (value === void 0 || value === null) searchParameters = void 0;
+				else searchParameters = searchParameters === void 0 ? value : appendSearchParameters(searchParameters, value);
+				continue;
+			}
+			if (isObject(value) && key in returnValue) value = deepMerge(returnValue[key], value);
+			returnValue = {
+				...returnValue,
+				[key]: value
+			};
+		}
+		if (isObject(source.hooks)) {
+			hooks = mergeHooks(hooks, source.hooks);
+			returnValue.hooks = hooks;
+		}
+		if (isObject(source.headers)) {
+			headers = mergeHeaders(headers, source.headers);
+			returnValue.headers = headers;
+		}
+	}
+	if (searchParameters !== void 0) returnValue.searchParams = searchParameters;
+	if (signals.length > 0) if (signals.length === 1) returnValue.signal = signals[0];
+	else if (supportsAbortSignal) returnValue.signal = AbortSignal.any(signals);
+	else returnValue.signal = signals.at(-1);
+	if (returnValue.context === void 0) returnValue.context = {};
+	return returnValue;
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/normalize.js
+const normalizeRequestMethod = (input) => requestMethods.includes(input) ? input.toUpperCase() : input;
+const defaultRetryOptions = {
+	limit: 2,
+	methods: [
+		"get",
+		"put",
+		"head",
+		"delete",
+		"options",
+		"trace"
+	],
+	statusCodes: [
+		408,
+		413,
+		429,
+		500,
+		502,
+		503,
+		504
+	],
+	afterStatusCodes: [
+		413,
+		429,
+		503
+	],
+	maxRetryAfter: Number.POSITIVE_INFINITY,
+	backoffLimit: Number.POSITIVE_INFINITY,
+	delay: (attemptCount) => .3 * 2 ** (attemptCount - 1) * 1e3,
+	jitter: void 0,
+	retryOnTimeout: false
+};
+const normalizeRetryOptions = (retry = {}) => {
+	if (typeof retry === "number") return {
+		...defaultRetryOptions,
+		limit: retry
+	};
+	if (retry.methods && !Array.isArray(retry.methods)) throw new Error("retry.methods must be an array");
+	retry.methods &&= retry.methods.map((method) => method.toLowerCase());
+	if (retry.statusCodes && !Array.isArray(retry.statusCodes)) throw new Error("retry.statusCodes must be an array");
+	const normalizedRetry = Object.fromEntries(Object.entries(retry).filter(([, value]) => value !== void 0));
+	return {
+		...defaultRetryOptions,
+		...normalizedRetry
+	};
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/TimeoutError.js
+var TimeoutError = class extends Error {
+	request;
+	constructor(request) {
+		super(`Request timed out: ${request.method} ${request.url}`);
+		this.name = "TimeoutError";
+		this.request = request;
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/timeout.js
+async function timeout(request, init, abortController, options) {
+	return new Promise((resolve, reject) => {
+		const timeoutId = setTimeout(() => {
+			if (abortController) abortController.abort();
+			reject(new TimeoutError(request));
+		}, options.timeout);
+		options.fetch(request, init).then(resolve).catch(reject).then(() => {
+			clearTimeout(timeoutId);
+		});
+	});
+}
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/delay.js
+async function delay(ms, { signal }) {
+	return new Promise((resolve, reject) => {
+		if (signal) {
+			signal.throwIfAborted();
+			signal.addEventListener("abort", abortHandler, { once: true });
+		}
+		function abortHandler() {
+			clearTimeout(timeoutId);
+			reject(signal.reason);
+		}
+		const timeoutId = setTimeout(() => {
+			signal?.removeEventListener("abort", abortHandler);
+			resolve();
+		}, ms);
+	});
+}
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/options.js
+const findUnknownOptions = (request, options) => {
+	const unknownOptions = {};
+	for (const key in options) {
+		if (!Object.hasOwn(options, key)) continue;
+		if (!(key in requestOptionsRegistry) && !(key in kyOptionKeys) && (!(key in request) || key in vendorSpecificOptions)) unknownOptions[key] = options[key];
+	}
+	return unknownOptions;
+};
+const hasSearchParameters = (search) => {
+	if (search === void 0) return false;
+	if (Array.isArray(search)) return search.length > 0;
+	if (search instanceof URLSearchParams) return search.size > 0;
+	if (typeof search === "object") return Object.keys(search).length > 0;
+	if (typeof search === "string") return search.trim().length > 0;
+	return Boolean(search);
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/utils/type-guards.js
+/**
+Type guard to check if an error is an HTTPError.
+
+@param error - The error to check
+@returns `true` if the error is an HTTPError, `false` otherwise
+
+@example
+```
+import ky, {isHTTPError} from 'ky';
+try {
+const response = await ky.get('/api/data');
+} catch (error) {
+if (isHTTPError(error)) {
+console.log('HTTP error status:', error.response.status);
+}
+}
+```
+*/
+function isHTTPError(error) {
+	return error instanceof HTTPError || error?.name === HTTPError.name;
+}
+/**
+Type guard to check if an error is a TimeoutError.
+
+@param error - The error to check
+@returns `true` if the error is a TimeoutError, `false` otherwise
+
+@example
+```
+import ky, {isTimeoutError} from 'ky';
+try {
+const response = await ky.get('/api/data', { timeout: 1000 });
+} catch (error) {
+if (isTimeoutError(error)) {
+console.log('Request timed out:', error.request.url);
+}
+}
+```
+*/
+function isTimeoutError(error) {
+	return error instanceof TimeoutError || error?.name === TimeoutError.name;
+}
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/core/Ky.js
+var Ky = class Ky {
+	static create(input, options) {
+		const ky = new Ky(input, options);
+		const function_ = async () => {
+			if (typeof ky.#options.timeout === "number" && ky.#options.timeout > 2147483647) throw new RangeError(`The \`timeout\` option cannot be greater than ${maxSafeTimeout}`);
+			await Promise.resolve();
+			let response = await ky.#fetch();
+			for (const hook of ky.#options.hooks.afterResponse) {
+				const clonedResponse = ky.#decorateResponse(response.clone());
+				let modifiedResponse;
+				try {
+					modifiedResponse = await hook(ky.request, ky.#getNormalizedOptions(), clonedResponse, { retryCount: ky.#retryCount });
+				} catch (error) {
+					ky.#cancelResponseBody(clonedResponse);
+					ky.#cancelResponseBody(response);
+					throw error;
+				}
+				if (modifiedResponse instanceof RetryMarker) {
+					ky.#cancelResponseBody(clonedResponse);
+					ky.#cancelResponseBody(response);
+					throw new ForceRetryError(modifiedResponse.options);
+				}
+				const nextResponse = modifiedResponse instanceof globalThis.Response ? modifiedResponse : response;
+				if (clonedResponse !== nextResponse) ky.#cancelResponseBody(clonedResponse);
+				if (response !== nextResponse) ky.#cancelResponseBody(response);
+				response = nextResponse;
+			}
+			ky.#decorateResponse(response);
+			if (!response.ok && (typeof ky.#options.throwHttpErrors === "function" ? ky.#options.throwHttpErrors(response.status) : ky.#options.throwHttpErrors)) {
+				let error = new HTTPError(response, ky.request, ky.#getNormalizedOptions());
+				for (const hook of ky.#options.hooks.beforeError) error = await hook(error, { retryCount: ky.#retryCount });
+				throw error;
+			}
+			if (ky.#options.onDownloadProgress) {
+				if (typeof ky.#options.onDownloadProgress !== "function") throw new TypeError("The `onDownloadProgress` option must be a function");
+				if (!supportsResponseStreams) throw new Error("Streams are not supported in your environment. `ReadableStream` is missing.");
+				const progressResponse = response.clone();
+				ky.#cancelResponseBody(response);
+				return streamResponse(progressResponse, ky.#options.onDownloadProgress);
+			}
+			return response;
+		};
+		const result = ky.#retry(function_).finally(() => {
+			const originalRequest = ky.#originalRequest;
+			ky.#cancelBody(originalRequest?.body ?? void 0);
+			ky.#cancelBody(ky.request.body ?? void 0);
+		});
+		for (const [type, mimeType] of Object.entries(responseTypes)) {
+			if (type === "bytes" && typeof globalThis.Response?.prototype?.bytes !== "function") continue;
+			result[type] = async () => {
+				ky.request.headers.set("accept", ky.request.headers.get("accept") || mimeType);
+				const response = await result;
+				if (type === "json") {
+					if (response.status === 204) return "";
+					const text = await response.text();
+					if (text === "") return "";
+					if (options.parseJson) return options.parseJson(text);
+					return JSON.parse(text);
+				}
+				return response[type]();
+			};
+		}
+		return result;
+	}
+	static #normalizeSearchParams(searchParams) {
+		if (searchParams && typeof searchParams === "object" && !Array.isArray(searchParams) && !(searchParams instanceof URLSearchParams)) return Object.fromEntries(Object.entries(searchParams).filter(([, value]) => value !== void 0));
+		return searchParams;
+	}
+	request;
+	#abortController;
+	#retryCount = 0;
+	#input;
+	#options;
+	#originalRequest;
+	#userProvidedAbortSignal;
+	#cachedNormalizedOptions;
+	constructor(input, options = {}) {
+		this.#input = input;
+		this.#options = {
+			...options,
+			headers: mergeHeaders(this.#input.headers, options.headers),
+			hooks: mergeHooks({
+				beforeRequest: [],
+				beforeRetry: [],
+				beforeError: [],
+				afterResponse: []
+			}, options.hooks),
+			method: normalizeRequestMethod(options.method ?? this.#input.method ?? "GET"),
+			prefixUrl: String(options.prefixUrl || ""),
+			retry: normalizeRetryOptions(options.retry),
+			throwHttpErrors: options.throwHttpErrors ?? true,
+			timeout: options.timeout ?? 1e4,
+			fetch: options.fetch ?? globalThis.fetch.bind(globalThis),
+			context: options.context ?? {}
+		};
+		if (typeof this.#input !== "string" && !(this.#input instanceof URL || this.#input instanceof globalThis.Request)) throw new TypeError("`input` must be a string, URL, or Request");
+		if (this.#options.prefixUrl && typeof this.#input === "string") {
+			if (this.#input.startsWith("/")) throw new Error("`input` must not begin with a slash when using `prefixUrl`");
+			if (!this.#options.prefixUrl.endsWith("/")) this.#options.prefixUrl += "/";
+			this.#input = this.#options.prefixUrl + this.#input;
+		}
+		if (supportsAbortController && supportsAbortSignal) {
+			this.#userProvidedAbortSignal = this.#options.signal ?? this.#input.signal;
+			this.#abortController = new globalThis.AbortController();
+			this.#options.signal = this.#userProvidedAbortSignal ? AbortSignal.any([this.#userProvidedAbortSignal, this.#abortController.signal]) : this.#abortController.signal;
+		}
+		if (supportsRequestStreams) this.#options.duplex = "half";
+		if (this.#options.json !== void 0) {
+			this.#options.body = this.#options.stringifyJson?.(this.#options.json) ?? JSON.stringify(this.#options.json);
+			this.#options.headers.set("content-type", this.#options.headers.get("content-type") ?? "application/json");
+		}
+		const userProvidedContentType = options.headers && new globalThis.Headers(options.headers).has("content-type");
+		if (this.#input instanceof globalThis.Request && (supportsFormData && this.#options.body instanceof globalThis.FormData || this.#options.body instanceof URLSearchParams) && !userProvidedContentType) this.#options.headers.delete("content-type");
+		this.request = new globalThis.Request(this.#input, this.#options);
+		if (hasSearchParameters(this.#options.searchParams)) {
+			const searchParams = "?" + (typeof this.#options.searchParams === "string" ? this.#options.searchParams.replace(/^\?/, "") : new URLSearchParams(Ky.#normalizeSearchParams(this.#options.searchParams)).toString());
+			const url = this.request.url.replace(/(?:\?.*?)?(?=#|$)/, searchParams);
+			this.request = new globalThis.Request(url, this.#options);
+		}
+		if (this.#options.onUploadProgress) {
+			if (typeof this.#options.onUploadProgress !== "function") throw new TypeError("The `onUploadProgress` option must be a function");
+			if (!supportsRequestStreams) throw new Error("Request streams are not supported in your environment. The `duplex` option for `Request` is not available.");
+			this.request = this.#wrapRequestWithUploadProgress(this.request, this.#options.body ?? void 0);
+		}
+	}
+	#calculateDelay() {
+		const retryDelay = this.#options.retry.delay(this.#retryCount);
+		let jitteredDelay = retryDelay;
+		if (this.#options.retry.jitter === true) jitteredDelay = Math.random() * retryDelay;
+		else if (typeof this.#options.retry.jitter === "function") {
+			jitteredDelay = this.#options.retry.jitter(retryDelay);
+			if (!Number.isFinite(jitteredDelay) || jitteredDelay < 0) jitteredDelay = retryDelay;
+		}
+		const backoffLimit = this.#options.retry.backoffLimit ?? Number.POSITIVE_INFINITY;
+		return Math.min(backoffLimit, jitteredDelay);
+	}
+	async #calculateRetryDelay(error) {
+		this.#retryCount++;
+		if (this.#retryCount > this.#options.retry.limit) throw error;
+		const errorObject = error instanceof Error ? error : new NonError(error);
+		if (errorObject instanceof ForceRetryError) return errorObject.customDelay ?? this.#calculateDelay();
+		if (!this.#options.retry.methods.includes(this.request.method.toLowerCase())) throw error;
+		if (this.#options.retry.shouldRetry !== void 0) {
+			const result = await this.#options.retry.shouldRetry({
+				error: errorObject,
+				retryCount: this.#retryCount
+			});
+			if (result === false) throw error;
+			if (result === true) return this.#calculateDelay();
+		}
+		if (isTimeoutError(error) && !this.#options.retry.retryOnTimeout) throw error;
+		if (isHTTPError(error)) {
+			if (!this.#options.retry.statusCodes.includes(error.response.status)) throw error;
+			const retryAfter = error.response.headers.get("Retry-After") ?? error.response.headers.get("RateLimit-Reset") ?? error.response.headers.get("X-RateLimit-Retry-After") ?? error.response.headers.get("X-RateLimit-Reset") ?? error.response.headers.get("X-Rate-Limit-Reset");
+			if (retryAfter && this.#options.retry.afterStatusCodes.includes(error.response.status)) {
+				let after = Number(retryAfter) * 1e3;
+				if (Number.isNaN(after)) after = Date.parse(retryAfter) - Date.now();
+				else if (after >= Date.parse("2024-01-01")) after -= Date.now();
+				const max = this.#options.retry.maxRetryAfter ?? after;
+				return after < max ? after : max;
+			}
+			if (error.response.status === 413) throw error;
+		}
+		return this.#calculateDelay();
+	}
+	#decorateResponse(response) {
+		if (this.#options.parseJson) response.json = async () => this.#options.parseJson(await response.text());
+		return response;
+	}
+	#cancelBody(body) {
+		if (!body) return;
+		body.cancel().catch(() => void 0);
+	}
+	#cancelResponseBody(response) {
+		this.#cancelBody(response.body ?? void 0);
+	}
+	async #retry(function_) {
+		try {
+			return await function_();
+		} catch (error) {
+			const ms = Math.min(await this.#calculateRetryDelay(error), maxSafeTimeout);
+			if (this.#retryCount < 1) throw error;
+			await delay(ms, this.#userProvidedAbortSignal ? { signal: this.#userProvidedAbortSignal } : {});
+			if (error instanceof ForceRetryError && error.customRequest) {
+				const managedRequest = this.#options.signal ? new globalThis.Request(error.customRequest, { signal: this.#options.signal }) : new globalThis.Request(error.customRequest);
+				this.#assignRequest(managedRequest);
+			}
+			for (const hook of this.#options.hooks.beforeRetry) {
+				const hookResult = await hook({
+					request: this.request,
+					options: this.#getNormalizedOptions(),
+					error,
+					retryCount: this.#retryCount
+				});
+				if (hookResult instanceof globalThis.Request) {
+					this.#assignRequest(hookResult);
+					break;
+				}
+				if (hookResult instanceof globalThis.Response) return hookResult;
+				if (hookResult === stop) return;
+			}
+			return this.#retry(function_);
+		}
+	}
+	async #fetch() {
+		if (this.#abortController?.signal.aborted) {
+			this.#abortController = new globalThis.AbortController();
+			this.#options.signal = this.#userProvidedAbortSignal ? AbortSignal.any([this.#userProvidedAbortSignal, this.#abortController.signal]) : this.#abortController.signal;
+			this.request = new globalThis.Request(this.request, { signal: this.#options.signal });
+		}
+		for (const hook of this.#options.hooks.beforeRequest) {
+			const result = await hook(this.request, this.#getNormalizedOptions(), { retryCount: this.#retryCount });
+			if (result instanceof Response) return result;
+			if (result instanceof globalThis.Request) {
+				this.#assignRequest(result);
+				break;
+			}
+		}
+		const nonRequestOptions = findUnknownOptions(this.request, this.#options);
+		this.#originalRequest = this.request;
+		this.request = this.#originalRequest.clone();
+		if (this.#options.timeout === false) return this.#options.fetch(this.#originalRequest, nonRequestOptions);
+		return timeout(this.#originalRequest, nonRequestOptions, this.#abortController, this.#options);
+	}
+	#getNormalizedOptions() {
+		if (!this.#cachedNormalizedOptions) {
+			const { hooks, ...normalizedOptions } = this.#options;
+			this.#cachedNormalizedOptions = Object.freeze(normalizedOptions);
+		}
+		return this.#cachedNormalizedOptions;
+	}
+	#assignRequest(request) {
+		this.#cachedNormalizedOptions = void 0;
+		this.request = this.#wrapRequestWithUploadProgress(request);
+	}
+	#wrapRequestWithUploadProgress(request, originalBody) {
+		if (!this.#options.onUploadProgress || !request.body) return request;
+		return streamRequest(request, this.#options.onUploadProgress, originalBody ?? this.#options.body ?? void 0);
+	}
+};
+//#endregion
+//#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/index.js
+/*! MIT License © Sindre Sorhus */
+const createInstance = (defaults) => {
+	const ky = (input, options) => Ky.create(input, validateAndMerge(defaults, options));
+	for (const method of requestMethods) ky[method] = (input, options) => Ky.create(input, validateAndMerge(defaults, options, { method }));
+	ky.create = (newDefaults) => createInstance(validateAndMerge(newDefaults));
+	ky.extend = (newDefaults) => {
+		if (typeof newDefaults === "function") newDefaults = newDefaults(defaults ?? {});
+		return createInstance(validateAndMerge(defaults, newDefaults));
+	};
+	ky.stop = stop;
+	ky.retry = retry;
+	return ky;
+};
+const ky = createInstance();
+//#endregion
+//#region node_modules/.pnpm/node-cnb@1.23.0/node_modules/node-cnb/dist/index.mjs
+var paths_default = {
+	"events.repo.get": {
+		"tags": ["Event"],
+		"summary": "获取仓库动态预签名地址，并返回内容。Get events pre-signed URL and return content.",
+		"operationId": "GetEvents",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "动态日期,支持按天或小时为维度获取,格式为yy-mm-dd-h or yy-mm-dd, eg:2025-09-11-5",
+			"name": "date",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/events/{repo}/-/{date}",
+		"method": "get"
+	},
+	"groups.post": {
+		"tags": ["Organizations"],
+		"summary": "创建新组织。Create new organization.",
+		"operationId": "CreateOrganization",
+		"parameters": [{
+			"description": "group information",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.CreateGroupReq" }
+		}],
+		"responses": { "201": { "description": "Created" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/groups",
+		"method": "post"
+	},
+	"user.get": {
+		"tags": ["Users"],
+		"summary": "获取指定用户的详情信息。Get detailed information for a specified user.",
+		"operationId": "GetUserInfo",
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UsersResultForSelf" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
+		"path": "/user",
+		"method": "get"
+	},
+	"user.post": {
+		"tags": ["Users"],
+		"summary": "更新指定用户的详情信息。Updates the specified user's profile information.",
+		"operationId": "UpdateUserInfo",
+		"parameters": [{
+			"description": "user info",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UpdateUserInfoPayload" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:rw",
+		"path": "/user",
+		"method": "post"
+	},
+	"user.autocompleteSource.list": {
+		"tags": ["Users"],
+		"summary": "查询当前用户用户拥有指定权限的所有资源列表。List resources that the current user has specified permissions for.",
+		"operationId": "AutoCompleteSource",
+		"parameters": [
+			{
+				"enum": ["Group", "Repo"],
+				"type": "string",
+				"default": "Group",
+				"description": "Source type",
+				"name": "source_type",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter by resources.",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"default": "Owner",
+				"description": "最小仓库权限，默认owner。Minima repository permissions",
+				"name": "access",
+				"in": "query"
+			},
+			{
+				"enum": ["created_at", "slug_path"],
+				"type": "string",
+				"default": "created_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序。Ordering.",
+				"name": "desc",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "type": "string" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/user/autocomplete_source",
+		"method": "get"
+	},
+	"user.gpgKeys.get": {
+		"tags": ["Users"],
+		"summary": "获取用户 GPG keys 列表。List GPG Keys.",
+		"operationId": "ListGPGKeys",
+		"parameters": [
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "gpg search key",
+				"name": "keyword",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.GPGPublicKey" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
+		"path": "/user/gpg-keys",
+		"method": "get"
+	},
+	"user.groups.list": {
+		"tags": ["Organizations"],
+		"summary": "获取当前用户拥有权限的顶层组织列表。Get top-level organizations list that the current user has access to.",
+		"operationId": "ListTopGroups",
+		"parameters": [
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter by organizations.",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Filter by role.",
+				"name": "role",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.OrganizationAccess" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/user/groups",
+		"method": "get"
+	},
+	"user.groups.listByGroup": {
+		"tags": ["Organizations"],
+		"summary": "查询当前用户在指定组织下拥有指定权限的子组织列表。Get the list of sub-organizations that the current user has access to in the specified organization.",
+		"operationId": "ListGroups",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Group slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"description": "access level",
+				"name": "access",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.OrganizationAccess" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/user/groups/{slug}",
+		"method": "get"
+	},
+	"user.repos.list": {
+		"tags": ["Repositories"],
+		"summary": "获取当前用户拥有指定权限及其以上权限的仓库。List repositories owned by the current user with the specified permissions or higher.",
+		"operationId": "GetRepos",
+		"parameters": [
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter by repositories",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"private",
+					"public",
+					"secret"
+				],
+				"type": "string",
+				"description": "RType",
+				"name": "filter_type",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"default": "Owner",
+				"description": "最小仓库权限，默认owner。Minima repository permissions",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"enum": ["KnowledgeBase"],
+				"type": "string",
+				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
+				"name": "flags",
+				"in": "query"
+			},
+			{
+				"enum": ["active", "archived"],
+				"type": "string",
+				"description": "仓库状态。Repository status",
+				"name": "status",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"last_updated_at",
+					"stars",
+					"slug_path",
+					"forks"
+				],
+				"type": "string",
+				"default": "last_updated_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序。Ordering.",
+				"name": "desc",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/user/repos",
+		"method": "get"
+	},
+	"user.staredRepos.list": {
+		"tags": ["Starring"],
+		"summary": "获取当前用户 star 的仓库列表。List all stared repositories.",
+		"operationId": "GetUserAllStaredRepos",
+		"parameters": [
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter by repositories",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序。Ordering.",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"last_updated_at",
+					"stared_time",
+					"stars",
+					"forks"
+				],
+				"type": "string",
+				"default": "last_updated_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/user/stared-repos",
+		"method": "get"
+	},
+	"users.get": {
+		"tags": ["Users"],
+		"summary": "获取指定用户的详情信息。Get detailed information for a specified user.",
+		"operationId": "GetUserInfoByName",
+		"parameters": [{
+			"type": "string",
+			"description": "User Name",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UsersResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-profile:r",
+		"path": "/users/{username}",
+		"method": "get"
+	},
+	"users.activities.get": {
+		"tags": ["Activities"],
+		"summary": "获取个人动态活跃详情汇总。Get user activities by date.",
+		"operationId": "GetUserActivitiesByDate",
+		"parameters": [{
+			"type": "string",
+			"description": "UserName",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "查询日期，格式 yyyyMM，或者 yyyyMMdd",
+			"name": "date",
+			"in": "query"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.ActivityDate" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/activities",
+		"method": "get"
+	},
+	"users.followers.list": {
+		"tags": ["Followers"],
+		"summary": "获取指定用户的粉丝列表。Get the followers list of specified user.",
+		"operationId": "GetFollowersByUserID",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UserFollowResult" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/followers",
+		"method": "get"
+	},
+	"users.following.list": {
+		"tags": ["Followers"],
+		"summary": "获取指定用户的关注人列表。Get the list of users that the specified user is following.",
+		"operationId": "GetFollowingByUserID",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UserFollowResult" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/following",
+		"method": "get"
+	},
+	"users.groups.get": {
+		"tags": ["Organizations"],
+		"summary": "获取指定用户拥有权限的顶层组织列表。 Get a list of top-level organizations that the specified user has permissions to access.",
+		"operationId": "GetGroupsByUserID",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "UserName",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter organizations.",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.OrganizationUnion" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/groups",
+		"method": "get"
+	},
+	"users.pinnedRepos.list": {
+		"tags": ["Repositories"],
+		"summary": "获取指定用户的用户仓库墙。 Get a list of repositories that the specified user has pinned.",
+		"operationId": "GetPinnedRepoByID",
+		"parameters": [{
+			"type": "string",
+			"description": "User Name",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/pinned-repos",
+		"method": "get"
+	},
+	"users.repoActivities.list": {
+		"tags": ["Activities"],
+		"summary": "个人仓库动态详情列表。List of personal repository activity details.",
+		"operationId": "GetUserRepoActivityDetails",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "UserName",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"issue",
+					"pull_request",
+					"code_review"
+				],
+				"type": "string",
+				"description": "activity type",
+				"name": "activityType",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "仓库路径",
+				"name": "slug",
+				"in": "query",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "查询日期，格式 yyyyMM，或者 yyyyMMdd",
+				"name": "date",
+				"in": "query",
+				"required": true
+			}
+		],
+		"responses": { "200": {
+			"description": "返回 []dto.ActivityPullRequestDetail|[]dto.ActivityIssueDetail",
+			"schema": {
+				"type": "array",
+				"items": {}
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/repo-activities/{activityType}",
+		"method": "get"
+	},
+	"users.repos.list": {
+		"tags": ["Repositories"],
+		"summary": "获取指定用户有指定以上权限并且客人态可见的仓库。List repositories where the specified user has the specified permission level or higher and are visible to guests.",
+		"operationId": "GetReposByUserName",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "UserName",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter by repositories",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"private",
+					"public",
+					"secret"
+				],
+				"type": "string",
+				"description": "Repositories type",
+				"name": "filter_type",
+				"in": "query"
+			},
+			{
+				"enum": ["KnowledgeBase"],
+				"type": "string",
+				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
+				"name": "flags",
+				"in": "query"
+			},
+			{
+				"enum": ["active", "archived"],
+				"type": "string",
+				"description": "仓库状态。Repository status",
+				"name": "status",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"default": "Owner",
+				"description": "最小仓库权限，默认owner。Minima repository permissions.",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序。Ordering.",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"last_updated_at",
+					"stars",
+					"slug_path",
+					"forks"
+				],
+				"type": "string",
+				"default": "last_updated_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/repos",
+		"method": "get"
+	},
+	"users.staredRepos.list": {
+		"tags": ["Starring"],
+		"summary": "获取指定用户的 star 仓库列表。Get the list of repositories starred by the specified user.",
+		"operationId": "GetUserStaredRepos",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "UserName",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤仓库。Filter by repositories",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "Ordering",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"last_updated_at",
+					"stars",
+					"forks"
+				],
+				"type": "string",
+				"default": "last_updated_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/users/{username}/stared-repos",
+		"method": "get"
+	},
+	"workspace.delete.post": {
+		"tags": ["Workspace"],
+		"summary": "删除我的云原生开发环境。Delete my workspace.",
+		"operationId": "DeleteWorkspace",
+		"parameters": [{
+			"description": "params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.WorkspaceDeleteReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.WorkspaceDeleteResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:rw",
+		"path": "/workspace/delete",
+		"method": "post"
+	},
+	"workspace.list.get": {
+		"tags": ["Workspace"],
+		"summary": "获取我的云原生开发环境列表。List my workspaces.",
+		"operationId": "ListWorkspaces",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Git branch name, e.g. \"main\"",
+				"name": "branch",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "查询结束时间。Query end time. format YYYY-MM-DD HH:mm:ssZZ, e.g. 2024-12-01 00:00:00+0800",
+				"name": "end",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"description": "Pagination page number, default(1)",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"description": "Pagination page size, default(20), max(100)",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Repository path, e.g. \"groupname/reponame\"",
+				"name": "slug",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "查询开始时间。Query start time. format YYYY-MM-DD HH:mm:ssZZ, e.g. 2024-12-01 00:00:00+0800",
+				"name": "start",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "开发环境状态，running: 开发环境已启动，closed：开发环境已关闭。Workspace status: \"running\" for started, \"closed\" for stopped.",
+				"name": "status",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.WorkspaceListResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:r",
+		"path": "/workspace/list",
+		"method": "get"
+	},
+	"workspace.stop.post": {
+		"tags": ["Workspace"],
+		"summary": "停止/关闭我的云原生开发环境。Stop/close my workspace.",
+		"operationId": "WorkspaceStop",
+		"parameters": [{
+			"description": "params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.WorkspaceStopReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.WorkspaceStopResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \naccount-engage:rw",
+		"path": "/workspace/stop",
+		"method": "post"
+	},
+	"group.get": {
+		"tags": ["Organizations"],
+		"summary": "获取指定组织信息。Get information for the specified organization.",
+		"operationId": "GetGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "group path",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "group",
+			"schema": { "$ref": "#/definitions/dto.OrganizationAccess" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"path": "/{group}",
+		"method": "get"
+	},
+	"group.put": {
+		"tags": ["Organizations"],
+		"summary": "更新组织信息, 可更新的内容为: 组织描述, 组织展示名称, 组织网站, 组织联系邮箱。Updates organization information including: description, display name, website URL and contact email.",
+		"operationId": "UpdateOrganization",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "group information to update",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UpdateGroupReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}",
+		"method": "put"
+	},
+	"group.delete": {
+		"tags": ["Organizations"],
+		"summary": "删除指定组织。Delete the specified organization.",
+		"operationId": "DeleteOrganization",
+		"parameters": [{
+			"type": "string",
+			"description": "group path",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
+			"name": "x-cnb-identity-ticket",
+			"in": "header"
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-delete:rw",
+		"path": "/{group}",
+		"method": "delete"
+	},
+	"group.inheritMembers.list": {
+		"tags": ["Members"],
+		"summary": "获取指定组织的继承成员。List inherited members within specified organization",
+		"operationId": "ListInheritMembersOfGroup",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "group",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.ListInheritMembers" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{group}/-/inherit-members",
+		"method": "get"
+	},
+	"group.members.list": {
+		"tags": ["Members"],
+		"summary": "获取指定组织内的所有直接成员。List all direct members within specified organization.",
+		"operationId": "ListMembersOfGroup",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "group",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member.",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{group}/-/members",
+		"method": "get"
+	},
+	"group.members.accessLevel.get": {
+		"tags": ["Members"],
+		"summary": "获取指定组织内, 访问成员在当前层级内的权限信息。Get permission information for accessing members at current level.",
+		"operationId": "GetMemberAccessLevelOfGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "boolean",
+			"default": true,
+			"description": "是否包含继承的权限。If inherited permissions are included.",
+			"name": "include_inherit",
+			"in": "query"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.MemberAccessLevelInSlugUnion" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{group}/-/members/access-level",
+		"method": "get"
+	},
+	"group.members.put": {
+		"tags": ["Members"],
+		"summary": "更新指定组织的直接成员权限信息。Update permission information for direct members in specified organization.",
+		"operationId": "UpdateMembersOfGroup",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "group",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}/-/members/{username}",
+		"method": "put"
+	},
+	"group.members.post": {
+		"tags": ["Members"],
+		"summary": "添加成员。Add members.",
+		"operationId": "AddMembersOfGroup",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "group",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}/-/members/{username}",
+		"method": "post"
+	},
+	"group.members.delete": {
+		"tags": ["Members"],
+		"summary": "删除指定组织的直接成员。Remove direct members from specified organization.",
+		"operationId": "DeleteMembersOfGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "username",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}/-/members/{username}",
+		"method": "delete"
+	},
+	"group.members.accessLevel.list": {
+		"tags": ["Members"],
+		"summary": "获取指定组织内指定成员的权限信息, 结果按组织层级来展示, 包含上层组织的权限继承信息。Get specified member's permissions with organizational hierarchy.",
+		"operationId": "ListMemberAccessLevelOfGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "username",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.MemberAccessLevel" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{group}/-/members/{username}/access-level",
+		"method": "get"
+	},
+	"group.transfer.post": {
+		"tags": ["Organizations"],
+		"summary": "转移组织。Transfer an organization.",
+		"operationId": "TransferGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "request",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.TransferSlugReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}/-/transfer",
+		"method": "post"
+	},
+	"group.upload.logos.post": {
+		"tags": ["Organizations"],
+		"summary": "发起一个上传 logo 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload logo,returns upload URL.Use PUT to initiate a stream upload.",
+		"operationId": "UploadLogos",
+		"parameters": [{
+			"type": "string",
+			"description": "group",
+			"name": "group",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "UploadRequestParams",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{group}/-/upload/logos",
+		"method": "post"
+	},
+	"mission.delete": {
+		"tags": ["Missions"],
+		"summary": "删除指定任务集。Delete the specified mission.",
+		"operationId": "DeleteMission",
+		"parameters": [{
+			"type": "string",
+			"description": "mission path",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
+			"name": "x-cnb-identity-ticket",
+			"in": "header"
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-delete:rw",
+		"path": "/{mission}",
+		"method": "delete"
+	},
+	"mission.members.post": {
+		"tags": ["Members"],
+		"summary": "添加成员。Add members.",
+		"operationId": "AddMembersOfMission",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "mission",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"path": "/{mission}/-/members/{username}",
+		"method": "post"
+	},
+	"mission.mission.view.get": {
+		"tags": ["Missions"],
+		"summary": "查询任务集视图配置信息。Get mission view config.",
+		"operationId": "GetMissionViewConfig",
+		"parameters": [{
+			"type": "string",
+			"description": "Mission slug",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "View ID",
+			"name": "id",
+			"in": "query",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
+		"path": "/{mission}/-/mission/view",
+		"method": "get"
+	},
+	"mission.mission.view.post": {
+		"tags": ["Missions"],
+		"summary": "设置任务集视图配置信息。Set mission view config.",
+		"operationId": "PostMissionViewConfig",
+		"parameters": [{
+			"type": "string",
+			"description": "Mission slug",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionViewConfig" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"path": "/{mission}/-/mission/view",
+		"method": "post"
+	},
+	"mission.mission.viewList.list": {
+		"tags": ["Missions"],
+		"summary": "获取任务集视图列表。Get view list of a mission.",
+		"operationId": "GetMissionViewList",
+		"parameters": [{
+			"type": "string",
+			"description": "mission",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.MissionView" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:r",
+		"path": "/{mission}/-/mission/view-list",
+		"method": "get"
+	},
+	"mission.mission.viewList.put": {
+		"tags": ["Missions"],
+		"summary": "添加、修改任务集视图。Update a mission view or add a new one.",
+		"operationId": "PutMissionViewList",
+		"parameters": [{
+			"type": "string",
+			"description": "Mission slug",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionView" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"path": "/{mission}/-/mission/view-list",
+		"method": "put"
+	},
+	"mission.mission.viewList.post": {
+		"tags": ["Missions"],
+		"summary": "排序任务集视图。Sort mission view list.",
+		"operationId": "PostMissionViewList",
+		"parameters": [{
+			"type": "string",
+			"description": "Mission slug",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.MissionPostViewReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"path": "/{mission}/-/mission/view-list",
+		"method": "post"
+	},
+	"mission.settings.setVisibility.post": {
+		"tags": ["Missions"],
+		"summary": "改变任务集可见性。Update the visibility of a mission.",
+		"operationId": "SetMissionVisibility",
+		"parameters": [{
+			"type": "string",
+			"description": "mission path",
+			"name": "mission",
+			"in": "path",
+			"required": true
+		}, {
+			"enum": ["Private", "Public"],
+			"type": "string",
+			"description": "任务集可见性",
+			"name": "visibility",
+			"in": "query",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nmission-manage:rw",
+		"path": "/{mission}/-/settings/set_visibility",
+		"method": "post"
+	},
+	"registry.delete": {
+		"tags": ["Registries"],
+		"summary": "删除制品库。Delete the registry.",
+		"operationId": "DeleteRegistry",
+		"parameters": [{
+			"type": "string",
+			"description": "制品库路径。Registry path.",
+			"name": "registry",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
+			"name": "x-cnb-identity-ticket",
+			"in": "header"
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-delete:rw",
+		"path": "/{registry}",
+		"method": "delete"
+	},
+	"registry.members.post": {
+		"tags": ["Members"],
+		"summary": "添加成员。Add members.",
+		"operationId": "AddMembersOfRegistry",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "registry",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-manage:rw",
+		"path": "/{registry}/-/members/{username}",
+		"method": "post"
+	},
+	"registry.settings.setVisibility.post": {
+		"tags": ["Registries"],
+		"summary": "改变制品仓库可见性。Update visibility of registry.",
+		"operationId": "SetRegistryVisibility",
+		"parameters": [{
+			"type": "string",
+			"description": "制品库路径。Registry path.",
+			"name": "registry",
+			"in": "path",
+			"required": true
+		}, {
+			"enum": ["Private", "Public"],
+			"type": "string",
+			"description": "可见性。Visibility",
+			"name": "visibility",
+			"in": "query",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-manage:rw",
+		"path": "/{registry}/-/settings/set_visibility",
+		"method": "post"
+	},
+	"repo.get": {
+		"tags": ["Repositories"],
+		"summary": "获取指定仓库信息。Get information for the specified repository.",
+		"operationId": "GetByID",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "repo",
+			"schema": { "$ref": "#/definitions/dto.Repos4User" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-basic-info:r",
+		"path": "/{repo}",
+		"method": "get"
+	},
+	"repo.delete": {
+		"tags": ["Repositories"],
+		"summary": "删除指定仓库。Delete the specified repository.",
+		"operationId": "DeleteRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "微信身份验证票据，首次请求不传会返回新票据。WeChat auth ticket, will return new ticket if not provided in first request.",
+			"name": "x-cnb-identity-ticket",
+			"in": "header"
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-delete:rw",
+		"path": "/{repo}",
+		"method": "delete"
+	},
+	"repo.patch": {
+		"tags": ["Repositories"],
+		"summary": "更新仓库信息, 可更新的内容为: 仓库简介, 仓库站点, 仓库主题, 开源许可证。updates repository details including description, website URL,topics and license type.",
+		"operationId": "UpdateRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "request body",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.RepoPatch" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}",
+		"method": "patch"
+	},
+	"repo.ai.chat.completions.post": {
+		"tags": ["AI"],
+		"summary": "AI 对话。调用者需有代码写权限（CI 中使用 CNB_TOKEN 不检查写权限）。AI chat completions. Requires caller to have repo write permission (except when using CNB_TOKEN in CI).",
+		"operationId": "AiChatCompletions",
+		"parameters": [{
+			"type": "string",
+			"description": "仓库完整路径",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "AI chat completions params. The params may differ by model.",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.AiChatCompletionsResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/ai/chat/completions",
+		"method": "post"
+	},
+	"repo.assets.delete": {
+		"description": "通过 asset 记录 id 删除一个 asset，release和commit附件不能通过该接口删除\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"tags": ["Assets"],
+		"summary": "通过 asset 记录 id 删除一个 asset",
+		"operationId": "DeleteAsset",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "integer",
+			"format": "int64",
+			"description": "asset id",
+			"name": "assetID",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"422": {
+				"description": "release和commit附件不能通过该接口删除",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{repo}/-/assets/{assetID}",
+		"method": "delete"
+	},
+	"repo.badge.git.get": {
+		"tags": ["Badge"],
+		"summary": "获取徽章 svg 或 JSON 数据。Get badge svg or JSON data.",
+		"operationId": "GetBadge",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "仓库完整路径",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "latest 或 commit 8 位短 hash（例如 89d48c07）",
+				"name": "sha",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "徽章名，例如 pr 事件徽章名为：ci/status/pull_request, 如需获取 JSON 数据，可加上 .json 后缀，如：ci/status/pull_request.json",
+				"name": "badge",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "GetBadge params",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.GetBadgeReq" }
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.GetBadgeResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:r",
+		"path": "/{repo}/-/badge/git/{sha}/{badge}",
+		"method": "get"
+	},
+	"repo.badge.list.get": {
+		"tags": ["Badge"],
+		"summary": "获取徽章列表数据。List badge data",
+		"operationId": "ListBadge",
+		"parameters": [{
+			"type": "string",
+			"description": "仓库完整路径",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "ListBadge params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.ListBadgeReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.ListBadgeResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:r",
+		"path": "/{repo}/-/badge/list",
+		"method": "get"
+	},
+	"repo.badge.upload.post": {
+		"tags": ["Badge"],
+		"summary": "上传徽章数据。Upload badge data",
+		"operationId": "UploadBadge",
+		"parameters": [{
+			"type": "string",
+			"description": "仓库完整路径",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "UploadBadge params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadBadgeReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadBadgeResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-commit-status:rw",
+		"path": "/{repo}/-/badge/upload",
+		"method": "post"
+	},
+	"repo.build.ai.autoPr.post": {
+		"tags": ["AI"],
+		"summary": "根据传入的需求内容和需求标题借助 AI 自动编码并提 PR。Automatically code and create a PR with AI based on the input requirement content and title.",
+		"operationId": "AiAutoPr",
+		"parameters": [{
+			"type": "string",
+			"description": "仓库完整路径",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "AI auto PR params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.AiAutoPrReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.AiAutoPrResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/build/ai/auto-pr",
+		"method": "post"
+	},
+	"repo.build.crontab.sync.post": {
+		"tags": ["Build"],
+		"summary": "同步仓库分支下的定时任务。 Synchronize the content under the repository branch.",
+		"operationId": "BuildCrontabSync",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Branch",
+			"name": "branch",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildCommonResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
+		"path": "/{repo}/-/build/crontab/sync/{branch}",
+		"method": "post"
+	},
+	"repo.build.logs.get": {
+		"tags": ["Build"],
+		"summary": "查询流水线构建列表。List pipeline builds.",
+		"operationId": "GetBuildLogs",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Repo path",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Start date in \"YYYY-MM-DD\" format, e.g. \"2024-12-01\"",
+				"name": "createTime",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "End date in \"YYYY-MM-DD\" format, e.g. \"2024-12-01\"",
+				"name": "endTime",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Event name, e.g. \"push\"",
+				"name": "event",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"description": "Pagination page number, default(1)",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"description": "Pagination page size, default(30), max(100)",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Commit ID, e.g. \"2221d4535ec0c921bcd0858627c5025a871dd2b5\"",
+				"name": "sha",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Build SN, e.g. \"cnb-1qa-1i3f5ecau",
+				"name": "sn",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Source branch name, e.g. \"dev\"",
+				"name": "sourceRef",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Build status: \"pending\", \"success\", \"error\", \"cancel\"",
+				"name": "status",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Target branch name, e.g. \"main\"",
+				"name": "targetRef",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "User ID",
+				"name": "userId",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Username",
+				"name": "userName",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildLogsResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
+		"path": "/{repo}/-/build/logs",
+		"method": "get"
+	},
+	"repo.build.logs.stage.get": {
+		"tags": ["Build"],
+		"summary": "查询流水线Stage详情。Get pipeline build stage detail.",
+		"operationId": "GetBuildStage",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Repo path",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "SN",
+				"name": "sn",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "PipelineId",
+				"name": "pipelineId",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "stageId",
+				"name": "stageId",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildStageResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
+		"path": "/{repo}/-/build/logs/stage/{sn}/{pipelineId}/{stageId}",
+		"method": "get"
+	},
+	"repo.build.logs.delete": {
+		"tags": ["Build"],
+		"summary": "删除流水线日志内容。Delete pipeline logs content.",
+		"operationId": "BuildLogsDelete",
+		"parameters": [{
+			"type": "string",
+			"description": "Repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Sn",
+			"name": "sn",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildCommonResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
+		"path": "/{repo}/-/build/logs/{sn}",
+		"method": "delete"
+	},
+	"repo.build.runner.download.log.get": {
+		"tags": ["Build"],
+		"summary": "流水线runner日志下载。Pipeline runner log download.",
+		"operationId": "BuildRunnerDownloadLog",
+		"parameters": [{
+			"type": "string",
+			"description": "Repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "PipelineId",
+			"name": "pipelineId",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
+		"path": "/{repo}/-/build/runner/download/log/{pipelineId}",
+		"method": "get"
+	},
+	"repo.build.start.post": {
+		"tags": ["Build"],
+		"summary": "开始一个构建。Start a build.",
+		"operationId": "StartBuild",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Build params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.StartBuildReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
+		"path": "/{repo}/-/build/start",
+		"method": "post"
+	},
+	"repo.build.status.get": {
+		"tags": ["Build"],
+		"summary": "查询流水线构建状态。Get pipeline build status.",
+		"operationId": "GetBuildStatus",
+		"parameters": [{
+			"type": "string",
+			"description": "Repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "SN",
+			"name": "sn",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildStatusResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:r",
+		"path": "/{repo}/-/build/status/{sn}",
+		"method": "get"
+	},
+	"repo.build.stop.post": {
+		"tags": ["Build"],
+		"summary": "停止一个构建。 Stop a build.",
+		"operationId": "StopBuild",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "SN",
+			"name": "sn",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.BuildResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
+		"path": "/{repo}/-/build/stop/{sn}",
+		"method": "post"
+	},
+	"repo.commitAssets.download.get": {
+		"tags": ["Git"],
+		"summary": "发起一个获取 commits 附件的请求， 302到有一定效期的下载地址。Get a request to fetch a commit assets and returns 302 redirect to the assets URL with specific valid time.",
+		"operationId": "GetCommitAssets",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "commit_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "文件名称。示例：`test.png`",
+				"name": "filename",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "是否可以下载，true表示302的下载地址有效期12小时，最多下载10次。",
+				"name": "share",
+				"in": "query"
+			}
+		],
+		"responses": { "302": { "description": "Found" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
+		"path": "/{repo}/-/commit-assets/download/{commit_id}/{filename}",
+		"method": "get"
+	},
+	"repo.files.delete": {
+		"description": "删除 UploadFiles 上传的附件\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"tags": ["Pulls", "Issues"],
+		"summary": "删除 UploadFiles 上传的附件",
+		"operationId": "DeleteRepoFiles",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "文件访问链接的files后半部分，比如链接是 https://cnb.cool/cnb/feedback/-/files/abc/1234abcd/test.zip，filePath 就是 abc/1234abcd/test.zip。",
+			"name": "filePath",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{repo}/-/files/{filePath}",
+		"method": "delete"
+	},
+	"repo.forks.get": {
+		"tags": ["Repositories"],
+		"summary": "获取指定仓库的 fork 列表。Get fork list for specified repository.",
+		"operationId": "ListForksRepos",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "仓库路径。Repository path.",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "是否从fork根节点开始展示。Whether to start from the root node of the fork.",
+				"name": "start_from_root",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "页码。Pagination page number.",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "每页大小。Pagination page size.",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.ListForks" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-base-info:r",
+		"path": "/{repo}/-/forks",
+		"method": "get"
+	},
+	"repo.git.archiveCommitChangedFiles.get": {
+		"tags": ["Git"],
+		"summary": "打包下载 commit 变更文件。Download archive of changed files for a commit.",
+		"operationId": "GetArchiveCommitChangedFiles",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "提交的哈希值。",
+			"name": "sha1",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/archive-commit-changed-files/{sha1}",
+		"method": "get"
+	},
+	"repo.git.archiveCompareChangedFiles.get": {
+		"tags": ["Git"],
+		"summary": "打包下载两次 ref 之间的变更文件。Download archive of changed files for a compare.",
+		"operationId": "GetArchiveCompareChangedFiles",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "用于Git比较操作的基准和头部分支或提交的SHA值。格式：`base...head`",
+			"name": "base_head",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/archive-compare-changed-files/{base_head}",
+		"method": "get"
+	},
+	"repo.git.archive.get": {
+		"tags": ["Git"],
+		"summary": "下载仓库内容",
+		"operationId": "GetArchive",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "包含路径的Git引用。格式：`分支名`,`标签名`,`提交哈希`,`分支名/文件路径`",
+			"name": "ref_with_path",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/archive/{ref_with_path}",
+		"method": "get"
+	},
+	"repo.git.blobs.post": {
+		"tags": ["Git"],
+		"summary": "创建一个 blob。Create a blob.",
+		"operationId": "CreateBlob",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "PostBlobForm",
+			"name": "post_blob_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PostBlobForm" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Blob" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/blobs",
+		"method": "post"
+	},
+	"repo.git.branchLocks.post": {
+		"tags": ["Git"],
+		"summary": "锁定分支",
+		"operationId": "CreateBranchLock",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "分支名称",
+			"name": "branch",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"201": { "description": "Created" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/branch-locks/{branch}",
+		"method": "post"
+	},
+	"repo.git.branchLocks.delete": {
+		"tags": ["Git"],
+		"summary": "解除锁定分支",
+		"operationId": "DeleteBranchLock",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "分支名称",
+			"name": "branch",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/branch-locks/{branch}",
+		"method": "delete"
+	},
+	"repo.git.branches.list": {
+		"tags": ["Git"],
+		"summary": "查询分支列表。List branches.",
+		"operationId": "ListBranches",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Branch" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/branches",
+		"method": "get"
+	},
+	"repo.git.branches.post": {
+		"tags": ["Git"],
+		"summary": "创建新分支。Create a new branch based on a start point.",
+		"operationId": "CreateBranch",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Create Branch Form",
+			"name": "create_branch_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/openapi.CreateBranchForm" }
+		}],
+		"responses": {
+			"201": { "description": "Created" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/branches",
+		"method": "post"
+	},
+	"repo.git.branches.get": {
+		"tags": ["Git"],
+		"summary": "查询指定分支。Get a branch.",
+		"operationId": "GetBranch",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "分支名称。",
+			"name": "branch",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.BranchDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/branches/{branch}",
+		"method": "get"
+	},
+	"repo.git.branches.delete": {
+		"tags": ["Git"],
+		"summary": "删除指定分支。Delete the specified branch.",
+		"operationId": "DeleteBranch",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "分支名称。",
+			"name": "branch",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/branches/{branch}",
+		"method": "delete"
+	},
+	"repo.git.commitAnnotationsInBatch.post": {
+		"tags": ["Git"],
+		"summary": "查询指定 commit 的元数据。Get commit annotations in batch.",
+		"operationId": "GetCommitAnnotationsInBatch",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Get Commit Annotations In Batch Form",
+			"name": "get_commit_annotations_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/web.GetCommitAnnotationsInBatchForm" }
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/web.CommitAnnotationInBatch" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commit-annotations-in-batch",
+		"method": "post"
+	},
+	"repo.git.commitAnnotations.list": {
+		"tags": ["Git"],
+		"summary": "查询指定 commit 的元数据。Get commit annotations.",
+		"operationId": "GetCommitAnnotations",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "提交的哈希值。",
+			"name": "sha",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/web.CommitAnnotation" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commit-annotations/{sha}",
+		"method": "get"
+	},
+	"repo.git.commitAnnotations.put": {
+		"tags": ["Git"],
+		"summary": "设定指定 commit 的元数据。Put commit annotations.",
+		"operationId": "PutCommitAnnotations",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "sha",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Put Commit Annotations Form",
+				"name": "put_commit_annotations_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.PutCommitAnnotationsForm" }
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/commit-annotations/{sha}",
+		"method": "put"
+	},
+	"repo.git.commitAnnotations.delete": {
+		"tags": ["Git"],
+		"summary": "删除指定 commit 的元数据。Delete commit annotation.",
+		"operationId": "DeleteCommitAnnotation",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "sha",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的元数据键名。",
+				"name": "key",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/commit-annotations/{sha}/{key}",
+		"method": "delete"
+	},
+	"repo.git.commitAssets.list": {
+		"tags": ["Git"],
+		"summary": "查询指定 commit 的附件。List commit assets.",
+		"operationId": "GetCommitAssetsBySha",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "提交的哈希值。",
+			"name": "sha1",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.CommitAsset" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commit-assets/{sha1}",
+		"method": "get"
+	},
+	"repo.git.commitAssets.assetUploadConfirmation.post": {
+		"tags": ["Git"],
+		"summary": "确认 commit 附件上传完成。Confirm commit asset upload.",
+		"operationId": "PostCommitAssetUploadConfirmation",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "sha1",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "PostCommitAssetUploadURL接口返回值verify_url字段提取的upload_token。",
+				"name": "upload_token",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "PostCommitAssetUploadURL接口返回值verify_url字段提取的asset_path。",
+				"name": "asset_path",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"description": "附件保持的天数。0 表示永久，最大不能超过 180 天",
+				"name": "ttl",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/commit-assets/{sha1}/asset-upload-confirmation/{upload_token}/{asset_path}",
+		"method": "post"
+	},
+	"repo.git.commitAssets.assetUploadUrl.post": {
+		"tags": ["Git"],
+		"summary": "新增一个 commit 附件。Create a commit asset.",
+		"operationId": "PostCommitAssetUploadURL",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "sha1",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Commit Asset Upload URL Form",
+				"name": "create_commit_asset_upload_url_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.PostCommitAssetUploadURLForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/openapi.CommitAssetUploadURL" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/commit-assets/{sha1}/asset-upload-url",
+		"method": "post"
+	},
+	"repo.git.commitAssets.delete": {
+		"tags": ["Git"],
+		"summary": "删除指定 commit 的附件。Delete commit asset.",
+		"operationId": "DeleteCommitAsset",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值。",
+				"name": "sha1",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "附件唯一标识符。",
+				"name": "asset_id",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/commit-assets/{sha1}/{asset_id}",
+		"method": "delete"
+	},
+	"repo.git.commitStatuses.list": {
+		"tags": ["Git"],
+		"summary": "查询指定 commit 的提交状态。List commit check statuses.",
+		"operationId": "GetCommitStatuses",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Git引用标识符。格式：`分支名称`,`提交哈希值`,`标签名称`",
+			"name": "commitish",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_git_service_bff_api.CommitStatus" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commit-statuses/{commitish}",
+		"method": "get"
+	},
+	"repo.git.commits.list": {
+		"tags": ["Git"],
+		"summary": "查询 commit 列表。List commits.",
+		"operationId": "ListCommits",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交标识符。格式：`分支名称`,`提交哈希值`",
+				"name": "sha",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "作者匹配模式，支持Git原生正则表达式匹配作者信息。",
+				"name": "author",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "提交者匹配模式，支持Git原生正则表达式匹配提交者信息。",
+				"name": "committer",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "提交时间起始范围。示例：`2025-01-01T00:00:00Z`",
+				"name": "since",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "提交时间结束范围。示例：`2025-12-31T23:59:59Z`",
+				"name": "until",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Commit" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commits",
+		"method": "get"
+	},
+	"repo.git.commits.get": {
+		"tags": ["Git"],
+		"summary": "查询指定 commit。Get a commit.",
+		"operationId": "GetCommit",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "提交的哈希值或分支名称。",
+			"name": "ref",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Commit" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/commits/{ref}",
+		"method": "get"
+	},
+	"repo.git.compare.get": {
+		"tags": ["Git"],
+		"summary": "比较两个提交、分支或标签之间差异的接口。Compare two commits, branches, or tags.",
+		"operationId": "GetCompareCommits",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "用于Git比较操作的基准和头部分支或提交的SHA值。格式：`base...head`",
+			"name": "base_head",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.CompareResponse" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/compare/{base_head}",
+		"method": "get"
+	},
+	"repo.git.contents.getWithoutPath": {
+		"tags": ["Git"],
+		"summary": "查询仓库文件和目录内容。List repository files and directories.",
+		"operationId": "GetContentWithoutPath",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "提交的哈希值或分支名称。",
+			"name": "ref",
+			"in": "query"
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Content" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/contents",
+		"method": "get"
+	},
+	"repo.git.contents.get": {
+		"tags": ["Git"],
+		"summary": "查询仓库文件列表或文件。List repository files or file.",
+		"operationId": "GetContent",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "文件路径。",
+				"name": "file_path",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "提交的哈希值或分支名称。",
+				"name": "ref",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Content" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/contents/{file_path}",
+		"method": "get"
+	},
+	"repo.git.head.get": {
+		"tags": ["Git"],
+		"summary": "获取仓库默认分支。Get the default branch of the repository.",
+		"operationId": "GetHead",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/openapi.HeadRef" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/head",
+		"method": "get"
+	},
+	"repo.git.raw.get": {
+		"tags": ["Git"],
+		"summary": "获得仓库指定文件内容",
+		"operationId": "GetRaw",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "包含路径的Git引用。格式：`分支名`,`标签名`,`提交哈希`,`分支名/文件路径`",
+				"name": "ref_with_path",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 0,
+				"description": "获得文件内容大小限制（字节），0表示使用gitConfig.RawFileLimitInByte配置值。",
+				"name": "max_in_byte",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "type": "string" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/git/raw/{ref_with_path}",
+		"method": "get"
+	},
+	"repo.git.tagAnnotations.delete": {
+		"tags": ["Git"],
+		"summary": "删除指定 tag 的元数据。Delete the metadata of the specified tag.",
+		"operationId": "DeleteTagAnnotation",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "tag元数据名称。格式：`标签名称/元数据key`",
+			"name": "tag_with_key",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"path": "/{repo}/-/git/tag-annotations/{tag_with_key}",
+		"method": "delete"
+	},
+	"repo.git.tagAnnotations.list": {
+		"tags": ["Git"],
+		"summary": "查询指定 tag 的元数据。Query the metadata of the specified tag.",
+		"operationId": "GetTagAnnotations",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "标签名称。示例：`v1.0.0`",
+			"name": "tag",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/web.TagAnnotation" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
+		"path": "/{repo}/-/git/tag-annotations/{tag}",
+		"method": "get"
+	},
+	"repo.git.tagAnnotations.put": {
+		"tags": ["Git"],
+		"summary": "设定指定 tag 的元数据。Set the metadata of the specified tag.",
+		"operationId": "PutTagAnnotations",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "标签名称。示例：`v1.0.0`",
+				"name": "tag",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Put Tag Annotations Form",
+				"name": "put_tag_annotations_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.PutTagAnnotationsForm" }
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"path": "/{repo}/-/git/tag-annotations/{tag}",
+		"method": "put"
+	},
+	"repo.git.tags.list": {
+		"tags": ["Git"],
+		"summary": "查询 tag 列表。List tags.",
+		"operationId": "ListTags",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Tag" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
+		"path": "/{repo}/-/git/tags",
+		"method": "get"
+	},
+	"repo.git.tags.post": {
+		"tags": ["Git"],
+		"summary": "创建一个 tag。Create a tag.",
+		"operationId": "CreateTag",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "PostTagFrom",
+			"name": "post_tag_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PostTagFrom" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Tag" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/git/tags",
+		"method": "post"
+	},
+	"repo.git.tags.get": {
+		"tags": ["Git"],
+		"summary": "查询指定 tag。Get a tag.",
+		"operationId": "GetTag",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "标签名称。示例：`v1.0.0`",
+			"name": "tag",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Tag" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
+		"path": "/{repo}/-/git/tags/{tag}",
+		"method": "get"
+	},
+	"repo.git.tags.delete": {
+		"tags": ["Git"],
+		"summary": "删除指定 tag。Delete the specified tag.",
+		"operationId": "DeleteTag",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "标签名称。示例：`v1.0.0`",
+			"name": "tag",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"path": "/{repo}/-/git/tags/{tag}",
+		"method": "delete"
+	},
+	"repo.imgs.delete": {
+		"description": "删除 UploadImgs 上传的图片\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"tags": ["Pulls", "Issues"],
+		"summary": "删除 UploadImgs 上传的图片",
+		"operationId": "DeleteRepoImgs",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "图片访问链接的imgs后半部分，比如链接是 https://cnb.cool/cnb/feedback/-/imgs/abc/1234abcd.png，imgPath 就是 abc/1234abcd.png。",
+			"name": "imgPath",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{repo}/-/imgs/{imgPath}",
+		"method": "delete"
+	},
+	"repo.inheritMembers.list": {
+		"tags": ["Members"],
+		"summary": "获取指定仓库内的继承成员。List inherited members within specified repository。",
+		"operationId": "ListInheritMembersOfRepo",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.ListInheritMembers" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/inherit-members",
+		"method": "get"
+	},
+	"repo.issues.list": {
+		"tags": ["Issues"],
+		"summary": "查询仓库的 Issues。List issues.",
+		"operationId": "ListIssues",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码，输入值小于1，则调整为1。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小，输入值小于0，则调整为10;输入值大于100，则调整为100。",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue状态过滤。可选值：`open`、`closed`",
+				"name": "state",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue搜索关键词，支持在标题和内容中模糊搜索。",
+				"name": "keyword",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue优先级过滤。示例：`-2P,-1P,P0,P1,P2,P3`",
+				"name": "priority",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue标签过滤。示例：`git,bug,feature`",
+				"name": "labels",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "contains_any",
+				"description": "标签过滤操作符。可选值：`contains_any`,`contains_all`",
+				"name": "labels_operator",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue创建者过滤，多个作者用英文逗号分隔。示例：`张三,李四`",
+				"name": "authors",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue处理人过滤，多个处理人用英文逗号分隔，-表示未分配处理人。示例：`张三,李四`,`-`",
+				"name": "assignees",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue更新时间范围开始。示例：`2022-01-31`",
+				"name": "updated_time_begin",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue更新时间范围结束。示例：`2022-02-16`",
+				"name": "updated_time_end",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue关闭时间范围开始。示例：`2022-01-31`",
+				"name": "close_time_begin",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue关闭时间范围结束。示例：`2022-02-16`",
+				"name": "close_time_end",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Issue排序字段，-前缀表示倒序。可选值：`created_at`,`-created_at`,`-updated_at`,`-last_acted_at`",
+				"name": "order_by",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Issue" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
+		"path": "/{repo}/-/issues",
+		"method": "get"
+	},
+	"repo.issues.post": {
+		"tags": ["Issues"],
+		"summary": "创建一个 Issue。Create an issue.",
+		"operationId": "CreateIssue",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Post Issue Form",
+			"name": "post_issue_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PostIssueForm" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues",
+		"method": "post"
+	},
+	"repo.issues.get": {
+		"tags": ["Issues"],
+		"summary": "查询指定的 Issues。Get an issue.",
+		"operationId": "GetIssue",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "integer",
+			"description": "Issue唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
+		"path": "/{repo}/-/issues/{number}",
+		"method": "get"
+	},
+	"repo.issues.patch": {
+		"tags": ["Issues"],
+		"summary": "更新一个 Issue。Update an issue.",
+		"operationId": "UpdateIssue",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Patch Issue Form",
+				"name": "patch_issue_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchIssueForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}",
+		"method": "patch"
+	},
+	"repo.issues.assignees.list": {
+		"tags": ["Issues"],
+		"summary": "查询指定 issue 的处理人。 List repository issue assignees.",
+		"operationId": "ListIssueAssignees",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Issue唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_vcs_service_bff_api.UserInfo" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
+		"path": "/{repo}/-/issues/{number}/assignees",
+		"method": "get"
+	},
+	"repo.issues.assignees.post": {
+		"tags": ["Issues"],
+		"summary": "添加处理人到指定的 issue。  Adds up to assignees to a issue, Users already assigned to an issue are not replaced.",
+		"operationId": "PostIssueAssignees",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Issue Assignees Form",
+				"name": "post_issue_assignees_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostIssueAssigneesForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/assignees",
+		"method": "post"
+	},
+	"repo.issues.assignees.delete": {
+		"tags": ["Issues"],
+		"summary": "删除 issue 中的处理人。 Removes one or more assignees from an issue.",
+		"operationId": "DeleteIssueAssignees",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Delete Issue Assignees Form",
+				"name": "delete_issue_assignees_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.DeleteIssueAssigneesForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/assignees",
+		"method": "delete"
+	},
+	"repo.issues.assignees.patch": {
+		"tags": ["Issues"],
+		"summary": "更新 issue 中的处理人。 Updates the assignees of an issue.",
+		"operationId": "PatchIssueAssignees",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Patch Issue Assignees Form",
+				"name": "patch_issue_assignees_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchIssueAssigneesForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueDetail" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/assignees",
+		"method": "patch"
+	},
+	"repo.issues.assignees.get": {
+		"tags": ["Issues"],
+		"summary": "检查用户是否可以被添加到 issue 的处理人中。 Checks if a user can be assigned to an issue.",
+		"operationId": "CanUserBeAssignedToIssue",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Issue处理人用户名。",
+				"name": "assignee",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
+		"path": "/{repo}/-/issues/{number}/assignees/{assignee}",
+		"method": "get"
+	},
+	"repo.issues.comments.list": {
+		"tags": ["Issues"],
+		"summary": "查询仓库的 issue 评论列表。List repository issue comments.",
+		"operationId": "ListIssueComments",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "created",
+				"description": "排序方式。支持 created, updated 升序; -created, -updated 降序",
+				"name": "sort",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.IssueComment" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/issues/{number}/comments",
+		"method": "get"
+	},
+	"repo.issues.comments.post": {
+		"tags": ["Issues"],
+		"summary": "创建一个 issue 评论。Create an issue comment.",
+		"operationId": "PostIssueComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Issue Comment Form",
+				"name": "post_issue_comment_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostIssueCommentForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.IssueComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/issues/{number}/comments",
+		"method": "post"
+	},
+	"repo.issues.comments.get": {
+		"tags": ["Issues"],
+		"summary": "获取指定 issue 评论。Get an issue comment.",
+		"operationId": "GetIssueComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue评论唯一标识编号。",
+				"name": "comment_id",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/issues/{number}/comments/{comment_id}",
+		"method": "get"
+	},
+	"repo.issues.comments.patch": {
+		"tags": ["Issues"],
+		"summary": "修改一个 issue 评论。Update an issue comment.",
+		"operationId": "PatchIssueComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue评论唯一标识编号。",
+				"name": "comment_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Patch Issue Comment Form",
+				"name": "patch_issue_comment_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchIssueCommentForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssueComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/issues/{number}/comments/{comment_id}",
+		"method": "patch"
+	},
+	"repo.issues.labels.list": {
+		"tags": ["Issues"],
+		"summary": "查询 issue 的标签列表。List labels for an issue.",
+		"operationId": "ListIssueLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Label" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:r",
+		"path": "/{repo}/-/issues/{number}/labels",
+		"method": "get"
+	},
+	"repo.issues.labels.put": {
+		"tags": ["Issues"],
+		"summary": "设置 issue 标签。 Set the new labels for an issue.",
+		"operationId": "PutIssueLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Put Issue Labels Form",
+				"name": "put_issue_labels_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PutIssueLabelsForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/labels",
+		"method": "put"
+	},
+	"repo.issues.labels.post": {
+		"tags": ["Issues"],
+		"summary": "新增 issue 标签。Add labels to an issue.",
+		"operationId": "PostIssueLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Issue Labels Form",
+				"name": "post_issue_labels_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostIssueLabelsForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/labels",
+		"method": "post"
+	},
+	"repo.issues.labels.delete": {
+		"tags": ["Issues"],
+		"summary": "清空 issue 标签。Remove all labels from an issue.",
+		"operationId": "DeleteIssueLabels",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "integer",
+			"description": "Issue唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/labels",
+		"method": "delete"
+	},
+	"repo.issues.labels.deleteByName": {
+		"tags": ["Issues"],
+		"summary": "删除 issue 标签。Remove a label from an issue.",
+		"operationId": "DeleteIssueLabel",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "标签名称。",
+				"name": "name",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"path": "/{repo}/-/issues/{number}/labels/{name}",
+		"method": "delete"
+	},
+	"repo.issues.property.patch": {
+		"description": "为指定Issue批量更新多个自定义属性的值，要求属性 key 必须已存在，允许部分失败\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-issue:rw",
+		"tags": ["Issues"],
+		"summary": "批量更新Issue自定义属性值",
+		"operationId": "UpdateIssueProperties",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Issue唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Issue Properties Form",
+				"name": "issue_properties_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.IssuePropertiesForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.IssuePropertyUpdateResult" }
+			},
+			"400": {
+				"description": "Bad Request",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{repo}/-/issues/{number}/property",
+		"method": "patch"
+	},
+	"repo.knowledge.base.get": {
+		"tags": ["KnowledgeBase"],
+		"summary": "获取知识库信息",
+		"operationId": "GetKnowledgeBaseInfo",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/dto.KnowledgeBaseInfoRes" }
+			},
+			"404": { "description": "Not Found" },
+			"500": { "description": "Internal Server Error" }
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/knowledge/base",
+		"method": "get"
+	},
+	"repo.knowledge.base.delete": {
+		"tags": ["KnowledgeBase"],
+		"summary": "删除知识库",
+		"operationId": "DeleteKnowledgeBase",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": { "description": "Not Found" },
+			"500": { "description": "Internal Server Error" }
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/knowledge/base",
+		"method": "delete"
+	},
+	"repo.knowledge.base.query.post": {
+		"tags": ["KnowledgeBase"],
+		"summary": "查询知识库，使用文档：https://docs.cnb.cool/zh/ai/knowledge-base.html",
+		"operationId": "QueryKnowledgeBase",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "查询内容",
+			"name": "query",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.QueryKnowledgeBaseReq" }
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/dto.QueryKnowledgeBaseRes" }
+				}
+			},
+			"400": { "description": "Bad Request" },
+			"500": { "description": "Internal Server Error" }
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/knowledge/base/query",
+		"method": "post"
+	},
+	"repo.knowledge.embedding.models.list": {
+		"tags": ["KnowledgeBase"],
+		"summary": "获取当前支持的 Embedding 模型列表",
+		"operationId": "GetModels",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/dto.EmbeddingModel" }
+				}
+			},
+			"400": { "description": "Bad Request" },
+			"500": { "description": "Internal Server Error" }
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/knowledge/embedding/models",
+		"method": "get"
+	},
+	"repo.labels.list": {
+		"tags": ["RepoLabels"],
+		"summary": "查询仓库的标签列表。List repository labels.",
+		"operationId": "ListLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "repo",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "label search key",
+				"name": "keyword",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Label" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/labels",
+		"method": "get"
+	},
+	"repo.labels.post": {
+		"tags": ["RepoLabels"],
+		"summary": "创建一个 标签。Create a label.",
+		"operationId": "PostLabel",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Post Label Form",
+			"name": "post_label_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PostLabelForm" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/labels",
+		"method": "post"
+	},
+	"repo.labels.delete": {
+		"tags": ["RepoLabels"],
+		"summary": "删除指定的仓库标签。Delete the specified repository label.",
+		"operationId": "DeleteLabel",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "label name",
+			"name": "name",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/labels/{name}",
+		"method": "delete"
+	},
+	"repo.labels.patch": {
+		"tags": ["RepoLabels"],
+		"summary": "更新标签信息。Update label information.",
+		"operationId": "PatchLabel",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "repo",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "label name",
+				"name": "name",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Patch Label Form",
+				"name": "patch_label_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchLabelForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/labels/{name}",
+		"method": "patch"
+	},
+	"repo.members.list": {
+		"tags": ["Members"],
+		"summary": "获取指定仓库内的所有直接成员。List all direct members within specified repository.",
+		"operationId": "ListMembersOfRepo",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member.",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/members",
+		"method": "get"
+	},
+	"repo.members.accessLevel.get": {
+		"tags": ["Members"],
+		"summary": "获取指定仓库内, 访问成员在当前层级内的权限信息。Get permission information for accessing members at current level.",
+		"operationId": "GetMemberAccessLevelOfRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "boolean",
+			"default": true,
+			"description": "是否包含继承的权限。If inherited permissions are included.",
+			"name": "include_inherit",
+			"in": "query"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.MemberAccessLevelInSlugUnion" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/members/access-level",
+		"method": "get"
+	},
+	"repo.members.put": {
+		"tags": ["Members"],
+		"summary": "更新指定仓库内的直接成员权限信息。Update permission information for direct members in specified repository.",
+		"operationId": "UpdateMembersOfRepo",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/members/{username}",
+		"method": "put"
+	},
+	"repo.members.post": {
+		"tags": ["Members"],
+		"summary": "添加成员。Add members.",
+		"operationId": "AddMembersOfRepo",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "member information",
+				"name": "request",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/dto.UpdateMembersRequest" }
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/members/{username}",
+		"method": "post"
+	},
+	"repo.members.delete": {
+		"tags": ["Members"],
+		"summary": "删除指定仓库的直接成员。Remove direct members from specified repository.",
+		"operationId": "DeleteMembersOfRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "username",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/members/{username}",
+		"method": "delete"
+	},
+	"repo.members.accessLevel.list": {
+		"tags": ["Members"],
+		"summary": "获取指定仓库内指定成员的权限信息, 结果按组织层级来展示, 包含上层组织的权限继承信息。Get specified member's permissions with organizational hierarchy.",
+		"operationId": "ListMemberAccessLevelOfRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "username",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.MemberAccessLevel" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/members/{username}/access-level",
+		"method": "get"
+	},
+	"repo.pullInBatch.list": {
+		"tags": ["Pulls"],
+		"summary": "根据 number 列表查询合并请求列表。List pull requests by numbers.",
+		"operationId": "ListPullsByNumbers",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "array",
+			"items": { "type": "integer" },
+			"collectionFormat": "csv",
+			"description": "Pull唯一标识编号",
+			"name": "n",
+			"in": "query",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullRequestInfo" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pull-in-batch",
+		"method": "get"
+	},
+	"repo.pulls.list": {
+		"tags": ["Pulls"],
+		"summary": "查询合并请求列表。List pull requests.",
+		"operationId": "ListPulls",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "open",
+				"description": "合并请求状态过滤。可选值：`open`,`closed`,`all`",
+				"name": "state",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "作者名称过滤。示例值：`张三,李四`",
+				"name": "authors",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "评审人名称过滤，-表示无评审人。示例值：`张三,李四`,`-`",
+				"name": "reviewers",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "contains_any",
+				"description": "评审者操作符。示例值：`contains_any`,`contains_all`",
+				"name": "reviewers_operator",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "处理人名称过滤，-表示无处理人。示例值：`张三,李四`,`-`",
+				"name": "assignees",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "contains_any",
+				"description": "处理人操作符。示例值：`contains_any`,`contains_all`",
+				"name": "assignees_operator",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "标签过滤。示例值：`git,bug,feature`",
+				"name": "labels",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "contains_any",
+				"description": "标签操作符。示例值：`contains_any`,`contains_all`",
+				"name": "labels_operator",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "目标分支引用。示例值：`master`",
+				"name": "base_ref",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullRequest" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls",
+		"method": "get"
+	},
+	"repo.pulls.post": {
+		"tags": ["Pulls"],
+		"summary": "新增一个合并请求。Create a pull request.",
+		"operationId": "PostPull",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Post Pull Request Form",
+			"name": "post_pull_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PullCreationForm" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Pull" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls",
+		"method": "post"
+	},
+	"repo.pulls.get": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求。Get a pull request.",
+		"operationId": "GetPull",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Pull唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Pull" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}",
+		"method": "get"
+	},
+	"repo.pulls.patch": {
+		"tags": ["Pulls"],
+		"summary": "更新一个合并请求。Update a pull request.",
+		"operationId": "PatchPull",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Update Pull Request Form",
+				"name": "update_pull_request_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchPullRequest" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Pull" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}",
+		"method": "patch"
+	},
+	"repo.pulls.assignees.list": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求的处理人。List repository pull request assignees.",
+		"operationId": "ListPullAssignees",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Pull唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_git_internal_app_git_service_bff_api.UserInfo" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/assignees",
+		"method": "get"
+	},
+	"repo.pulls.assignees.post": {
+		"tags": ["Pulls"],
+		"summary": "添加处理人到指定的合并请求。 Adds up to assignees to a pull request. Users already assigned to an issue are not replaced.",
+		"operationId": "PostPullAssignees",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Pull Assignees Form",
+				"name": "post_pull_assignees_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostPullAssigneesForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Pull" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/assignees",
+		"method": "post"
+	},
+	"repo.pulls.assignees.delete": {
+		"tags": ["Pulls"],
+		"summary": "删除合并请求中的处理人 Removes one or more assignees from a pull request.",
+		"operationId": "DeletePullAssignees",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Delete Pull Assignees Form",
+				"name": "delete_pull_assignees_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.DeletePullAssigneesForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Pull" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/assignees",
+		"method": "delete"
+	},
+	"repo.pulls.assignees.get": {
+		"tags": ["Pulls"],
+		"summary": "检查用户是否可以被添加到合并请求的处理人中。 Checks if a user can be assigned to a pull request.",
+		"operationId": "CanUserBeAssignedToPull",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "待检查的处理人用户名。",
+				"name": "assignee",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/assignees/{assignee}",
+		"method": "get"
+	},
+	"repo.pulls.comments.list": {
+		"tags": ["Pulls"],
+		"summary": "查询合并请求评论列表。List pull comments requests.",
+		"operationId": "ListPullComments",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullRequestComment" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/pulls/{number}/comments",
+		"method": "get"
+	},
+	"repo.pulls.comments.post": {
+		"tags": ["Pulls"],
+		"summary": "新增一个合并请求评论。Create a pull comment.",
+		"operationId": "PostPullComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Pull Request Comment Form",
+				"name": "post_pull_comment_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PullCommentCreationForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/pulls/{number}/comments",
+		"method": "post"
+	},
+	"repo.pulls.comments.get": {
+		"tags": ["Pulls"],
+		"summary": "获取一个合并请求评论。Get a pull comment.",
+		"operationId": "GetPullComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "PullComment唯一标识编号。",
+				"name": "comment_id",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/pulls/{number}/comments/{comment_id}",
+		"method": "get"
+	},
+	"repo.pulls.comments.patch": {
+		"tags": ["Pulls"],
+		"summary": "更新一个合并请求评论。Update a pull comment.",
+		"operationId": "PatchPullComment",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "PullComment唯一标识编号。",
+				"name": "comment_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Patch Pull Comment Form",
+				"name": "patch_pull_comment_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PatchPullCommentForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.PullRequestComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/pulls/{number}/comments/{comment_id}",
+		"method": "patch"
+	},
+	"repo.pulls.commitStatuses.get": {
+		"tags": ["Pulls"],
+		"summary": "查询 Pull Request 的状态检查",
+		"operationId": "ListPullCommitStatuses",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "integer",
+			"description": "Pull唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.CommitStatuses" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/commit-statuses",
+		"method": "get"
+	},
+	"repo.pulls.commits.list": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求的提交列表。Lists the commits in a specified pull request.",
+		"operationId": "ListPullCommits",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Commit" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/commits",
+		"method": "get"
+	},
+	"repo.pulls.files.list": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求的文件列表。Lists the files in a specified pull request.",
+		"operationId": "ListPullFiles",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Pull唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullFile" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/files",
+		"method": "get"
+	},
+	"repo.pulls.labels.list": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求的标签列表。List labels for a pull.",
+		"operationId": "ListPullLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Label" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:r",
+		"path": "/{repo}/-/pulls/{number}/labels",
+		"method": "get"
+	},
+	"repo.pulls.labels.put": {
+		"tags": ["Pulls"],
+		"summary": "设置合并请求标签。Set the new labels for a pull.",
+		"operationId": "PutPullLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Put Pull Labels Form",
+				"name": "put_pull_labels_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PutPullLabelsForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/labels",
+		"method": "put"
+	},
+	"repo.pulls.labels.post": {
+		"tags": ["Pulls"],
+		"summary": "新增合并请求标签。Add labels to a pull.",
+		"operationId": "PostPullLabels",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Pull Labels Form",
+				"name": "post_pull_labels_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostPullLabelsForm" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/labels",
+		"method": "post"
+	},
+	"repo.pulls.labels.delete": {
+		"tags": ["Pulls"],
+		"summary": "清空合并请求标签。Remove all labels from a pull.",
+		"operationId": "DeletePullLabels",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "Pull唯一标识编号。",
+			"name": "number",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"204": { "description": "No Content" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/labels",
+		"method": "delete"
+	},
+	"repo.pulls.labels.deleteByName": {
+		"tags": ["Pulls"],
+		"summary": "删除合并请求标签。Remove a label from a pull.",
+		"operationId": "DeletePullLabel",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "标签名称。",
+				"name": "name",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Label" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/labels/{name}",
+		"method": "delete"
+	},
+	"repo.pulls.merge.put": {
+		"tags": ["Pulls"],
+		"summary": "合并一个合并请求。Merge a pull request.",
+		"operationId": "MergePull",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Merge Pull Request Form",
+				"name": "merge_pull_request_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.MergePullRequest" }
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.MergePullResponse" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-pr:rw",
+		"path": "/{repo}/-/pulls/{number}/merge",
+		"method": "put"
+	},
+	"repo.pulls.reviews.list": {
+		"tags": ["Pulls"],
+		"summary": "查询特定合并请求的评审列表。List pull reviews.",
+		"operationId": "ListPullReviews",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullReview" }
+				}
+			},
+			"403": {
+				"description": "Forbidden",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/pulls/{number}/reviews",
+		"method": "get"
+	},
+	"repo.pulls.reviews.post": {
+		"tags": ["Pulls"],
+		"summary": "新增一次合并请求评审。Create a pull review.",
+		"operationId": "PostPullReview",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Pull Review Form",
+				"name": "post_pull_review_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PullReviewCreationForm" }
+			}
+		],
+		"responses": {
+			"201": { "description": "Created" },
+			"403": {
+				"description": "Forbidden",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/pulls/{number}/reviews",
+		"method": "post"
+	},
+	"repo.pulls.reviews.comments.list": {
+		"tags": ["Pulls"],
+		"summary": "查询指定合并请求评审评论列表。List pull review comments.",
+		"operationId": "ListPullReviewComments",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "PullReview唯一标识编号。",
+				"name": "review_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.PullReviewComment" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:r",
+		"path": "/{repo}/-/pulls/{number}/reviews/{review_id}/comments",
+		"method": "get"
+	},
+	"repo.pulls.reviews.replies.post": {
+		"tags": ["Pulls"],
+		"summary": "回复一个 review 评审",
+		"operationId": "PostPullRequestReviewReply",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "Pull唯一标识编号。",
+				"name": "number",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"description": "PullReview唯一标识编号。",
+				"name": "review_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "post pull request review reply form",
+				"name": "post_pull_request_review_reply_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.PostPullRequestReviewReplyForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.PullReviewComment" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-notes:rw",
+		"path": "/{repo}/-/pulls/{number}/reviews/{review_id}/replies",
+		"method": "post"
+	},
+	"repo.releases.list": {
+		"tags": ["Releases"],
+		"summary": "查询 release 列表。List releases.",
+		"operationId": "ListReleases",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "分页页码。",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 30,
+				"description": "分页页大小。",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.Release" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/releases",
+		"method": "get"
+	},
+	"repo.releases.post": {
+		"tags": ["Releases"],
+		"summary": "新增一个 release。Create a release.",
+		"operationId": "PostRelease",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Post Release Form, attachment is optional",
+			"name": "create_release_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/openapi.PostReleaseForm" }
+		}],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/api.Release" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases",
+		"method": "post"
+	},
+	"repo.releases.download.get": {
+		"tags": ["Releases"],
+		"summary": "发起一个获取 release 附件的请求， 302到有一定效期的下载地址。Get a request to fetch a release assets and returns 302 redirect to the assets URL with specific valid time.",
+		"operationId": "GetReleasesAsset",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "标签名称。示例：`v1.0.0`",
+				"name": "tag",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "文件名称。示例：`test.png`",
+				"name": "filename",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "是否可以下载，true表示302的下载地址有效期12小时，最多下载10次。",
+				"name": "share",
+				"in": "query"
+			}
+		],
+		"responses": { "302": { "description": "Found" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:r",
+		"path": "/{repo}/-/releases/download/{tag}/{filename}",
+		"method": "get"
+	},
+	"repo.releases.latest.get": {
+		"tags": ["Releases"],
+		"summary": "查询最新的 release。Query the latest release.",
+		"operationId": "GetLatestRelease",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Release" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/releases/latest",
+		"method": "get"
+	},
+	"repo.releases.tags.get": {
+		"tags": ["Releases"],
+		"summary": "通过 tag 查询指定 release,包含附件信息。Get a release by tag, include assets information.",
+		"operationId": "GetReleaseByTag",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "标签名称。",
+			"name": "tag",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Release" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/releases/tags/{tag}",
+		"method": "get"
+	},
+	"repo.releases.get": {
+		"tags": ["Releases"],
+		"summary": "根据 id	查询指定 release, 包含附件信息。Get a release by id, include assets information.",
+		"operationId": "GetReleaseByID",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "版本唯一标识符。",
+			"name": "release_id",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.Release" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/releases/{release_id}",
+		"method": "get"
+	},
+	"repo.releases.delete": {
+		"tags": ["Releases"],
+		"summary": "删除指定的 release。Delete a release.",
+		"operationId": "DeleteRelease",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "版本唯一标识符。",
+			"name": "release_id",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases/{release_id}",
+		"method": "delete"
+	},
+	"repo.releases.patch": {
+		"tags": ["Releases"],
+		"summary": "更新 release。Update a release.",
+		"operationId": "PatchRelease",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "版本唯一标识符。",
+				"name": "release_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "patch release form",
+				"name": "patch_release_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.PatchReleaseForm" }
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases/{release_id}",
+		"method": "patch"
+	},
+	"repo.releases.assetUploadConfirmation.post": {
+		"tags": ["Releases"],
+		"summary": "确认  release 附件上传完成。Confirm release asset upload.",
+		"operationId": "PostReleaseAssetUploadConfirmation",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "版本唯一标识符。",
+				"name": "release_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "PostReleaseAssetUploadURL接口返回值verify_url字段提取的upload_token。",
+				"name": "upload_token",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "PostReleaseAssetUploadURL接口返回值verify_url字段提取的asset_path。",
+				"name": "asset_path",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"description": "附件保持的天数。0 表示永久，最大不能超过 180 天",
+				"name": "ttl",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases/{release_id}/asset-upload-confirmation/{upload_token}/{asset_path}",
+		"method": "post"
+	},
+	"repo.releases.assetUploadUrl.post": {
+		"tags": ["Releases"],
+		"summary": "新增一个 release 附件。Create a release asset.",
+		"operationId": "PostReleaseAssetUploadURL",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "版本唯一标识符。",
+				"name": "release_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Post Release Asset Upload URL Form",
+				"name": "create_release_asset_upload_url_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/openapi.PostReleaseAssetUploadURLForm" }
+			}
+		],
+		"responses": {
+			"201": {
+				"description": "Created",
+				"schema": { "$ref": "#/definitions/openapi.ReleaseAssetUploadURL" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases/{release_id}/asset-upload-url",
+		"method": "post"
+	},
+	"repo.releases.assets.get": {
+		"tags": ["Releases"],
+		"summary": "查询指定的 release 附件 the specified release asset.",
+		"operationId": "GetReleaseAsset",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "版本唯一标识符。",
+				"name": "release_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "附件唯一标识符。",
+				"name": "asset_id",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.ReleaseAsset" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{repo}/-/releases/{release_id}/assets/{asset_id}",
+		"method": "get"
+	},
+	"repo.releases.assets.delete": {
+		"tags": ["Releases"],
+		"summary": "删除指定的 release 附件 the specified release asset.",
+		"operationId": "DeleteReleaseAsset",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "版本唯一标识符。",
+				"name": "release_id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "附件唯一标识符。",
+				"name": "asset_id",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:rw",
+		"path": "/{repo}/-/releases/{release_id}/assets/{asset_id}",
+		"method": "delete"
+	},
+	"repo.security.overview.get": {
+		"tags": ["Security"],
+		"summary": "查询仓库安全模块概览数据。Query the security overview data of a repository",
+		"operationId": "GetRepoSecurityOverview",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "仓库名称",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "类型，多个类型用逗号分隔code_sensitive,code_vulnerability,code_issue，为空默认查询所有类型",
+				"name": "types",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "查询类型下开启或忽略的各风险类型概览数量,可选值：open,ignore,all，默认all",
+				"name": "tab",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/dto.RepoSecurityOverview" }
+			},
+			"400": {
+				"description": "Bad Request",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-security:r",
+		"path": "/{repo}/-/security/overview",
+		"method": "get"
+	},
+	"repo.settings.branchProtections.list": {
+		"tags": ["GitSettings"],
+		"summary": "查询仓库保护分支规则列表。List branch protection rules.",
+		"operationId": "ListBranchProtections",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/api.BranchProtection" }
+				}
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/settings/branch-protections",
+		"method": "get"
+	},
+	"repo.settings.branchProtections.post": {
+		"tags": ["GitSettings"],
+		"summary": "新增仓库保护分支规则。Create branch protection rule.",
+		"operationId": "PostBranchProtection",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Branch Protection Form",
+			"name": "branch_protection_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.BranchProtection" }
+		}],
+		"responses": {
+			"201": { "description": "Created" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/branch-protections",
+		"method": "post"
+	},
+	"repo.settings.branchProtections.get": {
+		"tags": ["GitSettings"],
+		"summary": "查询仓库保护分支规则。Get branch protection rule.",
+		"operationId": "GetBranchProtection",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "保护分支规则唯一标识符。",
+			"name": "id",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.BranchProtection" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/settings/branch-protections/{id}",
+		"method": "get"
+	},
+	"repo.settings.branchProtections.delete": {
+		"tags": ["GitSettings"],
+		"summary": "删除仓库保护分支规则。 Delete branch protection rule.",
+		"operationId": "DeleteBranchProtection",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "保护分支规则唯一标识符。",
+			"name": "id",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/branch-protections/{id}",
+		"method": "delete"
+	},
+	"repo.settings.branchProtections.patch": {
+		"tags": ["GitSettings"],
+		"summary": "更新仓库保护分支规则。Update branch protection rule.",
+		"operationId": "PatchBranchProtection",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+				"name": "repo",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "保护分支规则唯一标识符。",
+				"name": "id",
+				"in": "path",
+				"required": true
+			},
+			{
+				"description": "Branch Protection Form",
+				"name": "branch_protection_form",
+				"in": "body",
+				"required": true,
+				"schema": { "$ref": "#/definitions/api.BranchProtection" }
+			}
+		],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/branch-protections/{id}",
+		"method": "patch"
+	},
+	"repo.settings.cloudNativeBuild.get": {
+		"tags": ["GitSettings"],
+		"summary": "查询仓库云原生构建设置。List pipeline settings.",
+		"operationId": "GetPipelineSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.PipelineSettings" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/settings/cloud-native-build",
+		"method": "get"
+	},
+	"repo.settings.cloudNativeBuild.put": {
+		"tags": ["GitSettings"],
+		"summary": "更新仓库云原生构建设置。Update pipeline settings.",
+		"operationId": "PutPipelineSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Cloud Native Build Form",
+			"name": "pipeline_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PipelineSettings" }
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/cloud-native-build",
+		"method": "put"
+	},
+	"repo.settings.pullRequest.get": {
+		"tags": ["GitSettings"],
+		"summary": "查询仓库合并请求设置。List pull request settings.",
+		"operationId": "GetPullRequestSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.PullRequestSettings" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/settings/pull-request",
+		"method": "get"
+	},
+	"repo.settings.pullRequest.put": {
+		"tags": ["GitSettings"],
+		"summary": "更新仓库合并请求设置。Set pull request settings.",
+		"operationId": "PutPullRequestSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Pull Request Form",
+			"name": "pull_request_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PullRequestSettings" }
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/pull-request",
+		"method": "put"
+	},
+	"repo.settings.pushLimit.get": {
+		"tags": ["GitSettings"],
+		"summary": "查询仓库推送设置。List push limit settings.",
+		"operationId": "GetPushLimitSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/api.PushLimitSettings" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{repo}/-/settings/push-limit",
+		"method": "get"
+	},
+	"repo.settings.pushLimit.put": {
+		"tags": ["GitSettings"],
+		"summary": "设置仓库推送设置。Set push limit settings.",
+		"operationId": "PutPushLimitSettings",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "Push Limit Form",
+			"name": "push_limit_form",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/api.PushLimitSettings" }
+		}],
+		"responses": {
+			"200": { "description": "OK" },
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/push-limit",
+		"method": "put"
+	},
+	"repo.settings.setVisibility.post": {
+		"tags": ["Repositories"],
+		"summary": "改变仓库可见性。Update visibility of repository.",
+		"operationId": "SetRepoVisibility",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"enum": [
+				"Private",
+				"Public",
+				"Secret"
+			],
+			"type": "string",
+			"description": "仓库可见性",
+			"name": "visibility",
+			"in": "query",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{repo}/-/settings/set_visibility",
+		"method": "post"
+	},
+	"repo.topActivityUsers.list": {
+		"tags": ["Activities"],
+		"summary": "获取仓库 top 活跃用户。List the top active users",
+		"operationId": "TopContributors",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"maximum": 10,
+			"minimum": 1,
+			"type": "integer",
+			"default": 5,
+			"description": "返回的用户个数",
+			"name": "top",
+			"in": "query"
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UsersResult" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-base-info:r",
+		"path": "/{repo}/-/top-activity-users",
+		"method": "get"
+	},
+	"repo.transfer.post": {
+		"tags": ["Repositories"],
+		"summary": "转移仓库。Transfer a repository.",
+		"operationId": "TransferRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "request",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.TransferSlugReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
+		"path": "/{repo}/-/transfer",
+		"method": "post"
+	},
+	"repo.upload.files.post": {
+		"tags": ["Pulls", "Issues"],
+		"summary": "发起一个上传 files 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload files,returns upload URL.Use PUT to initiate a stream upload.",
+		"operationId": "UploadFiles",
+		"parameters": [{
+			"type": "string",
+			"description": "不带.git后缀的仓库名称。格式：`组织名称/仓库名称`",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "UploadRequestParams",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"path": "/{repo}/-/upload/files",
+		"method": "post"
+	},
+	"repo.upload.imgs.post": {
+		"tags": ["Pulls", "Issues"],
+		"summary": "发起一个上传 imgs 的请求，返回上传文件的url，请使用 put 发起流式上传。Initiate a request to upload images,returns upload URL.Use PUT to initiate a stream upload.",
+		"operationId": "UploadImgs",
+		"parameters": [{
+			"type": "string",
+			"description": "repo",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "UploadRequestParams",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.UploadRequestParams" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.UploadAssetsResponse" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-contents:rw",
+		"path": "/{repo}/-/upload/imgs",
+		"method": "post"
+	},
+	"repo.workspace.detail.get": {
+		"tags": ["Workspace"],
+		"summary": "根据流水线sn查询云原生开发访问地址。Query cloud-native development access address by pipeline SN.",
+		"operationId": "GetWorkspaceDetail",
+		"parameters": [{
+			"type": "string",
+			"description": "Repo path",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "SN",
+			"name": "sn",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.WorkspaceDetailResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-detail:r",
+		"path": "/{repo}/-/workspace/detail/{sn}",
+		"method": "get"
+	},
+	"repo.workspace.start.post": {
+		"tags": ["Workspace"],
+		"summary": "启动云原生开发环境，已存在环境则直接打开，否则重新创建开发环境。Start cloud-native dev. Opens existing env or creates a new one.",
+		"operationId": "StartWorkspace",
+		"parameters": [{
+			"type": "string",
+			"description": "仓库完整路径",
+			"name": "repo",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "StartWorkspace params",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.StartWorkspaceReq" }
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.StartWorkspaceResult" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-cnb-trigger:rw",
+		"path": "/{repo}/-/workspace/start",
+		"method": "post"
+	},
+	"slug.charge.specialAmount.get": {
+		"description": "查看根组织的特权额度，需要根组织的 master 以上权限才可以查看\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"tags": ["Charge"],
+		"summary": "查看特权额度",
+		"operationId": "GetSpecialAmount",
+		"parameters": [{
+			"type": "string",
+			"description": "group slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.SpecialAmount" }
+		} },
+		"path": "/{slug}/-/charge/special-amount",
+		"method": "get"
+	},
+	"slug.contributor.trend.get": {
+		"tags": ["RepoContributor"],
+		"summary": "查询仓库贡献者前 100 名的详细趋势数据。Query detailed trend data for top 100 contributors of the repository.",
+		"operationId": "GetRepoContributorTrend",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 14,
+				"description": "limit, 0~100",
+				"name": "limit",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "exclude_external_users, true|false",
+				"name": "exclude_external_users",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": { "$ref": "#/definitions/web.RepoContribTrend" }
+			},
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{slug}/-/contributor/trend",
+		"method": "get"
+	},
+	"slug.lfs.get": {
+		"tags": ["Git"],
+		"summary": "获取 git lfs 文件下载链接",
+		"operationId": "GetPresignedLFSDownloadLink",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "仓库标识符。格式：`组织名称/仓库名称`",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "LFS文件的唯一标识符。",
+				"name": "oid",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "LFS文件名称。",
+				"name": "name",
+				"in": "query",
+				"required": true
+			}
+		],
+		"responses": {
+			"404": {
+				"description": "Not Found",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			},
+			"500": {
+				"description": "Internal Server Error",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-code:r",
+		"path": "/{slug}/-/lfs/{oid}",
+		"method": "get"
+	},
+	"slug.listAssets.list": {
+		"tags": ["Assets"],
+		"summary": "仓库的 asset 记录列表",
+		"operationId": "ListAssets",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "第几页，从1开始",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "每页多少条数据",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.AssetRecords" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{slug}/-/list-assets",
+		"method": "get"
+	},
+	"slug.listMembers.list": {
+		"tags": ["Members"],
+		"summary": "获取指定仓库内的有效成员列表，包含继承成员。List active members in specified repository including inherited members.",
+		"operationId": "ListAllMembers",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master",
+					"Owner"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "精准匹配用户名,多个用户名用逗号间隔。Exact username matching, multiple usernames separated by commas.",
+				"name": "names",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"stars",
+					"follower"
+				],
+				"type": "string",
+				"default": "created_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "Ordering",
+				"name": "desc",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.UsersWithAccessLevelInSlug" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{slug}/-/list-members",
+		"method": "get"
+	},
+	"slug.missions.list": {
+		"tags": ["Missions"],
+		"summary": "查询组织下面用户有权限查看到的任务集。Query all missions that the user has permission to see under the specific organization.",
+		"operationId": "GetGroupSubMissions",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "组织 slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 1,
+				"description": "页码",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 10,
+				"description": "每页数量",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": ["private", "public"],
+				"type": "string",
+				"description": "任务集类型",
+				"name": "filter_type",
+				"in": "query"
+			},
+			{
+				"enum": ["created_at", "name"],
+				"type": "string",
+				"description": "排序类型，默认created_at",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"all",
+					"sub",
+					"grand"
+				],
+				"type": "string",
+				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的仓库",
+				"name": "descendant",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "搜索关键字",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Missions4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"path": "/{slug}/-/missions",
+		"method": "get"
+	},
+	"slug.missions.post": {
+		"tags": ["Missions"],
+		"summary": "创建任务集。Create a mission.",
+		"operationId": "CreateMission",
+		"parameters": [{
+			"type": "string",
+			"description": "Group slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "mission information",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.CreateMissionReq" }
+		}],
+		"responses": { "201": { "description": "Created" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:rw",
+		"path": "/{slug}/-/missions",
+		"method": "post"
+	},
+	"slug.outsideCollaborators.list": {
+		"tags": ["Members", "Collaborators"],
+		"summary": "获取指定仓库内的外部贡献者。List external contributors in specified repository.",
+		"operationId": "ListOutsideCollaborators",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer",
+					"Master"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "过滤成员。Filter by member.",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.OutsideCollaboratorInRepo" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:r",
+		"path": "/{slug}/-/outside-collaborators",
+		"method": "get"
+	},
+	"slug.outsideCollaborators.put": {
+		"tags": ["Members", "Collaborators"],
+		"summary": "更新指定仓库的外部贡献者权限信息。 Update permission information for external contributors in specified repository.",
+		"operationId": "UpdateOutsideCollaborators",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "username",
+				"name": "username",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"Guest",
+					"Reporter",
+					"Developer"
+				],
+				"type": "string",
+				"description": "Role",
+				"name": "role",
+				"in": "query",
+				"required": true
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{slug}/-/outside-collaborators/{username}",
+		"method": "put"
+	},
+	"slug.outsideCollaborators.delete": {
+		"tags": ["Members", "Collaborators"],
+		"summary": "删除指定仓库的外部贡献者。Removes external contributors from specified repository.",
+		"operationId": "DeleteOutsideCollaborators",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}, {
+			"type": "string",
+			"description": "username",
+			"name": "username",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw",
+		"path": "/{slug}/-/outside-collaborators/{username}",
+		"method": "delete"
+	},
+	"slug.packages.list": {
+		"description": "制品首页\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
+		"tags": ["Registries"],
+		"summary": "查询制品列表。 List all packages.",
+		"operationId": "ListPackages",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "资源路径。Slug.",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"all",
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "制品类型。Type.",
+				"name": "type",
+				"in": "query",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "页码。Pagination page number.",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "页数。Pagination page size.",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"pull_count",
+					"last_push_at",
+					"name_ascend",
+					"name_descend"
+				],
+				"type": "string",
+				"description": "顺序类型。Ordering type.",
+				"name": "ordering",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "关键字。Key word to search package name.",
+				"name": "name",
+				"in": "query"
+			}
+		],
+		"responses": {
+			"200": {
+				"description": "OK",
+				"schema": {
+					"type": "array",
+					"items": { "$ref": "#/definitions/dto.Package" }
+				}
+			},
+			"400": {
+				"description": "Bad Request",
+				"schema": { "$ref": "#/definitions/die.WebError" }
+			}
+		},
+		"path": "/{slug}/-/packages",
+		"method": "get"
+	},
+	"slug.packages.get": {
+		"description": "制品详情页\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
+		"tags": ["Registries"],
+		"summary": "获取指定制品的详细信息。 Get the package detail.",
+		"operationId": "GetPackage",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "资源路径。Slug.",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "制品类型。Type",
+				"name": "type",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "制品名称。Name",
+				"name": "name",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.PackageDetail" }
+		} },
+		"path": "/{slug}/-/packages/{type}/{name}",
+		"method": "get"
+	},
+	"slug.packages.delete": {
+		"description": "制品详情页-删除制品\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package-delete:rw",
+		"tags": ["Registries"],
+		"summary": "删除制品。 Delete the specific package.",
+		"operationId": "DeletePackage",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "资源路径。 Slug.",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "制品类型。Type.",
+				"name": "type",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "制品名称。Package name.",
+				"name": "name",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{slug}/-/packages/{type}/{name}",
+		"method": "delete"
+	},
+	"slug.packages.name.tag.get": {
+		"description": "制品详情页-版本详情\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
+		"tags": ["Registries"],
+		"summary": "获取制品标签详情。 Get the specific tag under specific package.",
+		"operationId": "GetPackageTagDetail",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "Type",
+				"name": "type",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Name",
+				"name": "name",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Tag",
+				"name": "tag",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "摘要",
+				"name": "sha256",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "架构，docker制品必需，例: linux/amd64/v3。required for docker artifacts",
+				"name": "arch",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.TagDetail" }
+		} },
+		"path": "/{slug}/-/packages/{type}/{name}/-/tag/{tag}",
+		"method": "get"
+	},
+	"slug.packages.name.tag.delete": {
+		"description": "制品详情页-版本详情-删除标签\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package-delete:rw",
+		"tags": ["Registries"],
+		"summary": "删除制品标签。 Delete the specific tag under specific package",
+		"operationId": "DeletePackageTag",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "Type",
+				"name": "type",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Name",
+				"name": "name",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "Tag",
+				"name": "tag",
+				"in": "path",
+				"required": true
+			}
+		],
+		"responses": { "200": { "description": "OK" } },
+		"path": "/{slug}/-/packages/{type}/{name}/-/tag/{tag}",
+		"method": "delete"
+	},
+	"slug.packages.name.tags.get": {
+		"description": "制品详情页-版本列表\n访问令牌调用此接口需包含以下权限。Required permissions for access token. \nregistry-package:r",
+		"tags": ["Registries"],
+		"summary": "查询制品标签列表。 List all tags under specific package.",
+		"operationId": "ListPackageTags",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "资源路径。Slug.",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": [
+					"docker",
+					"helm",
+					"docker-model",
+					"maven",
+					"npm",
+					"ohpm",
+					"pypi",
+					"nuget",
+					"composer",
+					"conan",
+					"cargo"
+				],
+				"type": "string",
+				"description": "制品类型。Type.",
+				"name": "type",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"description": "制品名称。Package name.",
+				"name": "name",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "页码。Pagination page number.",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "页数。Pagination page size.",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": ["pull_count", "last_push_at"],
+				"type": "string",
+				"description": "顺序。Ordering type.",
+				"name": "ordering",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "关键字。Key word to search tag name.",
+				"name": "tag_name",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/git_woa_com_cnb_monorepo_platform_service-api_internal_models_artifactory_dto.Tag" }
+		} },
+		"path": "/{slug}/-/packages/{type}/{name}/-/tags",
+		"method": "get"
+	},
+	"slug.pinnedRepos.list": {
+		"tags": ["Repositories"],
+		"summary": "获取指定组织的仓库墙列表。List the pinned repositories of a group.",
+		"operationId": "GetPinnedRepoByGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4UserBase" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{slug}/-/pinned-repos",
+		"method": "get"
+	},
+	"slug.pinnedRepos.put": {
+		"tags": ["Repositories"],
+		"summary": "更新指定组织仓库墙。Update the pinned repositories of a group.",
+		"operationId": "SetPinnedRepoByGroup",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "repo path",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": {
+				"type": "array",
+				"items": { "type": "string" }
+			}
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4UserBase" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{slug}/-/pinned-repos",
+		"method": "put"
+	},
+	"slug.registries.list": {
+		"tags": ["Registries"],
+		"summary": "查询组织下面用户有权限查看到的制品仓库。Query all registries that the user has permission to see under specific organization.",
+		"operationId": "GetGroupSubRegistries",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "组织 slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 1,
+				"description": "页码",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 10,
+				"description": "每页数量",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"npm",
+					"maven",
+					"ohpm"
+				],
+				"type": "string",
+				"description": "制品仓库类型",
+				"name": "registry_type",
+				"in": "query"
+			},
+			{
+				"enum": ["private", "public"],
+				"type": "string",
+				"description": "制品仓库可见性类型",
+				"name": "filter_type",
+				"in": "query"
+			},
+			{
+				"enum": ["created_at", "name"],
+				"type": "string",
+				"description": "排序类型，默认created_at",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "排序顺序",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"all",
+					"sub",
+					"grand"
+				],
+				"type": "string",
+				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的制品仓库",
+				"name": "descendant",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "搜索关键字",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Registry4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"path": "/{slug}/-/registries",
+		"method": "get"
+	},
+	"slug.repos.list": {
+		"tags": ["Repositories"],
+		"summary": "查询组织下访问用户有权限查看到仓库。List the repositories that the user has access to.",
+		"operationId": "GetGroupSubRepos",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"format": "int64",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"private",
+					"public",
+					"secret"
+				],
+				"type": "string",
+				"description": "Repositories type",
+				"name": "filter_type",
+				"in": "query"
+			},
+			{
+				"enum": ["KnowledgeBase"],
+				"type": "string",
+				"description": "仓库类型标记，逗号分隔。Repository type flags, comma separated",
+				"name": "flags",
+				"in": "query"
+			},
+			{
+				"enum": ["active", "archived"],
+				"type": "string",
+				"description": "仓库状态。Repository status",
+				"name": "status",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"created_at",
+					"last_updated_at",
+					"stars",
+					"slug_path",
+					"forks"
+				],
+				"type": "string",
+				"default": "last_updated_at",
+				"description": "Order field",
+				"name": "order_by",
+				"in": "query"
+			},
+			{
+				"type": "boolean",
+				"default": false,
+				"description": "Ordering",
+				"name": "desc",
+				"in": "query"
+			},
+			{
+				"enum": [
+					"all",
+					"sub",
+					"grand"
+				],
+				"type": "string",
+				"description": "查全部/查询直接属于当前组织的仓库/查询子组织的仓库。Get all/Get repos belong to current org or sub-organization",
+				"name": "descendant",
+				"in": "query"
+			},
+			{
+				"type": "string",
+				"description": "Key word",
+				"name": "search",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.Repos4User" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"path": "/{slug}/-/repos",
+		"method": "get"
+	},
+	"slug.repos.post": {
+		"tags": ["Repositories"],
+		"summary": "创建仓库。Create repositories.",
+		"operationId": "CreateRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "Group slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "repo information",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.CreateRepoReq" }
+		}],
+		"responses": { "201": { "description": "Created" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:rw",
+		"path": "/{slug}/-/repos",
+		"method": "post"
+	},
+	"slug.settings.get": {
+		"tags": ["Organizations"],
+		"summary": "获取指定组织的配置详情。Get the configuration details for the specified organization.",
+		"operationId": "GetGroupSetting",
+		"parameters": [{
+			"type": "string",
+			"description": "group path",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.OrganizationSettingWithParent" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:r",
+		"path": "/{slug}/-/settings",
+		"method": "get"
+	},
+	"slug.settings.put": {
+		"tags": ["Organizations"],
+		"summary": "更新指定组织的配置。Updates the configuration for the specified organization.",
+		"operationId": "UpdateGroupSetting",
+		"parameters": [{
+			"type": "string",
+			"description": "slug",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}, {
+			"description": "group information to update",
+			"name": "request",
+			"in": "body",
+			"required": true,
+			"schema": { "$ref": "#/definitions/dto.GroupSettingReq" }
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-manage:rw",
+		"path": "/{slug}/-/settings",
+		"method": "put"
+	},
+	"slug.settings.archive.post": {
+		"tags": ["Repositories"],
+		"summary": "仓库归档。Archive a repository.",
+		"operationId": "ArchiveRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
+		"path": "/{slug}/-/settings/archive",
+		"method": "post"
+	},
+	"slug.settings.unarchive.post": {
+		"tags": ["Repositories"],
+		"summary": "解除仓库归档。Unarchive a repository.",
+		"operationId": "UnArchiveRepo",
+		"parameters": [{
+			"type": "string",
+			"description": "repo path",
+			"name": "slug",
+			"in": "path",
+			"required": true
+		}],
+		"responses": { "200": { "description": "OK" } },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-manage:rw,repo-code:rw",
+		"path": "/{slug}/-/settings/unarchive",
+		"method": "post"
+	},
+	"slug.stars.get": {
+		"tags": ["Starring"],
+		"summary": "获取指定仓库的star用户列表。Get the list of users who starred the specified repository.",
+		"operationId": "ListStarUsers",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"enum": ["all", "followed"],
+				"type": "string",
+				"description": "Filter type",
+				"name": "filter_type",
+				"in": "query",
+				"required": true
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "page",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "page",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": { "$ref": "#/definitions/dto.RepoStarUsers" }
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \nrepo-basic-info:r",
+		"path": "/{slug}/-/stars",
+		"method": "get"
+	},
+	"slug.subGroups.list": {
+		"tags": ["Organizations"],
+		"summary": "获取指定组织下的子组织列表。Get the list of sub-organizations under the specified organization.",
+		"operationId": "ListSubgroups",
+		"parameters": [
+			{
+				"type": "string",
+				"description": "Slug",
+				"name": "slug",
+				"in": "path",
+				"required": true
+			},
+			{
+				"type": "string",
+				"default": "",
+				"description": "Filter organization",
+				"name": "search",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 1,
+				"description": "Pagination page number",
+				"name": "page",
+				"in": "query"
+			},
+			{
+				"type": "integer",
+				"default": 10,
+				"description": "Pagination page size",
+				"name": "page_size",
+				"in": "query"
+			}
+		],
+		"responses": { "200": {
+			"description": "OK",
+			"schema": {
+				"type": "array",
+				"items": { "$ref": "#/definitions/dto.OrganizationUnion" }
+			}
+		} },
+		"description": "访问令牌调用此接口需包含以下权限。Required permissions for access token. \ngroup-resource:r",
+		"path": "/{slug}/-/sub-groups",
+		"method": "get"
+	}
+};
+const callApi = (baseUrl, token, methodPath, params) => {
+	const methodValue = paths_default[methodPath];
+	if (!methodValue) throw new Error("未能找出对应api路径");
+	const { parameters, method } = methodValue;
+	let { path } = methodValue;
+	parameters?.filter((item) => item.in === "path").forEach((item) => {
+		path = path.replace(`{${item.name}}`, params[item.name]);
+	});
+	const queryParams = {};
+	parameters?.filter((item) => item.in === "query").forEach((item) => {
+		queryParams[item.name] = params?.[item.name];
+	});
+	const bodyParams = {};
+	parameters?.filter((item) => item.in === "body").forEach((item) => {
+		Object.assign(bodyParams, params?.[item.name] || {});
+	});
+	return ky(`${baseUrl}${path}`, {
+		method,
+		headers: { Authorization: `Bearer ${token}` },
+		searchParams: queryParams,
+		json: Object.keys(bodyParams).length ? bodyParams : void 0
+	}).json();
+};
+const getClient = (baseUrl, token) => {
+	function getProxyForPath(path) {
+		if (paths_default[path]) return (params) => callApi(baseUrl, token, path, params);
+		else return new Proxy({}, { get(target, prop) {
+			return getProxyForPath(path + "." + String(prop));
+		} });
+	}
+	function getProxyForTagMethod(tag) {
+		return new Proxy({}, { get(target, method) {
+			const path = Object.keys(paths_default).find((path) => {
+				const item = paths_default[path];
+				return item.tags[0] === tag && item.operationId === method;
+			});
+			if (!paths_default[path]) throw new Error(`未能找到对应的api路径: ${tag} ${String(method)}`);
+			return (params) => callApi(baseUrl, token, path, params);
+		} });
+	}
+	return new Proxy({}, { get: (target, prop) => {
+		if (/^[A-Z]/.test(prop.charAt(0))) return getProxyForTagMethod(prop);
+		else return getProxyForPath(String(prop));
+	} });
 };
 //#endregion
 //#region src/tdesign/common.ts
 async function start$1(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
-		info(`错误的trigger: ${context.trigger}`);
-		return;
-	}
+	if (!Reflect.has(repoMap, context.trigger)) throw new Error(`错误的 trigger: ${context.trigger}`);
 	const githubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -39340,7 +39930,7 @@ async function start$1(context) {
 	const prData = await githubHelper.getPrData(context.pr_number);
 	if (!prData.merged) {
 		info("pr has been merged");
-		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		await githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
 	const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`;
@@ -39382,13 +39972,17 @@ async function start$1(context) {
 		token: context.token,
 		dryRun: context.dry_run
 	}).createPR(title, branchName, body, baseBranch);
-	if (newPrData) githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
+	if (newPrData) await githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
 }
 //#endregion
 //#region src/tdesign/icons.ts
-const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
+const CDN_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
 async function getCdnIconfontVersion() {
-	return (await (await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)).text()).match(CND_ICONFONT_VERSION_REG)?.[1] || "";
+	const res = await fetch("https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx");
+	if (!res.ok) throw new Error(`获取 cdn-iconfont 版本失败: HTTP ${res.status}`);
+	const match = (await res.text()).match(CDN_ICONFONT_VERSION_REG);
+	if (!match) throw new Error("无法从 tdesign-icons 源码解析 cdn-iconfont 版本");
+	return match[1];
 }
 async function miniprogramUpdateIcons(repo, version) {
 	await exec("node", [
@@ -39396,13 +39990,9 @@ async function miniprogramUpdateIcons(repo, version) {
 		"--version",
 		version
 	], { cwd: `./${repo}` });
-	await exec("git", ["status"], { cwd: `./${repo}` });
 }
 async function start(context) {
-	if (!Reflect.has(repoMap, context.trigger)) {
-		info(`错误的trigger: ${context.trigger}`);
-		return;
-	}
+	if (!Reflect.has(repoMap, context.trigger)) throw new Error(`错误的 trigger: ${context.trigger}`);
 	const prData = await new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -39417,9 +40007,7 @@ async function start(context) {
 	endGroup();
 	const packageName = iconsMap[trigger];
 	startGroup(packageName);
-	let latestVersion = "";
-	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
-	else latestVersion = await getPkgLatestVersion(packageName);
+	const latestVersion = packageName === "cdn-iconfont" ? await getCdnIconfontVersion() : await getPkgLatestVersion(packageName);
 	info(`latestVersion: ${latestVersion}`);
 	endGroup();
 	const gitHelper = new GitHelper({
@@ -39450,7 +40038,7 @@ async function start(context) {
 	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${repoMap[trigger]}` });
 	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
 	await gitHelper.push(branchName);
-	new GithubHelper({
+	await new GithubHelper({
 		repo: repoMap[trigger],
 		owner: ownerMap[trigger],
 		token: context.token,
@@ -39458,7 +40046,122 @@ async function start(context) {
 	}).createPR(title, branchName, body);
 }
 //#endregion
+//#region src/tdesign/repository-update.ts
+async function runOperations(operations, context) {
+	for (const operation of operations) {
+		startGroup(operation.name);
+		try {
+			await operation.run(context);
+		} catch (error) {
+			throw new Error(`Operation「${operation.name}」失败: ${error instanceof Error ? error.message : String(error)}`, { cause: error });
+		} finally {
+			endGroup();
+		}
+		if (context.skipRemaining) break;
+	}
+}
+async function addResultComment(github, prNumber, body) {
+	try {
+		await github.addComment(prNumber, body);
+	} catch (error) {
+		warning(`添加运行结果评论失败: ${error instanceof Error ? error.message : String(error)}`);
+	}
+}
+function createOperationEnvironments(token, source = process$1.env) {
+	const gitEnv = {
+		...source,
+		GH_TOKEN: token
+	};
+	const env = {
+		...source,
+		HUSKY: "0"
+	};
+	delete env.INPUT_TOKEN;
+	delete env.GH_TOKEN;
+	delete env.GITHUB_TOKEN;
+	return {
+		env,
+		gitEnv
+	};
+}
+async function updateRepository(context) {
+	const trigger = context.trigger;
+	const operations = getRepositoryOperations(context.repo, trigger);
+	if (!operations) {
+		info(`仓库 ${context.repo} 未适配指令 ${trigger}，跳过处理`);
+		return;
+	}
+	const cwd = join(await mkdtemp(join(process$1.env.RUNNER_TEMP || tmpdir(), "tdesign-pr-trigger-")), context.repo);
+	const { env, gitEnv } = createOperationEnvironments(context.token);
+	const github = new GithubHelper({
+		owner: context.owner,
+		repo: context.repo,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await github.getPrData(context.pr_number);
+	const repository = `${context.owner}/${context.repo}`;
+	if (prData.head.repo?.full_name !== repository) throw new Error(`暂不支持向 fork PR 推送: ${prData.head.repo?.full_name || "unknown"}/${prData.head.ref}`);
+	await exec("gh", ["auth", "setup-git"], { env: gitEnv });
+	await exec("gh", [
+		"repo",
+		"clone",
+		repository,
+		cwd
+	], { env: gitEnv });
+	await exec("gh", [
+		"pr",
+		"checkout",
+		String(context.pr_number),
+		"--recurse-submodules"
+	], {
+		cwd,
+		env: gitEnv
+	});
+	await exec("git", [
+		"config",
+		"--local",
+		"user.name",
+		"github-actions[bot]"
+	], { cwd });
+	await exec("git", [
+		"config",
+		"--local",
+		"user.email",
+		"github-actions[bot]@users.noreply.github.com"
+	], { cwd });
+	const operationContext = {
+		cwd,
+		dryRun: context.dry_run,
+		env,
+		gitEnv,
+		github,
+		headRef: prData.head.ref,
+		owner: context.owner,
+		prNumber: context.pr_number,
+		repo: context.repo,
+		skipRemaining: false,
+		trigger
+	};
+	const runUrl = `${process$1.env.GITHUB_SERVER_URL}/${process$1.env.GITHUB_REPOSITORY}/actions/runs/${process$1.env.GITHUB_RUN_ID}`;
+	try {
+		await runOperations(operations, operationContext);
+		const result = operationContext.skipRemaining ? "无需处理" : "执行完成";
+		await addResultComment(github, context.pr_number, `✅ ${trigger} ${result}。CI: [Open](${runUrl})`);
+	} catch (error) {
+		await addResultComment(github, context.pr_number, `❌ ${trigger} 执行失败：${error instanceof Error ? error.message : String(error)}。CI: [Open](${runUrl})`);
+		throw error;
+	}
+}
+//#endregion
 //#region src/utils/trigger.ts
+const REPOSITORY_TRIGGERS = [
+	"/update-common",
+	"/update-ai-core",
+	"/update-snapshot",
+	"/update-coverage",
+	"/resolve-conflict"
+];
 const iconsMap = {
 	"/pr-vue": "tdesign-icons-vue",
 	"/pr-vue-next": "tdesign-icons-vue-next",
@@ -39491,7 +40194,31 @@ const packageManagerMap = {
 	"tdesign-mobile-react": "npm",
 	"tdesign-miniprogram": "pnpm"
 };
-function useTrigger(context) {
+const triggers = new Set([
+	...Object.keys(repoMap),
+	...REPOSITORY_TRIGGERS,
+	"/upgrade-deps",
+	"/delete-cnb-branch"
+]);
+const TRIGGER_SEPARATOR_REGEXP = /\s+/;
+const repositoryTriggers = new Set(REPOSITORY_TRIGGERS);
+function isRepositoryTrigger(trigger) {
+	return repositoryTriggers.has(trigger);
+}
+function parseTrigger(value) {
+	const trigger = tryParseTrigger(value);
+	if (!trigger) {
+		const command = value.trim().split(TRIGGER_SEPARATOR_REGEXP, 1)[0];
+		throw new Error(`未支持的触发器: ${command || "(empty)"}`);
+	}
+	return trigger;
+}
+function tryParseTrigger(value) {
+	const trigger = value.trim().split(TRIGGER_SEPARATOR_REGEXP, 1)[0];
+	if (!triggers.has(trigger)) return;
+	return trigger;
+}
+async function useTrigger(context) {
 	switch (context.trigger) {
 		case "/pr-vue":
 		case "/pr-vue-next":
@@ -39499,24 +40226,31 @@ function useTrigger(context) {
 		case "/pr-mobile-vue":
 		case "/pr-mobile-react":
 		case "/pr-miniprogram":
-			autoPR(context);
+			await autoPR(context);
+			break;
+		case "/update-common":
+		case "/update-ai-core":
+		case "/update-snapshot":
+		case "/update-coverage":
+		case "/resolve-conflict":
+			await updateRepository(context);
 			break;
 		case "/upgrade-deps":
-			upgradeDeps(context);
+			await upgradeDeps(context);
 			break;
 		case "/delete-cnb-branch":
-			deleteCnbBranch(context);
+			await deleteCnbBranch(context);
 			break;
 		default: throw new Error(`未支持的触发器: ${context.trigger}`);
 	}
 }
-function autoPR(context) {
+async function autoPR(context) {
 	switch (context.repo) {
 		case "tdesign-icons":
-			start(context);
+			await start(context);
 			break;
 		case "tdesign-common":
-			start$1(context);
+			await start$1(context);
 			break;
 		default: throw new Error(`该仓库未适配: ${context.repo}`);
 	}
@@ -39575,43 +40309,72 @@ async function deleteCnbBranch(context) {
 	}
 }
 //#endregion
+//#region src/utils/whitelist.ts
+function loadWhitelist() {
+	const currentDirectory = dirname(fileURLToPath(import.meta.url));
+	const whitelistPath = [resolve(currentDirectory, "../.comment-trigger-whitelist"), resolve(currentDirectory, "../../.comment-trigger-whitelist")].find((path) => existsSync$1(path));
+	if (!whitelistPath) throw new Error("找不到 .comment-trigger-whitelist");
+	return readFileSync$1(whitelistPath, "utf8");
+}
+function isWhitelisted(whitelist, user) {
+	return whitelist.split("\n").some((item) => item.trim() === user);
+}
+//#endregion
 //#region src/index.ts
 async function run() {
 	const repo = getInput("repo") || context.repo.repo;
 	const owner = getInput("owner") || context.repo.owner;
 	const prNumber = Number(getInput("pr_number")) || context.issue.number;
 	const token = getInput("token") || process$1.env.GITHUB_TOKEN || "";
-	const trigger = getInput("trigger") || context.payload.comment?.body || "";
+	const configuredTrigger = getInput("trigger");
+	const triggerInput = configuredTrigger || context.payload.comment?.body || "";
 	const dryRun = getInput("dry-run", { trimWhitespace: true }) === "true";
 	info(`dryRun: ${dryRun}`);
+	const trigger = configuredTrigger ? parseTrigger(configuredTrigger) : tryParseTrigger(triggerInput);
+	if (!trigger) {
+		info("评论未包含受支持的触发器，跳过处理");
+		return;
+	}
 	if (context.eventName === "issue_comment") {
 		info("pr comment trigger");
 		if (!context.payload.issue?.pull_request) {
 			info("issue_comment not a pull_request comment");
 			return;
 		}
-		const whitelist = readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "../.comment-trigger-whitelist"), "utf-8");
-		let isWhitelist = false;
-		whitelist.split("\n").forEach((item) => {
-			if (item.trim() === context.payload.comment?.user.login) {
-				info("comment whitelist trigger");
-				isWhitelist = true;
-			}
-		});
-		if (!isWhitelist) {
-			info(`${context.payload.comment?.user.login}不在白名单内，不触发`);
+		const user = context.payload.comment?.user.login || "";
+		if (!isWhitelisted(loadWhitelist(), user)) {
+			info(`${user} 不在评论指令白名单内，不触发`);
 			return;
 		}
 	}
-	useTrigger({
+	if (isRepositoryTrigger(trigger) && !getRepositoryOperations(repo, trigger)) {
+		info(`仓库 ${repo} 未适配指令 ${trigger}，跳过处理`);
+		return;
+	}
+	if (context.eventName === "issue_comment" && context.payload.comment?.id) {
+		const githubHelper = new GithubHelper({
+			owner,
+			repo,
+			token,
+			dryRun
+		});
+		try {
+			await githubHelper.addReaction(context.payload.comment.id, "rocket");
+		} catch (error) {
+			warning(`添加指令 reaction 失败，继续执行: ${error instanceof Error ? error.message : String(error)}`);
+		}
+	}
+	await useTrigger({
 		owner,
 		repo,
 		pr_number: prNumber,
 		token,
-		trigger: trigger.trim(),
+		trigger,
 		dry_run: dryRun
 	});
 }
-run().catch(console.error);
+run().catch((error) => {
+	setFailed(error instanceof Error ? error.message : String(error));
+});
 //#endregion
 export { run };

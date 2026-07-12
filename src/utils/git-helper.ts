@@ -48,7 +48,8 @@ export class GitHelper {
   }
 
   async commit(message: string) {
-    await exec('git', ['commit', '-am', message, '--no-verify'], { cwd: this.repoPath })
+    await exec('git', ['add', '-A'], { cwd: this.repoPath })
+    await exec('git', ['commit', '-m', message, '--no-verify'], { cwd: this.repoPath })
   }
 
   async push(branch: string) {
@@ -68,8 +69,8 @@ export class GitHelper {
   }
 
   async isNeedCommit() {
-    const { stdout } = await getExecOutput('git', ['status'], { cwd: this.repoPath })
-    return !stdout.includes('nothing to commit, working tree clean')
+    const { stdout } = await getExecOutput('git', ['status', '--porcelain'], { cwd: this.repoPath })
+    return stdout.trim().length > 0
   }
 
   async printDiff() {

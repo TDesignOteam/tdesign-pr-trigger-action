@@ -6,8 +6,7 @@ import { ownerMap, repoMap } from '../utils/trigger'
 
 export default async function start(context: TriggerContext) {
   if (!Reflect.has(repoMap, context.trigger)) {
-    info(`错误的trigger: ${context.trigger}`)
-    return
+    throw new Error(`错误的 trigger: ${context.trigger}`)
   }
 
   const githubHelper = new GithubHelper({
@@ -19,7 +18,7 @@ export default async function start(context: TriggerContext) {
   const prData = await githubHelper.getPrData(context.pr_number)
   if (!prData.merged) {
     info('pr has been merged')
-    githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发')
+    await githubHelper.addComment(context.pr_number, 'PR 还没合并，无法触发')
     return
   }
   const link = `([common#${context.pr_number}](https://github.com/Tencent/tdesign-common/pull/${context.pr_number}))`
@@ -56,14 +55,14 @@ export default async function start(context: TriggerContext) {
   }
   await gitHelper.push(branchName)
 
-  const targetRepo = new GithubHelper({
+  const targetGithub = new GithubHelper({
     repo: repoMap[trigger],
     owner: ownerMap[trigger],
     token: context.token,
     dryRun: context.dry_run,
   })
-  const newPrData = await targetRepo.createPR(title, branchName, body, baseBranch)
+  const newPrData = await targetGithub.createPR(title, branchName, body, baseBranch)
   if (newPrData) {
-    githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
+    await githubHelper.addComment(context.pr_number, `> ${trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`)
   }
 }
