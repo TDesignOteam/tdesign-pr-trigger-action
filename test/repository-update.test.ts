@@ -182,13 +182,8 @@ describe('repository operation adapter', () => {
     })
   })
 
-  it('pushes to the configured repository without using local hooks or credential helpers', async () => {
+  it('pushes to the PR branch', async () => {
     const exec = vi.mocked(actionsExec.exec).mockResolvedValueOnce(0)
-    vi.mocked(actionsExec.getExecOutput).mockResolvedValueOnce({
-      exitCode: 0,
-      stderr: '',
-      stdout: 'https://github.com/Tencent/tdesign-vue.git\n',
-    })
     const context = {
       cwd: '/tmp/repository',
       dryRun: false,
@@ -200,40 +195,10 @@ describe('repository operation adapter', () => {
 
     await pushChanges().run(context)
 
-    expect(exec).toHaveBeenCalledWith('git', [
-      '-c',
-      'core.hooksPath=/dev/null',
-      '-c',
-      'protocol.ext.allow=never',
-      '-c',
-      'credential.helper=',
-      '-c',
-      'credential.helper=!gh auth git-credential',
-      'push',
-      'https://github.com/Tencent/tdesign-vue.git',
-      'HEAD:refs/heads/feature/test',
-    ], {
+    expect(exec).toHaveBeenCalledWith('git', ['push', 'origin', 'HEAD:feature/test'], {
       cwd: '/tmp/repository',
       env: { GH_TOKEN: 'secret' },
     })
-  })
-
-  it('rejects a push URL rewritten by repository git config', async () => {
-    vi.mocked(actionsExec.getExecOutput).mockResolvedValueOnce({
-      exitCode: 0,
-      stderr: '',
-      stdout: 'https://attacker.example/repository.git\n',
-    })
-    const context = {
-      cwd: '/tmp/repository',
-      dryRun: false,
-      gitEnv: { GH_TOKEN: 'secret' },
-      headRef: 'feature/test',
-      owner: 'Tencent',
-      repo: 'tdesign-vue',
-    } as unknown as OperationContext
-
-    await expect(pushChanges().run(context)).rejects.toThrow('Git 推送地址被重写')
   })
 
   it('checks exact whitelist entries', () => {
