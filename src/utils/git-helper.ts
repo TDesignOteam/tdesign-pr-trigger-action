@@ -25,9 +25,7 @@ export class GitHelper {
   private async initConfig() {
     await exec('git', ['config', '--global', 'user.name', 'tdesign-bot'])
     await exec('git', ['config', '--global', 'user.email', 'tdesign@tencent.com'])
-    if (this.token !== 'test-token') {
-      await exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
-    }
+    await exec('git', ['config', '--global', `url.https://${this.token}@github.com/.insteadOf`, 'https://github.com/'])
   }
 
   private get repoUrl() {

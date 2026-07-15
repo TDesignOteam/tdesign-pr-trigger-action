@@ -13,7 +13,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2006
@@ -27,7 +27,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2006
@@ -41,7 +41,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2006
@@ -55,7 +55,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2018
@@ -69,7 +69,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2018
@@ -83,7 +83,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: test-token
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-common
           pr_number: 2018
