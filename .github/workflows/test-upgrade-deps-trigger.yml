@@ -18,7 +18,7 @@ jobs:
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: test-token
           owner: Tencent
           repo: tdesign
           trigger: /upgrade-deps
