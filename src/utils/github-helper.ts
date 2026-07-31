@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { endGroup, info, startGroup } from '@actions/core'
 import { getOctokit } from '@actions/github'
 
@@ -25,6 +26,19 @@ export class GithubHelper {
       pull_number: pr_number,
     })
     return data
+  }
+
+  async getFileContent(path: string, ref?: string): Promise<string> {
+    const { data } = await this.octokit.rest.repos.getContent({
+      owner: this.context.owner,
+      repo: this.context.repo,
+      path,
+      ref,
+    })
+    if (Array.isArray(data) || data.type !== 'file' || !('content' in data)) {
+      throw new Error(`无法读取文件: ${this.context.owner}/${this.context.repo}/${path}`)
+    }
+    return Buffer.from(data.content, 'base64').toString('utf8')
   }
 
   async createPR(title: string, head: string, body: string, base?: string) {
@@ -80,5 +94,18 @@ export class GithubHelper {
       labels,
     })
     return data
+  }
+
+  async addReaction(commentId: number) {
+    if (this.dryRun) {
+      info(`dry-run模式, 不运行addReaction: ${commentId}`)
+      return
+    }
+    await this.octokit.rest.reactions.createForIssueComment({
+      owner: this.context.owner,
+      repo: this.context.repo,
+      comment_id: commentId,
+      content: 'rocket',
+    })
   }
 }

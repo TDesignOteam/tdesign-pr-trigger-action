@@ -4,25 +4,22 @@ import { targetConfigs } from './config'
 import { updateCurrentCommon, updateCurrentCoverage, updateCurrentSnapshot } from './current-pr'
 import { createTargetModule } from './target-module'
 
-const target = targetConfigs['/pr-mobile-vue']
+const target = targetConfigs['/pr-miniprogram']
 const commonConflicts = [{ matches: (file: string) => file === 'packages/common', strategy: 'ours' as const }]
 const snapshotConflicts = [{ matches: (file: string) => file.endsWith('.snap'), strategy: 'theirs' as const }, ...commonConflicts]
-async function afterCommonMerge(repoPath: string) {
-  await exec('npm', ['run', 'api:css', 'all'], { cwd: repoPath })
-}
 
 export function updateCommon(context: TriggerContext) {
-  return updateCurrentCommon(context, target, { conflictRules: commonConflicts, afterMerge: afterCommonMerge })
+  return updateCurrentCommon(context, target, { conflictRules: commonConflicts })
 }
 export function updateSnapshot(context: TriggerContext) {
   return updateCurrentSnapshot(context, target, {
     conflictRules: snapshotConflicts,
-    runSnapshot: async (repoPath) => { await exec('npm', ['run', 'test:update'], { cwd: repoPath }) },
+    runSnapshot: async (repoPath) => { await exec('pnpm', ['run', 'test:snap-update'], { cwd: repoPath }) },
   })
 }
 export function updateCoverage(context: TriggerContext) {
   return updateCurrentCoverage(context, target)
 }
 
-const mobileVue = createTargetModule(target, { updateCommon, updateSnapshot, updateCoverage })
-export default mobileVue
+const miniprogram = createTargetModule(target, { updateCommon, updateSnapshot, updateCoverage })
+export default miniprogram

@@ -20,3 +20,14 @@
 - [x] /pr-mobile-react
 - [x] /pr-miniprogram
 - [ ] /pr-flutter
+
+## 组件仓库当前 PR
+
+以下指令支持 `tdesign-vue`、`tdesign-vue-next`、`tdesign-react`、`tdesign-mobile-vue`、`tdesign-mobile-react` 和 `tdesign-miniprogram`，处理完成后直接推送到当前 PR 分支：
+
+- [x] /update-common
+- [x] `/update-common <common-pr-number>`
+- [x] /update-snapshot
+- [x] /update-coverage
+
+`/update-ai-core` 仅支持 `tdesign-react`。

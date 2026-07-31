@@ -1,98 +1,67 @@
-import type { AutoPrTrigger, TdesignRepo, TriggerContext } from '../utils/trigger'
+import type { TriggerContext } from '../utils/trigger'
+import type { TargetConfig } from './types'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import { adaptChangelogForRepo, addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from '../utils'
-import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
 export async function getCdnIconfontVersion(): Promise<string> {
-  const res = await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)
+  const res = await fetch('https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx')
   const text = await res.text()
-
   const match = text.match(CND_ICONFONT_VERSION_REG)
   return match?.[1] || ''
 }
+
 async function miniprogramUpdateIcons(repo: string, version: string) {
   await exec('node', ['./script/update-icons.mjs', '--version', version], { cwd: `./${repo}` })
   await exec('git', ['status'], { cwd: `./${repo}` })
 }
-export default async function start(context: TriggerContext) {
-  if (!Reflect.has(repoMap, context.trigger)) {
-    info(`错误的trigger: ${context.trigger}`)
-    return
-  }
-  const githubHelper = new GithubHelper({
-    repo: context.repo,
-    owner: context.owner,
-    token: context.token,
-    dryRun: context.dry_run,
-  })
-  const prData = await githubHelper.getPrData(context.pr_number)
-  let body = addContributor(prData.body || '', prData.user.login)
-  const trigger = context.trigger as AutoPrTrigger
-  body = adaptChangelogForRepo(body, repoMap[trigger])
-  startGroup('body')
-  info(`${body}`)
-  endGroup()
-  const packageName = iconsMap[trigger]
-  startGroup(packageName)
-  let latestVersion = ''
-  if (packageName === 'cdn-iconfont') {
-    latestVersion = await getCdnIconfontVersion()
-  }
-  else {
-    latestVersion = await getPkgLatestVersion(packageName)
-  }
 
+export default async function updateIcons(context: TriggerContext, target: TargetConfig): Promise<void | boolean> {
+  const githubHelper = new GithubHelper({ repo: context.repo, owner: context.owner, token: context.token, dryRun: context.dry_run })
+  const prData = await githubHelper.getPrData(context.pr_number)
+  const body = adaptChangelogForRepo(addContributor(prData.body || '', prData.user.login), target.repo)
+
+  startGroup('body')
+  info(body)
+  endGroup()
+  startGroup(target.iconPackage)
+  const latestVersion = target.iconPackage === 'cdn-iconfont' ? await getCdnIconfontVersion() : await getPkgLatestVersion(target.iconPackage)
   info(`latestVersion: ${latestVersion}`)
   endGroup()
-  const gitHelper = new GitHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
-    token: context.token,
-    dryRun: context.dry_run,
-  })
+
+  const gitHelper = new GitHelper({ repo: target.repo, owner: target.owner, token: context.token, dryRun: context.dry_run })
   await gitHelper.clone()
   await gitHelper.initSubmodule()
-  const packageManager = packageManagerMap[repoMap[trigger] as TdesignRepo]
-  if (packageManager === 'pnpm') {
+  if (target.packageManager === 'pnpm') {
     await corepackEnable()
   }
-  await exec(packageManager, ['install'], { cwd: `./${repoMap[trigger]}` })
-  const branchName = `chore/icon/${packageName}/${latestVersion}`
+  await exec(target.packageManager, ['install'], { cwd: `./${target.repo}` })
+  const branchName = `chore/icon/${target.iconPackage}/${latestVersion}`
   await gitHelper.createBranch(branchName)
-
-  await bumpIconsVersion(packageManager, repoMap[trigger])
-  if (packageName === 'cdn-iconfont') {
-    await miniprogramUpdateIcons(repoMap[trigger], latestVersion)
+  await bumpIconsVersion(target.packageManager, target.repo)
+  if (target.iconPackage === 'cdn-iconfont') {
+    await miniprogramUpdateIcons(target.repo, latestVersion)
   }
   if (!await gitHelper.isNeedCommit()) {
     return true
   }
-  const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
+
+  const title = `feat(Icon): upgrade ${target.iconPackage} to ${latestVersion}`
   await gitHelper.commit(title)
-
-  const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
-
-  if (repoMap[trigger] === 'tdesign-vue-next') {
-    await exec(packageManager, ['-F', '@tdesign/vue-next-test', 'run', updateSnapScript], { cwd: `./${repoMap[trigger]}` })
+  const updateSnapScript = target.iconPackage === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
+  if (target.repo === 'tdesign-vue-next') {
+    await exec(target.packageManager, ['-F', '@tdesign/vue-next-test', 'run', updateSnapScript], { cwd: `./${target.repo}` })
   }
   else {
-    await exec(packageManager, ['run', updateSnapScript], { cwd: `./${repoMap[trigger]}` })
+    await exec(target.packageManager, ['run', updateSnapScript], { cwd: `./${target.repo}` })
   }
-
   if (await gitHelper.isNeedCommit()) {
     await gitHelper.commit('chore: update snapshot')
   }
-
   await gitHelper.push(branchName)
 
-  const targetRepo = new GithubHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
-    token: context.token,
-    dryRun: context.dry_run,
-  })
-  targetRepo.createPR(title, branchName, body)
-};
+  const targetGithub = new GithubHelper({ repo: target.repo, owner: target.owner, token: context.token, dryRun: context.dry_run })
+  await targetGithub.createPR(title, branchName, body)
+}

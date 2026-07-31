@@ -1,10 +1,8 @@
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
 import process from 'node:process'
-import { fileURLToPath } from 'node:url'
-import { getInput, info } from '@actions/core'
+import { getInput, info, setFailed } from '@actions/core'
 import { context } from '@actions/github'
-import useTrigger from './utils/trigger'
+import { GithubHelper } from './utils'
+import useTrigger, { parseTrigger, parseTriggerArgs } from './utils/trigger'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
@@ -22,31 +20,32 @@ export async function run(): Promise<void> {
       info('issue_comment not a pull_request comment')
       return
     }
-    const __filename = fileURLToPath(import.meta.url)
-    const __dirname = dirname(__filename)
-    const whitelist = readFileSync(resolve(__dirname, '../.comment-trigger-whitelist'), 'utf-8')
-    // TODO 需要白名单的人才能触发
-    let isWhitelist = false
-
-    whitelist.split('\n').forEach((item) => {
-      if (item.trim() === context.payload.comment?.user.login) {
-        info('comment whitelist trigger')
-        isWhitelist = true
-      }
-    })
+    const whitelistGithub = new GithubHelper({ owner: 'Tencent', repo: 'tdesign', token, dryRun })
+    const whitelist = await whitelistGithub.getFileContent('.github/.pr-comment-ci-whitelist')
+    const login = context.payload.comment?.user.login
+    const isWhitelist = whitelist.split('\n').some(item => item.trim() === login)
     if (!isWhitelist) {
-      info(`${context.payload.comment?.user.login}不在白名单内，不触发`)
+      info(`${login}不在白名单内，不触发`)
       return
+    }
+    info('comment whitelist trigger')
+    const commentId = context.payload.comment?.id
+    if (commentId) {
+      const currentGithub = new GithubHelper({ owner, repo, token, dryRun })
+      await currentGithub.addReaction(commentId)
     }
   }
 
-  useTrigger({
+  await useTrigger({
     owner,
     repo,
     pr_number: prNumber,
     token,
-    trigger: trigger.trim(),
+    trigger: parseTrigger(trigger),
+    args: parseTriggerArgs(trigger),
     dry_run: dryRun,
   })
 }
-run().catch(console.error)
+run().catch((err: unknown) => {
+  setFailed(err instanceof Error ? err.message : String(err))
+})

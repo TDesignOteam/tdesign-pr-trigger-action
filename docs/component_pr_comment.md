@@ -12,6 +12,8 @@
 
 更新 PR common 子仓库的 `commit id` 到 最新
 
+支持六个组件仓库，也可以通过 `/update-common <common-pr-number>` 更新到指定 common PR。
+
 #### 自动运行了哪些
 
 1. 更新 `common` 子仓 `commit id`
@@ -23,6 +25,8 @@
 
 更新 PR 测试快照，部分快照更新 `node` 版本大于 `18` 会出现差异
 
+支持六个组件仓库，并根据目标仓库执行对应的快照脚本。
+
 #### 自动运行了哪些
 
 1. 合并 `develop `分支
@@ -31,6 +35,14 @@
 4. 检查快照文件 `ssr.test.js.snap` 是否有冲突，如果有使用 `develop` 分支 `ssr.test.js.snap`
 5. 运行快照更新 `test:update`
 6. 提交变更，推送到 PR
+
+### /update-ai-core
+
+仅支持 `tdesign-react`，更新 PR 的 `ai-core` 子仓库到最新版本，合并 `develop` 后提交并推送到当前 PR。
+
+### /update-coverage
+
+支持六个组件仓库，重新生成 coverage badge，提交并推送到当前 PR。
 
 ### /resolve-conflict
 

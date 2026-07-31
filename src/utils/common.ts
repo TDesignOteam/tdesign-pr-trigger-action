@@ -1,5 +1,5 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
-import type { TdesignRepo } from './trigger'
+import type { TargetRepo } from '../tdesign/types'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
@@ -44,7 +44,7 @@ export function addContributor(body: string, contributor: string, link?: string)
   }).join('\r\n')
 }
 
-export function adaptChangelogForRepo(body: string, repo: TdesignRepo): string {
+export function adaptChangelogForRepo(body: string, repo: TargetRepo): string {
   if (SKIP_CHANGELOG_REG.test(body)) {
     info(`不需要纳入 Changelog`)
     return body
