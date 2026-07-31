@@ -12,12 +12,12 @@ export interface ConflictRule {
 
 export interface CommonUpdateOptions {
   conflictRules: ConflictRule[]
-  afterMerge?: (repoPath: string) => Promise<void>
+  afterMerge?: (repoPath: string, env: Record<string, string>) => Promise<void>
 }
 
 export interface SnapshotUpdateOptions {
   conflictRules: ConflictRule[]
-  runSnapshot: (repoPath: string) => Promise<void>
+  runSnapshot: (repoPath: string, env: Record<string, string>) => Promise<void>
 }
 
 const COMMON_PR_REG = /^\d+$/
@@ -39,8 +39,11 @@ async function prepare(context: TriggerContext, target: TargetConfig, recurseSub
 }
 
 async function resolveMerge(git: GitHelper, rules: ConflictRule[]) {
-  await git.mergeDevelop()
+  const exitCode = await git.mergeDevelop()
   const conflicts = await git.getUnmergedFiles()
+  if (exitCode !== 0 && !conflicts.length) {
+    throw new Error('合并 develop 失败')
+  }
   const unresolved = conflicts.filter(file => !rules.some(rule => rule.matches(file)))
   if (unresolved.length) {
     throw new Error(`存在未适配的冲突文件: ${unresolved.join(', ')}`)
@@ -68,11 +71,19 @@ async function notify(context: TriggerContext, target: TargetConfig, message: st
   await github.addComment(context.pr_number, runUrl ? `${message} CI: [Open](${runUrl})` : message)
 }
 
-export async function installDependencies(target: TargetConfig) {
+export function createRepositoryEnv(source: NodeJS.ProcessEnv = process.env): Record<string, string> {
+  const env = Object.fromEntries(Object.entries(source).filter((entry): entry is [string, string] => entry[1] !== undefined))
+  delete env.INPUT_TOKEN
+  delete env.GITHUB_TOKEN
+  delete env.GH_TOKEN
+  return env
+}
+
+export async function installDependencies(target: TargetConfig, env: Record<string, string>) {
   if (target.packageManager === 'pnpm') {
     await corepackEnable()
   }
-  await exec(target.packageManager, ['install'], { cwd: `./${target.repo}` })
+  await exec(target.packageManager, ['install'], { cwd: `./${target.repo}`, env })
 }
 
 export async function updateCurrentCommon(context: TriggerContext, target: TargetConfig, options: CommonUpdateOptions): Promise<void> {
@@ -82,16 +93,16 @@ export async function updateCurrentCommon(context: TriggerContext, target: Targe
     throw new Error('/update-common 的参数必须是 common PR number')
   }
   if (commonPrNumber) {
-    await git.updateSubmoduleToPullRequest(Number(commonPrNumber))
+    await git.updateSubmoduleToPullRequest(Number(commonPrNumber), target.commonPath)
   }
   else {
-    await git.updateSubmodulePath('packages/common')
+    await git.updateSubmodulePath(target.commonPath)
   }
   if (await git.isNeedCommit()) {
     await git.commitAll(commonPrNumber ? `chore: update common to PR ${commonPrNumber}` : 'chore: update common')
   }
   await resolveMerge(git, options.conflictRules)
-  await options.afterMerge?.(`./${target.repo}`)
+  await options.afterMerge?.(`./${target.repo}`, createRepositoryEnv())
   await commitAndPush(git, 'chore: merge develop')
 }
 
@@ -109,15 +120,19 @@ export async function updateCurrentSnapshot(context: TriggerContext, target: Tar
   const git = await prepare(context, target, true)
   await resolveMerge(git, options.conflictRules)
   await notify(context, target, '⏳ 正在运行快照更新。。。')
-  await installDependencies(target)
-  await options.runSnapshot(`./${target.repo}`)
+  const env = createRepositoryEnv()
+  await installDependencies(target, env)
+  await options.runSnapshot(`./${target.repo}`, env)
   await commitAndPush(git, 'chore: update snapshot')
 }
 
 export async function updateCurrentCoverage(context: TriggerContext, target: TargetConfig): Promise<void> {
   const git = await prepare(context, target, true)
   await notify(context, target, '⏳ 正在运行 coverage badge 更新。。。')
-  await installDependencies(target)
-  await exec(target.packageManager, ['run', 'generate:coverage-badge'], { cwd: `./${target.repo}` })
+  const env = createRepositoryEnv()
+  await installDependencies(target, env)
+  for (const args of target.coverageCommands) {
+    await exec(target.packageManager, args, { cwd: `./${target.repo}`, env })
+  }
   await commitAndPush(git, 'chore: update coverage badge')
 }

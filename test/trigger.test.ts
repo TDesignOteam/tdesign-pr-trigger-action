@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
+import { targetConfigs } from '../src/tdesign/config'
+import { createRepositoryEnv } from '../src/tdesign/current-pr'
 import react from '../src/tdesign/react'
 import useTrigger, { getTargetModule, getTargetModuleByRepo, parseTrigger, parseTriggerArgs } from '../src/utils/trigger'
 
@@ -56,5 +58,31 @@ describe('trigger routes', () => {
 
   it('rejects unsupported source repositories', async () => {
     await expect(getTargetModule('/pr-react').run({ ...context, repo: 'tdesign' })).rejects.toThrow('不支持来源仓库')
+  })
+
+  it('removes action credentials from repository command environments', () => {
+    expect(createRepositoryEnv({
+      PATH: '/bin',
+      INPUT_TOKEN: 'input-token',
+      GITHUB_TOKEN: 'github-token',
+      GH_TOKEN: 'gh-token',
+    })).toEqual({ PATH: '/bin' })
+  })
+
+  it('configures repository-specific common paths', () => {
+    expect(targetConfigs['/pr-vue'].commonPath).toBe('src/_common')
+    expect(targetConfigs['/pr-mobile-vue'].commonPath).toBe('src/_common')
+    expect(targetConfigs['/pr-mobile-react'].commonPath).toBe('src/_common')
+    expect(targetConfigs['/pr-react'].commonPath).toBe('packages/common')
+  })
+
+  it('configures repository-specific coverage commands', () => {
+    expect(targetConfigs['/pr-vue-next'].coverageCommands).toEqual([
+      ['-F', '@tdesign/vue-next-test', 'run', 'generate:coverage-badge'],
+    ])
+    expect(targetConfigs['/pr-miniprogram'].coverageCommands).toEqual([
+      ['run', 'cover'],
+      ['run', 'badge'],
+    ])
   })
 })

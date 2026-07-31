@@ -6,7 +6,7 @@ import { createTargetModule } from './target-module'
 
 const target = targetConfigs['/pr-react']
 const commonConflicts = [
-  { matches: (file: string) => file === 'packages/common', strategy: 'ours' as const },
+  { matches: (file: string) => file === target.commonPath, strategy: 'ours' as const },
   { matches: (file: string) => file === 'packages/ai-core', strategy: 'theirs' as const },
 ]
 const snapshotConflicts = [
@@ -19,14 +19,14 @@ export function updateCommon(context: TriggerContext) {
 }
 export function updateAiCore(context: TriggerContext) {
   return updateCurrentAiCore(context, target, [
-    { matches: (file: string) => file === 'packages/common', strategy: 'theirs' as const },
+    { matches: (file: string) => file === target.commonPath, strategy: 'theirs' as const },
     { matches: (file: string) => file === 'packages/ai-core', strategy: 'ours' as const },
   ])
 }
 export function updateSnapshot(context: TriggerContext) {
   return updateCurrentSnapshot(context, target, {
     conflictRules: snapshotConflicts,
-    runSnapshot: async (repoPath) => { await exec('pnpm', ['run', 'test:update'], { cwd: repoPath }) },
+    runSnapshot: async (repoPath, env) => { await exec('pnpm', ['run', 'test:update'], { cwd: repoPath, env }) },
   })
 }
 export function updateCoverage(context: TriggerContext) {

@@ -7,6 +7,8 @@ export interface TargetConfig {
   repo: TargetRepo
   packageManager: string
   iconPackage: string
+  commonPath: string
+  coverageCommands: string[][]
 }
 
 export interface TargetOperations {

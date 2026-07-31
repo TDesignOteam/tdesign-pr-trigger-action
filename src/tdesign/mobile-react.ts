@@ -5,10 +5,10 @@ import { updateCurrentCommon, updateCurrentCoverage, updateCurrentSnapshot } fro
 import { createTargetModule } from './target-module'
 
 const target = targetConfigs['/pr-mobile-react']
-const commonConflicts = [{ matches: (file: string) => file === 'packages/common', strategy: 'ours' as const }]
+const commonConflicts = [{ matches: (file: string) => file === target.commonPath, strategy: 'ours' as const }]
 const snapshotConflicts = [{ matches: (file: string) => file.endsWith('.snap'), strategy: 'theirs' as const }, ...commonConflicts]
-async function afterCommonMerge(repoPath: string) {
-  await exec('npm', ['run', 'api:css', 'all'], { cwd: repoPath })
+async function afterCommonMerge(repoPath: string, env: Record<string, string>) {
+  await exec('npm', ['run', 'api:css', 'all'], { cwd: repoPath, env })
 }
 
 export function updateCommon(context: TriggerContext) {
@@ -17,7 +17,7 @@ export function updateCommon(context: TriggerContext) {
 export function updateSnapshot(context: TriggerContext) {
   return updateCurrentSnapshot(context, target, {
     conflictRules: snapshotConflicts,
-    runSnapshot: async (repoPath) => { await exec('npm', ['run', 'test:update'], { cwd: repoPath }) },
+    runSnapshot: async (repoPath, env) => { await exec('npm', ['run', 'test:update'], { cwd: repoPath, env }) },
   })
 }
 export function updateCoverage(context: TriggerContext) {

@@ -92,7 +92,7 @@ export class GitHelper {
 
   async commitAll(message: string) {
     await exec('git', ['add', '--all'], { cwd: this.repoPath })
-    await exec('git', ['commit', message, '--no-verify'], { cwd: this.repoPath })
+    await exec('git', ['commit', '-m', message, '--no-verify'], { cwd: this.repoPath })
   }
 
   async push(branch: string) {
@@ -126,14 +126,14 @@ export class GitHelper {
     await exec('git', ['submodule', 'update', '--init', '--remote', path], { cwd: this.repoPath })
   }
 
-  async updateSubmoduleToPullRequest(prNumber: number) {
-    await exec('git', ['submodule', 'update', '--init', 'packages/common'], { cwd: this.repoPath })
-    await exec('git', ['fetch', 'origin', `pull/${prNumber}/head:refs/heads/pr-${prNumber}`], { cwd: `${this.repoPath}/packages/common` })
-    await exec('git', ['checkout', `pr-${prNumber}`], { cwd: `${this.repoPath}/packages/common` })
+  async updateSubmoduleToPullRequest(prNumber: number, path: string) {
+    await exec('git', ['submodule', 'update', '--init', path], { cwd: this.repoPath })
+    await exec('git', ['fetch', 'origin', `pull/${prNumber}/head:refs/heads/pr-${prNumber}`], { cwd: `${this.repoPath}/${path}` })
+    await exec('git', ['checkout', `pr-${prNumber}`], { cwd: `${this.repoPath}/${path}` })
   }
 
-  async mergeDevelop() {
-    await exec('git', ['merge', 'develop', '--no-commit'], { cwd: this.repoPath, ignoreReturnCode: true })
+  async mergeDevelop(): Promise<number> {
+    return exec('git', ['merge', 'develop', '--no-commit'], { cwd: this.repoPath, ignoreReturnCode: true })
   }
 
   async getUnmergedFiles(): Promise<string[]> {

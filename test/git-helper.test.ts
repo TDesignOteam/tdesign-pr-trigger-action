@@ -53,4 +53,35 @@ describe('gitHelper pull request push', () => {
     expect(commands).not.toContain('secret-token')
     expect(commands).not.toContain('insteadOf')
   })
+
+  it('commits staged changes with an explicit message', async () => {
+    const git = createGitHelper()
+
+    await git.commitAll('chore: update snapshot')
+
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['add', '--all'], { cwd: './tdesign-react' })
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['commit', '-m', 'chore: update snapshot', '--no-verify'], { cwd: './tdesign-react' })
+  })
+
+  it('updates a common PR at the repository-specific submodule path', async () => {
+    const git = createGitHelper()
+
+    await git.updateSubmoduleToPullRequest(789, 'src/_common')
+
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['submodule', 'update', '--init', 'src/_common'], { cwd: './tdesign-react' })
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['fetch', 'origin', 'pull/789/head:refs/heads/pr-789'], { cwd: './tdesign-react/src/_common' })
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['checkout', 'pr-789'], { cwd: './tdesign-react/src/_common' })
+  })
+
+  it('returns a failed merge exit code for the caller to handle', async () => {
+    mocks.exec.mockResolvedValueOnce(1)
+    const git = createGitHelper()
+
+    await expect(git.mergeDevelop()).resolves.toBe(1)
+
+    expect(mocks.exec).toHaveBeenCalledWith('git', ['merge', 'develop', '--no-commit'], {
+      cwd: './tdesign-react',
+      ignoreReturnCode: true,
+    })
+  })
 })
