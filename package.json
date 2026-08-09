@@ -41,7 +41,7 @@
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@types/node": "^24.13.3",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
-    "eslint": "^10.7.0",
+    "eslint": "^10.8.1",
     "lint-staged": "^17.0.8",
     "simple-git-hooks": "^2.13.1",
     "tsdown": "^0.22.14",
