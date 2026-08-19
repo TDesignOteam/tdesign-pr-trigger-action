@@ -3,12 +3,15 @@ import { exec } from '@actions/exec'
 import { getClient } from 'node-cnb'
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
+import repositoryUpdate from '../tdesign/repository-update'
 import { corepackEnable, getPkgLatestVersion } from './common'
 import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
 export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
-export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
+export const REPOSITORY_TRIGGERS = ['/update-common', '/update-ai-core', '/update-snapshot', '/update-coverage', '/resolve-conflict'] as const
+export type RepositoryTrigger = typeof REPOSITORY_TRIGGERS[number]
+export type Trigger = AutoPrTrigger | RepositoryTrigger | '/upgrade-deps' | '/delete-cnb-branch'
 export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
 
 export const iconsMap: Record<AutoPrTrigger, string> = {
@@ -35,7 +38,6 @@ export const ownerMap: Record<AutoPrTrigger, string> = {
   '/pr-mobile-react': 'Tencent',
   '/pr-miniprogram': 'Tencent',
 }
-
 export const packageManagerMap: Record<TdesignRepo, string> = {
   'tdesign-vue': 'npm',
   'tdesign-vue-next': 'pnpm',
@@ -53,8 +55,38 @@ export interface TriggerContext {
   trigger: Trigger
   dry_run: boolean
 }
-export default function useTrigger(context: TriggerContext) {
-  // TODO
+
+const triggers: ReadonlySet<string> = new Set([
+  ...Object.keys(repoMap),
+  ...REPOSITORY_TRIGGERS,
+  '/upgrade-deps',
+  '/delete-cnb-branch',
+])
+const TRIGGER_SEPARATOR_REGEXP = /\s+/
+const repositoryTriggers: ReadonlySet<string> = new Set(REPOSITORY_TRIGGERS)
+
+export function isRepositoryTrigger(trigger: Trigger): trigger is RepositoryTrigger {
+  return repositoryTriggers.has(trigger)
+}
+
+export function parseTrigger(value: string): Trigger {
+  const trigger = tryParseTrigger(value)
+  if (!trigger) {
+    const command = value.trim().split(TRIGGER_SEPARATOR_REGEXP, 1)[0]
+    throw new Error(`未支持的触发器: ${command || '(empty)'}`)
+  }
+  return trigger
+}
+
+export function tryParseTrigger(value: string): Trigger | undefined {
+  const trigger = value.trim().split(TRIGGER_SEPARATOR_REGEXP, 1)[0]
+  if (!triggers.has(trigger)) {
+    return undefined
+  }
+  return trigger as Trigger
+}
+
+export default async function useTrigger(context: TriggerContext): Promise<void> {
   switch (context.trigger) {
     case '/pr-vue':
     case '/pr-vue-next':
@@ -62,26 +94,33 @@ export default function useTrigger(context: TriggerContext) {
     case '/pr-mobile-vue':
     case '/pr-mobile-react':
     case '/pr-miniprogram':
-      autoPR(context)
+      await autoPR(context)
+      break
+    case '/update-common':
+    case '/update-ai-core':
+    case '/update-snapshot':
+    case '/update-coverage':
+    case '/resolve-conflict':
+      await repositoryUpdate(context)
       break
     case '/upgrade-deps':
-      upgradeDeps(context)
+      await upgradeDeps(context)
       break
     case '/delete-cnb-branch':
-      deleteCnbBranch(context)
+      await deleteCnbBranch(context)
       break
     default:
       throw new Error(`未支持的触发器: ${context.trigger}`)
   }
 }
 
-function autoPR(context: TriggerContext) {
+async function autoPR(context: TriggerContext): Promise<void> {
   switch (context.repo) {
     case 'tdesign-icons':
-      iconStart(context)
+      await iconStart(context)
       break
     case 'tdesign-common':
-      commonStart(context)
+      await commonStart(context)
       break
     default:
       throw new Error(`该仓库未适配: ${context.repo}`)

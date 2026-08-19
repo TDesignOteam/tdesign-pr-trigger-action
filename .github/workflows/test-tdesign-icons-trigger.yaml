@@ -13,12 +13,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
@@ -32,12 +32,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
@@ -51,12 +51,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
@@ -70,12 +70,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
@@ -89,12 +89,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
@@ -108,12 +108,12 @@ jobs:
 
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: 18
+          node-version: 22
 
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ github.token }}
           owner: Tencent
           repo: tdesign-icons
           pr_number: 130
