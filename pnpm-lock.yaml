@@ -24,8 +24,8 @@ importers:
         specifier: ^1000.3.1
         version: 1000.3.1
       node-cnb:
-        specifier: ^1.30.0
-        version: 1.30.0
+        specifier: ^1.36.0
+        version: 1.36.0
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^9.5.1
@@ -2162,8 +2162,8 @@ packages:
     resolution: {integrity: sha512-kKHJhxwpR/Okycz4HhQKKlhWe4ASEfPgkSWNmKFHd7+ezuQlxkA5cM3+XkBPvm1gmHen3w53qsYAv+8GwRrBlg==}
     engines: {node: '>=18'}
 
-  node-cnb@1.30.0:
-    resolution: {integrity: sha512-WpWRIXH1pScqgLR4QjVO8dqp8zUkDDl2MpsH+8IcMS105loD5K9O2BYZRFHuW0hApfPYTr244tEklObHopIMCg==}
+  node-cnb@1.36.0:
+    resolution: {integrity: sha512-16Rxut/wfdDWXQoqJ2Nb/D7X6e/HuCu2VM+laeDyYD0JEHDD0wr9PopX4N42qxqrVhYUS/yMv6EQaBXGmymfwQ==}
 
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
@@ -4315,10 +4315,6 @@ snapshots:
     dependencies:
       format: 0.2.2
 
-  fdir@6.5.0(picomatch@4.0.5):
-    optionalDependencies:
-      picomatch: 4.0.5
-
   fdir@6.5.0(picomatch@4.0.7):
     optionalDependencies:
       picomatch: 4.0.7
@@ -4504,7 +4500,7 @@ snapshots:
 
   magic-string@0.30.21:
     dependencies:
-      '@jridgewell/sourcemap-codec': 1.5.5
+      '@jridgewell/sourcemap-codec': 1.6.0
 
   magic-string@1.4.1:
     dependencies:
@@ -4876,7 +4872,7 @@ snapshots:
 
   natural-orderby@5.0.0: {}
 
-  node-cnb@1.30.0:
+  node-cnb@1.36.0:
     dependencies:
       ky: 1.14.2
 
@@ -5225,7 +5221,7 @@ snapshots:
 
   ts-declaration-location@1.0.7(typescript@6.0.3):
     dependencies:
-      picomatch: 4.0.5
+      picomatch: 4.0.7
       typescript: 6.0.3
     optional: true
 
@@ -5333,8 +5329,8 @@ snapshots:
   vite@7.3.1(@types/node@24.13.3)(yaml@2.9.0):
     dependencies:
       esbuild: 0.27.2
-      fdir: 6.5.0(picomatch@4.0.5)
-      picomatch: 4.0.5
+      fdir: 6.5.0(picomatch@4.0.7)
+      picomatch: 4.0.7
       postcss: 8.5.6
       rollup: 4.56.0
       tinyglobby: 0.2.17
