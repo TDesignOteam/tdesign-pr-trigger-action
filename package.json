@@ -39,14 +39,14 @@
   "devDependencies": {
     "@antfu/eslint-config": "^9.5.1",
     "@octokit/plugin-rest-endpoint-methods": "^18.0.0",
-    "@types/node": "^24.13.3",
+    "@types/node": "^24.13.6",
     "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "eslint": "^10.9.1",
     "lint-staged": "^17.0.8",
     "simple-git-hooks": "^2.14.0",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.2"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
