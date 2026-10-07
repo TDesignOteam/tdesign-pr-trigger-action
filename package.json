@@ -3,7 +3,7 @@
   "type": "module",
   "version": "0.0.0",
   "private": true,
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@10.34.6",
   "description": "",
   "author": "tdesign",
   "license": "MIT",
@@ -46,7 +46,7 @@
     "simple-git-hooks": "^2.14.0",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.3"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"
