@@ -20,3 +20,7 @@
 - [x] /pr-mobile-react
 - [x] /pr-miniprogram
 - [ ] /pr-flutter
+
+## 通用指令
+
+- [x] /update-site: 合并 develop 到 main，触发官网更新

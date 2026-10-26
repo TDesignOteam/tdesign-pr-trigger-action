@@ -47,6 +47,24 @@ export class GitHelper {
     await exec('git', ['checkout', '-b', branch], { cwd: this.repoPath })
   }
 
+  async checkout(branch: string) {
+    await exec('git', ['checkout', branch], { cwd: this.repoPath })
+  }
+
+  async fetch() {
+    await exec('git', ['fetch', 'origin'], { cwd: this.repoPath })
+  }
+
+  async merge(branch: string) {
+    try {
+      const { stdout } = await getExecOutput('git', ['merge', branch], { cwd: this.repoPath })
+      return stdout
+    }
+    catch (err: any) {
+      throw new Error(`git merge ${branch} 失败，可能存在冲突，请手动处理: ${err.message}`)
+    }
+  }
+
   async commit(message: string) {
     await exec('git', ['commit', '-am', message, '--no-verify'], { cwd: this.repoPath })
   }

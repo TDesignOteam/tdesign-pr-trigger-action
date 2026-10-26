@@ -1,5 +1,5 @@
 import { error, getInput, info } from '@actions/core'
-import { exec } from '@actions/exec'
+import { exec, getExecOutput } from '@actions/exec'
 import { getClient } from 'node-cnb'
 import commonStart from '../tdesign/common'
 import iconStart from '../tdesign/icons'
@@ -8,7 +8,7 @@ import { GitHelper } from './git-helper'
 import { GithubHelper } from './github-helper'
 
 export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
-export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch'
+export type Trigger = AutoPrTrigger | '/upgrade-deps' | '/delete-cnb-branch' | '/update-site'
 export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
 
 export const iconsMap: Record<AutoPrTrigger, string> = {
@@ -69,6 +69,9 @@ export default function useTrigger(context: TriggerContext) {
       break
     case '/delete-cnb-branch':
       deleteCnbBranch(context)
+      break
+    case '/update-site':
+      updateSite(context)
       break
     default:
       throw new Error(`未支持的触发器: ${context.trigger}`)
@@ -148,5 +151,40 @@ async function deleteCnbBranch(context: TriggerContext) {
   }
   catch (err: any) {
     throw new Error(`删除分支失败: ${JSON.stringify(err.response?.data) || err.message}`)
+  }
+}
+
+async function updateSite(context: TriggerContext) {
+  const gitHelper = new GitHelper({
+    repo: context.repo,
+    owner: context.owner,
+    token: context.token,
+    dryRun: context.dry_run,
+  })
+  const githubHelper = new GithubHelper({
+    repo: context.repo,
+    owner: context.owner,
+    token: context.token,
+    dryRun: context.dry_run,
+  })
+
+  try {
+    await gitHelper.clone()
+    await gitHelper.checkout('main')
+    await gitHelper.fetch()
+    const { stdout } = await getExecOutput('git', ['rev-parse', 'HEAD'], { cwd: `./${context.repo}` })
+    const baseSha = stdout.trim()
+    const mergeResult = await gitHelper.merge('origin/develop')
+    if (mergeResult.includes('Already up to date')) {
+      info('develop 无新提交')
+      await githubHelper.addComment(context.pr_number, '> /update-site\r\n \r\n develop 无新提交，官网已是最新')
+      return
+    }
+    await gitHelper.push('main')
+    await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新成功，请查看 https://github.com/${context.owner}/${context.repo}/compare/${baseSha}...main`)
+  }
+  catch (err: any) {
+    await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新失败: ${err.message}`)
+    throw err
   }
 }
