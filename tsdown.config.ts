@@ -4,7 +4,9 @@ import packageJson from './package.json' with { type: 'json' }
 export default defineConfig({
   entry: ['src/index.ts'],
   deps: {
-    alwaysBundle: [...Object.keys(packageJson.dependencies)],
+    alwaysBundle: [
+      ...Object.keys(packageJson.dependencies),
+    ],
     onlyAllowBundle: [
       '@actions/core',
       '@actions/exec',

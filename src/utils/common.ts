@@ -92,7 +92,12 @@ export async function createPR(context: CreatePRContext) {
   })
 }
 export async function getPkgLatestVersion(packageName: string) {
-  const { stdout } = await getExecOutput('npm', ['view', packageName, 'version', '--registry=https://registry.npmjs.org/'])
+  const { stdout } = await getExecOutput('npm', [
+    'view',
+    packageName,
+    'version',
+    '--registry=https://registry.npmjs.org/',
+  ])
   return stdout.trim()
 }
 
@@ -114,7 +119,12 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
       }
     }
     else {
-      await exec('pnpm', ['--recursive', 'update', 'tdesign-icons-*', '--latest'], { cwd: `./${repo}` })
+      await exec('pnpm', [
+        '--recursive',
+        'update',
+        'tdesign-icons-*',
+        '--latest',
+      ], { cwd: `./${repo}` })
     }
   }
   else {
