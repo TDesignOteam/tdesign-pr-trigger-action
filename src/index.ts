@@ -1,10 +1,11 @@
+import type { Trigger } from './commands/types'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { getInput, info } from '@actions/core'
 import { context } from '@actions/github'
-import useTrigger from './utils/trigger'
+import useTrigger from './commands'
 
 export async function run(): Promise<void> {
   const repo = getInput('repo') || context.repo.repo
@@ -40,13 +41,16 @@ export async function run(): Promise<void> {
     }
   }
 
-  useTrigger({
+  const [command, ...rest] = trigger.trim().split(/\s+/)
+  await useTrigger({
     owner,
     repo,
     pr_number: prNumber,
     token,
-    trigger: trigger.trim(),
+    trigger: command as Trigger,
     dry_run: dryRun,
+    args: rest.join(' '),
+    comment_id: context.payload.comment?.id,
   })
 }
 run().catch(console.error)

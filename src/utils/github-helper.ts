@@ -81,4 +81,21 @@ export class GithubHelper {
     })
     return data
   }
+
+  async addReaction(commentId: number, content: '+1' | '-1' | 'confused' | 'eyes' | 'heart' | 'hooray' | 'laugh' | 'rocket') {
+    if (this.dryRun) {
+      startGroup('dry-run模式, 不运行addReaction')
+      info(`comment_id: ${commentId}`)
+      info(`content: ${content}`)
+      endGroup()
+      return
+    }
+    const { data } = await this.octokit.rest.reactions.createForIssueComment({
+      owner: this.context.owner,
+      repo: this.context.repo,
+      comment_id: commentId,
+      content,
+    })
+    return data
+  }
 }

@@ -21,6 +21,12 @@
 - [x] /pr-miniprogram
 - [ ] /pr-flutter
 
+## 组件仓库 (tdesign-vue / tdesign-vue-next / tdesign-react / tdesign-mobile-vue / tdesign-mobile-react / tdesign-miniprogram)
+
+- [x] /update-common [pr_number]: 更新当前 PR 的 common 子模块到最新，带编号时指向对应 common PR 的 head
+- [x] /update-snapshot: 合并 develop 并更新测试快照
+- [x] /update-coverage: 更新 coverage badge
+
 ## 通用指令
 
 - [x] /update-site: 合并 develop 到 main，触发官网更新

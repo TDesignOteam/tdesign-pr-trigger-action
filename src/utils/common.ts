@@ -1,5 +1,5 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
-import type { TdesignRepo } from './trigger'
+import type { TdesignRepo } from '../commands/types'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'

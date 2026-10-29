@@ -1,8 +1,8 @@
-import type { AutoPrTrigger, TdesignRepo, TriggerContext } from '../utils/trigger'
+import type { AutoPrTrigger, RepoHandlers, TriggerContext } from '../commands/types'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
+import { prCommands, targetRepoProfiles } from '../commands/definitions'
 import { adaptChangelogForRepo, addContributor, bumpIconsVersion, corepackEnable, getPkgLatestVersion, GitHelper, GithubHelper } from '../utils'
-import { iconsMap, ownerMap, packageManagerMap, repoMap } from '../utils/trigger'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
@@ -17,11 +17,7 @@ async function miniprogramUpdateIcons(repo: string, version: string) {
   await exec('node', ['./script/update-icons.mjs', '--version', version], { cwd: `./${repo}` })
   await exec('git', ['status'], { cwd: `./${repo}` })
 }
-export default async function start(context: TriggerContext) {
-  if (!Reflect.has(repoMap, context.trigger)) {
-    info(`错误的trigger: ${context.trigger}`)
-    return
-  }
+export async function upgradeIcons(context: TriggerContext) {
   const githubHelper = new GithubHelper({
     repo: context.repo,
     owner: context.owner,
@@ -31,11 +27,13 @@ export default async function start(context: TriggerContext) {
   const prData = await githubHelper.getPrData(context.pr_number)
   let body = addContributor(prData.body || '', prData.user.login)
   const trigger = context.trigger as AutoPrTrigger
-  body = adaptChangelogForRepo(body, repoMap[trigger])
+  const { targetRepo } = prCommands[trigger]
+  const profile = targetRepoProfiles[targetRepo]
+  body = adaptChangelogForRepo(body, targetRepo)
   startGroup('body')
   info(`${body}`)
   endGroup()
-  const packageName = iconsMap[trigger]
+  const packageName = profile.iconsPackage
   startGroup(packageName)
   let latestVersion = ''
   if (packageName === 'cdn-iconfont') {
@@ -48,24 +46,24 @@ export default async function start(context: TriggerContext) {
   info(`latestVersion: ${latestVersion}`)
   endGroup()
   const gitHelper = new GitHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+    repo: targetRepo,
+    owner: profile.owner,
     token: context.token,
     dryRun: context.dry_run,
   })
   await gitHelper.clone()
   await gitHelper.initSubmodule()
-  const packageManager = packageManagerMap[repoMap[trigger] as TdesignRepo]
+  const packageManager = profile.packageManager
   if (packageManager === 'pnpm') {
     await corepackEnable()
   }
-  await exec(packageManager, ['install'], { cwd: `./${repoMap[trigger]}` })
+  await exec(packageManager, ['install'], { cwd: `./${targetRepo}` })
   const branchName = `chore/icon/${packageName}/${latestVersion}`
   await gitHelper.createBranch(branchName)
 
-  await bumpIconsVersion(packageManager, repoMap[trigger])
+  await bumpIconsVersion(packageManager, targetRepo)
   if (packageName === 'cdn-iconfont') {
-    await miniprogramUpdateIcons(repoMap[trigger], latestVersion)
+    await miniprogramUpdateIcons(targetRepo, latestVersion)
   }
   if (!await gitHelper.isNeedCommit()) {
     return true
@@ -73,20 +71,13 @@ export default async function start(context: TriggerContext) {
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitHelper.commit(title)
 
-  const updateSnapScript = packageName === 'cdn-iconfont'
-    ? 'test:snap-update'
-    : 'test:update'
+  const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
 
-  if (repoMap[trigger] === 'tdesign-vue-next') {
-    await exec(packageManager, [
-      '-F',
-      '@tdesign/vue-next-test',
-      'run',
-      updateSnapScript,
-    ], { cwd: `./${repoMap[trigger]}` })
+  if (targetRepo === 'tdesign-vue-next') {
+    await exec(packageManager, ['-F', '@tdesign/vue-next-test', 'run', updateSnapScript], { cwd: `./${targetRepo}` })
   }
   else {
-    await exec(packageManager, ['run', updateSnapScript], { cwd: `./${repoMap[trigger]}` })
+    await exec(packageManager, ['run', updateSnapScript], { cwd: `./${targetRepo}` })
   }
 
   if (await gitHelper.isNeedCommit()) {
@@ -95,11 +86,20 @@ export default async function start(context: TriggerContext) {
 
   await gitHelper.push(branchName)
 
-  const targetRepo = new GithubHelper({
-    repo: repoMap[trigger],
-    owner: ownerMap[trigger],
+  const targetRepoHelper = new GithubHelper({
+    repo: targetRepo,
+    owner: profile.owner,
     token: context.token,
     dryRun: context.dry_run,
   })
-  targetRepo.createPR(title, branchName, body)
-};
+  targetRepoHelper.createPR(title, branchName, body)
+}
+
+export const handlers: RepoHandlers = {
+  '/pr-vue': upgradeIcons,
+  '/pr-vue-next': upgradeIcons,
+  '/pr-react': upgradeIcons,
+  '/pr-mobile-vue': upgradeIcons,
+  '/pr-mobile-react': upgradeIcons,
+  '/pr-miniprogram': upgradeIcons,
+}
