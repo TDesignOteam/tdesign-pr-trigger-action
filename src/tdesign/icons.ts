@@ -73,10 +73,17 @@ export default async function start(context: TriggerContext) {
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitHelper.commit(title)
 
-  const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
+  const updateSnapScript = packageName === 'cdn-iconfont'
+    ? 'test:snap-update'
+    : 'test:update'
 
   if (repoMap[trigger] === 'tdesign-vue-next') {
-    await exec(packageManager, ['-F', '@tdesign/vue-next-test', 'run', updateSnapScript], { cwd: `./${repoMap[trigger]}` })
+    await exec(packageManager, [
+      '-F',
+      '@tdesign/vue-next-test',
+      'run',
+      updateSnapScript,
+    ], { cwd: `./${repoMap[trigger]}` })
   }
   else {
     await exec(packageManager, ['run', updateSnapScript], { cwd: `./${repoMap[trigger]}` })
