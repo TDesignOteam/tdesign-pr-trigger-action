@@ -55,6 +55,7 @@ export async function createCommonUpdatePr(context: TriggerContext, config: Repo
   const title = `chore(submodule): update common`
   if (!await commitCommonUpdate(gitHelper, config)) {
     info('nothing to commit')
+    githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n common 子模块已是最新，无需更新`)
     return true// nothing to commit
   }
   await gitHelper.push(branchName)

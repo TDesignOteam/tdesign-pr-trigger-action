@@ -19733,45 +19733,38 @@ function getOctokit(token, options, ...additionalPlugins) {
 const targetRepoProfiles = {
 	"tdesign-vue": {
 		owner: "Tencent",
-		packageManager: "npm",
-		iconsPackage: "tdesign-icons-vue"
+		packageManager: "npm"
 	},
 	"tdesign-vue-next": {
 		owner: "Tencent",
-		packageManager: "pnpm",
-		iconsPackage: "tdesign-icons-vue-next"
+		packageManager: "pnpm"
 	},
 	"tdesign-react": {
 		owner: "Tencent",
-		packageManager: "pnpm",
-		iconsPackage: "tdesign-icons-react"
+		packageManager: "pnpm"
 	},
 	"tdesign-mobile-vue": {
 		owner: "Tencent",
-		packageManager: "npm",
-		iconsPackage: "tdesign-icons-vue-next"
+		packageManager: "npm"
 	},
 	"tdesign-mobile-react": {
 		owner: "Tencent",
-		packageManager: "npm",
-		iconsPackage: "tdesign-icons-react"
+		packageManager: "npm"
 	},
 	"tdesign-miniprogram": {
 		owner: "Tencent",
-		packageManager: "pnpm",
-		iconsPackage: "cdn-iconfont"
+		packageManager: "pnpm"
 	}
 };
-const prCommands = {
-	"/pr-vue": { targetRepo: "tdesign-vue" },
-	"/pr-vue-next": { targetRepo: "tdesign-vue-next" },
-	"/pr-react": { targetRepo: "tdesign-react" },
-	"/pr-mobile-vue": { targetRepo: "tdesign-mobile-vue" },
-	"/pr-mobile-react": { targetRepo: "tdesign-mobile-react" },
-	"/pr-miniprogram": { targetRepo: "tdesign-miniprogram" }
-};
 const repoScopedTriggers = /* @__PURE__ */ new Set([
-	...Object.keys(prCommands),
+	...Object.keys({
+		"/pr-vue": { targetRepo: "tdesign-vue" },
+		"/pr-vue-next": { targetRepo: "tdesign-vue-next" },
+		"/pr-react": { targetRepo: "tdesign-react" },
+		"/pr-mobile-vue": { targetRepo: "tdesign-mobile-vue" },
+		"/pr-mobile-react": { targetRepo: "tdesign-mobile-react" },
+		"/pr-miniprogram": { targetRepo: "tdesign-miniprogram" }
+	}),
 	"/update-common",
 	"/update-snapshot",
 	"/update-coverage"
@@ -36984,6 +36977,7 @@ async function createCommonUpdatePr(context, config) {
 	const title = `chore(submodule): update common`;
 	if (!await commitCommonUpdate(gitHelper, config)) {
 		info("nothing to commit");
+		githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n common 子模块已是最新，无需更新`);
 		return true;
 	}
 	await gitHelper.push(branchName);
@@ -37041,44 +37035,143 @@ function createPrCommandHandlers(config) {
 	};
 }
 //#endregion
+//#region src/tdesign/operations/update-icons.ts
+const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
+async function getCdnIconfontVersion() {
+	return (await (await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)).text()).match(CND_ICONFONT_VERSION_REG)?.[1] || "";
+}
+async function miniprogramUpdateIcons(repo, version) {
+	await exec("node", [
+		"./script/update-icons.mjs",
+		"--version",
+		version
+	], { cwd: `./${repo}` });
+	await exec("git", ["status"], { cwd: `./${repo}` });
+}
+async function createIconsUpdatePr(context, config) {
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await githubHelper.getPrData(context.pr_number);
+	if (!prData.merged) {
+		info("pr has been merged");
+		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		return;
+	}
+	const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
+	let body = addContributor(prData.body || "", prData.user.login, link);
+	const targetRepo = config.targetRepo;
+	const { owner, packageManager } = targetRepoProfiles[targetRepo];
+	body = adaptChangelogForRepo(body, targetRepo);
+	startGroup("body");
+	info(`${body}`);
+	endGroup();
+	const packageName = config.iconsPackage;
+	if (!packageName) throw new Error(`${targetRepo} 未配置 iconsPackage`);
+	startGroup(packageName);
+	let latestVersion = "";
+	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
+	else latestVersion = await getPkgLatestVersion(packageName);
+	info(`latestVersion: ${latestVersion}`);
+	endGroup();
+	const gitHelper = new GitHelper({
+		repo: targetRepo,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	await gitHelper.clone();
+	await gitHelper.initSubmodule();
+	if (packageManager === "pnpm") await corepackEnable();
+	await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
+	const branchName = `chore/icon/${packageName}/${latestVersion}`;
+	await gitHelper.createBranch(branchName);
+	await bumpIconsVersion(packageManager, targetRepo);
+	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(targetRepo, latestVersion);
+	if (!await gitHelper.isNeedCommit()) {
+		githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n icons 已是最新版本，无需升级`);
+		return true;
+	}
+	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
+	await gitHelper.commit(title);
+	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
+	if (targetRepo === "tdesign-vue-next") await exec(packageManager, [
+		"-F",
+		"@tdesign/vue-next-test",
+		"run",
+		updateSnapScript
+	], { cwd: `./${targetRepo}` });
+	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${targetRepo}` });
+	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
+	await gitHelper.push(branchName);
+	const newPrData = await new GithubHelper({
+		repo: targetRepo,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	}).createPR(title, branchName, body);
+	if (newPrData) githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
+}
+//#endregion
 //#region src/tdesign/miniprogram.ts
-const repoConfig$5 = { targetRepo: "tdesign-miniprogram" };
+const repoConfig$5 = {
+	targetRepo: "tdesign-miniprogram",
+	iconsPackage: "cdn-iconfont"
+};
 const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$5);
+const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$5);
 const handlers$7 = createPrCommandHandlers(repoConfig$5);
 //#endregion
 //#region src/tdesign/mobile-react.ts
 const repoConfig$4 = {
 	targetRepo: "tdesign-mobile-react",
+	iconsPackage: "tdesign-icons-react",
 	runApiCss: true
 };
 const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$4);
+const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$4);
 const handlers$6 = createPrCommandHandlers(repoConfig$4);
 //#endregion
 //#region src/tdesign/mobile-vue.ts
 const repoConfig$3 = {
 	targetRepo: "tdesign-mobile-vue",
+	iconsPackage: "tdesign-icons-vue-next",
 	runApiCss: true
 };
 const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$3);
+const updateIconsAndCreatePr$3 = (context) => createIconsUpdatePr(context, repoConfig$3);
 const handlers$5 = createPrCommandHandlers(repoConfig$3);
 //#endregion
 //#region src/tdesign/react.ts
-const repoConfig$2 = { targetRepo: "tdesign-react" };
+const repoConfig$2 = {
+	targetRepo: "tdesign-react",
+	iconsPackage: "tdesign-icons-react"
+};
 const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$2);
+const updateIconsAndCreatePr$2 = (context) => createIconsUpdatePr(context, repoConfig$2);
 const handlers$4 = createPrCommandHandlers(repoConfig$2);
 //#endregion
 //#region src/tdesign/vue.ts
-const repoConfig$1 = { targetRepo: "tdesign-vue" };
+const repoConfig$1 = {
+	targetRepo: "tdesign-vue",
+	iconsPackage: "tdesign-icons-vue"
+};
 const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$1);
+const updateIconsAndCreatePr$1 = (context) => createIconsUpdatePr(context, repoConfig$1);
 const handlers$3 = createPrCommandHandlers(repoConfig$1);
 //#endregion
 //#region src/tdesign/vue-next.ts
 const repoConfig = {
 	targetRepo: "tdesign-vue-next",
 	commonSubmodule: "packages/common",
+	iconsPackage: "tdesign-icons-vue-next",
 	snapshotConflictFiles: ["packages/tdesign-vue-next/test/src/snap/__snapshots__/csr.test.ts.snap", "packages/tdesign-vue-next/test/src/snap/__snapshots__/ssr.test.ts.snap"]
 };
 const updateCommonAndCreatePr = (context) => createCommonUpdatePr(context, repoConfig);
+const updateIconsAndCreatePr = (context) => createIconsUpdatePr(context, repoConfig);
 const handlers$2 = createPrCommandHandlers(repoConfig);
 //#endregion
 //#region src/tdesign/common.ts
@@ -37092,82 +37185,13 @@ const handlers$1 = {
 };
 //#endregion
 //#region src/tdesign/icons.ts
-const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
-async function getCdnIconfontVersion() {
-	return (await (await fetch(`https://raw.githubusercontent.com/Tencent/tdesign-icons/refs/heads/develop/packages/vue/src/iconfont/icon.tsx`)).text()).match(CND_ICONFONT_VERSION_REG)?.[1] || "";
-}
-async function miniprogramUpdateIcons(repo, version) {
-	await exec("node", [
-		"./script/update-icons.mjs",
-		"--version",
-		version
-	], { cwd: `./${repo}` });
-	await exec("git", ["status"], { cwd: `./${repo}` });
-}
-async function upgradeIcons(context) {
-	const prData = await new GithubHelper({
-		repo: context.repo,
-		owner: context.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	}).getPrData(context.pr_number);
-	let body = addContributor(prData.body || "", prData.user.login);
-	const trigger = context.trigger;
-	const { targetRepo } = prCommands[trigger];
-	const profile = targetRepoProfiles[targetRepo];
-	body = adaptChangelogForRepo(body, targetRepo);
-	startGroup("body");
-	info(`${body}`);
-	endGroup();
-	const packageName = profile.iconsPackage;
-	startGroup(packageName);
-	let latestVersion = "";
-	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
-	else latestVersion = await getPkgLatestVersion(packageName);
-	info(`latestVersion: ${latestVersion}`);
-	endGroup();
-	const gitHelper = new GitHelper({
-		repo: targetRepo,
-		owner: profile.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	await gitHelper.clone();
-	await gitHelper.initSubmodule();
-	const packageManager = profile.packageManager;
-	if (packageManager === "pnpm") await corepackEnable();
-	await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
-	const branchName = `chore/icon/${packageName}/${latestVersion}`;
-	await gitHelper.createBranch(branchName);
-	await bumpIconsVersion(packageManager, targetRepo);
-	if (packageName === "cdn-iconfont") await miniprogramUpdateIcons(targetRepo, latestVersion);
-	if (!await gitHelper.isNeedCommit()) return true;
-	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
-	await gitHelper.commit(title);
-	const updateSnapScript = packageName === "cdn-iconfont" ? "test:snap-update" : "test:update";
-	if (targetRepo === "tdesign-vue-next") await exec(packageManager, [
-		"-F",
-		"@tdesign/vue-next-test",
-		"run",
-		updateSnapScript
-	], { cwd: `./${targetRepo}` });
-	else await exec(packageManager, ["run", updateSnapScript], { cwd: `./${targetRepo}` });
-	if (await gitHelper.isNeedCommit()) await gitHelper.commit("chore: update snapshot");
-	await gitHelper.push(branchName);
-	new GithubHelper({
-		repo: targetRepo,
-		owner: profile.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	}).createPR(title, branchName, body);
-}
 const handlers = {
-	"/pr-vue": upgradeIcons,
-	"/pr-vue-next": upgradeIcons,
-	"/pr-react": upgradeIcons,
-	"/pr-mobile-vue": upgradeIcons,
-	"/pr-mobile-react": upgradeIcons,
-	"/pr-miniprogram": upgradeIcons
+	"/pr-vue": updateIconsAndCreatePr$1,
+	"/pr-vue-next": updateIconsAndCreatePr,
+	"/pr-react": updateIconsAndCreatePr$2,
+	"/pr-mobile-vue": updateIconsAndCreatePr$3,
+	"/pr-mobile-react": updateIconsAndCreatePr$4,
+	"/pr-miniprogram": updateIconsAndCreatePr$5
 };
 //#endregion
 //#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js
@@ -47823,6 +47847,9 @@ async function run() {
 		comment_id: context.payload.comment?.id
 	});
 }
-run().catch(console.error);
+run().catch((err) => {
+	console.error(err);
+	process$1.exitCode = 1;
+});
 //#endregion
 export { run };

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CND_ICONFONT_VERSION_REG } from '../../src/tdesign/icons'
+import { CND_ICONFONT_VERSION_REG } from '../../src/tdesign/operations/update-icons'
 
 describe('tdesign/icons', () => {
   describe('regex', () => {

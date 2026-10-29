@@ -53,4 +53,7 @@ export async function run(): Promise<void> {
     comment_id: context.payload.comment?.id,
   })
 }
-run().catch(console.error)
+run().catch((err) => {
+  console.error(err)
+  process.exitCode = 1
+})
