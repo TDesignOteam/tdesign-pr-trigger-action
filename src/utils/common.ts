@@ -1,5 +1,5 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
-import type { TdesignRepo } from './trigger'
+import type { TdesignRepo } from '../commands/types'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
@@ -133,10 +133,40 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
 
   await exec('git', ['status'], { cwd: `./${repo}` })
 }
+export async function bumpSiteDeps(packageManager: string, repo: string, deps: string[]) {
+  if (packageManager === 'pnpm') {
+    const workspaceManifest = await readWorkspaceManifest(`./${repo}`)
+    if (workspaceManifest && (workspaceManifest.catalog || workspaceManifest.catalogs)) {
+      let updated = workspaceManifest
+      for (const dep of deps) {
+        updated = updateCatalogs(updated, dep, await getPkgLatestVersion(dep))
+      }
+      await updateWorkspaceManifest(`./${repo}`, { updatedFields: updated })
+      await exec('pnpm', ['install', '--force'], {
+        cwd: `./${repo}`,
+        env: { ...process.env, CI: 'false' },
+      })
+    }
+    else {
+      await exec('pnpm', [
+        '--recursive',
+        'update',
+        ...deps,
+        '--latest',
+      ], { cwd: `./${repo}` })
+    }
+  }
+  else {
+    await exec('npx', ['npm-check-updates', ...deps, '-u'], { cwd: `./${repo}` })
+  }
+
+  await exec('git', ['status'], { cwd: `./${repo}` })
+}
+
 export async function corepackEnable() {
   await exec('corepack', ['enable'])
 }
-function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
+export function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
   if (workspaceManifest.catalog) {
     for (const [name, ver] of Object.entries(workspaceManifest.catalog)) {
       if (name === packageName) {
