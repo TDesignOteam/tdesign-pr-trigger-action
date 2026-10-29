@@ -148,7 +148,12 @@ export async function bumpSiteDeps(packageManager: string, repo: string, deps: s
       })
     }
     else {
-      await exec('pnpm', ['--recursive', 'update', ...deps, '--latest'], { cwd: `./${repo}` })
+      await exec('pnpm', [
+        '--recursive',
+        'update',
+        ...deps,
+        '--latest',
+      ], { cwd: `./${repo}` })
     }
   }
   else {

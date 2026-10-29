@@ -81,10 +81,17 @@ export async function createIconsUpdatePr(context: TriggerContext, config: RepoC
   const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`
   await gitHelper.commit(title)
 
-  const updateSnapScript = packageName === 'cdn-iconfont' ? 'test:snap-update' : 'test:update'
+  const updateSnapScript = packageName === 'cdn-iconfont'
+    ? 'test:snap-update'
+    : 'test:update'
 
   if (targetRepo === 'tdesign-vue-next') {
-    await exec(packageManager, ['-F', '@tdesign/vue-next-test', 'run', updateSnapScript], { cwd: `./${targetRepo}` })
+    await exec(packageManager, [
+      '-F',
+      '@tdesign/vue-next-test',
+      'run',
+      updateSnapScript,
+    ], { cwd: `./${targetRepo}` })
   }
   else {
     await exec(packageManager, ['run', updateSnapScript], { cwd: `./${targetRepo}` })

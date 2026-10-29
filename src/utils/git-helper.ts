@@ -164,12 +164,24 @@ export class GitHelper {
           if (!strategy.submodule) {
             throw new Error(`git merge ${branch} 存在无法自动处理的冲突: ${path}`)
           }
-          const stage = strategy.submodule === 'ours' ? 2 : 3
+          const stage = strategy.submodule === 'ours'
+            ? 2
+            : 3
           const { stdout } = await getExecOutput('git', ['rev-parse', `:${stage}:${path}`], { cwd: this.repoPath })
-          await exec('git', ['update-index', '--cacheinfo', '160000', stdout.trim(), path], { cwd: this.repoPath })
+          await exec('git', [
+            'update-index',
+            '--cacheinfo',
+            '160000',
+            stdout.trim(),
+            path,
+          ], { cwd: this.repoPath })
         }
-        else if ((strategy.snapshotFiles ? strategy.snapshotFiles.includes(path) : path.endsWith('.snap')) && strategy.snapshot) {
-          const flag = strategy.snapshot === 'theirs' ? '--theirs' : '--ours'
+        else if ((strategy.snapshotFiles
+          ? strategy.snapshotFiles.includes(path)
+          : path.endsWith('.snap')) && strategy.snapshot) {
+          const flag = strategy.snapshot === 'theirs'
+            ? '--theirs'
+            : '--ours'
           await exec('git', ['checkout', flag, '--', path], { cwd: this.repoPath })
           await exec('git', ['add', path], { cwd: this.repoPath })
         }
@@ -190,7 +202,13 @@ export class GitHelper {
   }
 
   async getSubmodulePaths(): Promise<string[]> {
-    const { stdout } = await getExecOutput('git', ['config', '--file', '.gitmodules', '--get-regexp', 'path'], { cwd: this.repoPath, ignoreReturnCode: true })
+    const { stdout } = await getExecOutput('git', [
+      'config',
+      '--file',
+      '.gitmodules',
+      '--get-regexp',
+      'path',
+    ], { cwd: this.repoPath, ignoreReturnCode: true })
     return stdout.split('\n').map(item => item.trim().split(/\s+/)[1]).filter(Boolean)
   }
 

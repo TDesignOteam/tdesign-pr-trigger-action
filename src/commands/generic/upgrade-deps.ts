@@ -25,7 +25,12 @@ export const upgradeDeps: CommandHandler = async (context) => {
   const branchName = `chore/deps/${deps}/${latestVersion}`
   await gitHelper.createBranch(branchName)
   if (packageManager === 'pnpm') {
-    await exec('pnpm', ['--recursive', 'update', deps, '--latest'], { cwd: `./${context.repo}` })
+    await exec('pnpm', [
+      '--recursive',
+      'update',
+      deps,
+      '--latest',
+    ], { cwd: `./${context.repo}` })
   }
   else {
     await exec('npx', ['npm-check-updates', deps, '-u'], { cwd: `./${context.repo}` })

@@ -5,7 +5,10 @@ const repoRegistry = new Map<string, RepoHandlers>()
 const globalHandlers: RepoHandlers = {}
 
 export function registerRepoHandlers(repo: string, handlers: RepoHandlers) {
-  repoRegistry.set(repo, { ...repoRegistry.get(repo), ...handlers })
+  repoRegistry.set(repo, {
+    ...repoRegistry.get(repo),
+    ...handlers,
+  })
 }
 
 export function registerGlobalHandlers(handlers: RepoHandlers) {

@@ -41,4 +41,9 @@ export const prCommands: Record<AutoPrTrigger, { targetRepo: TdesignRepo }> = {
   '/pr-miniprogram': { targetRepo: 'tdesign-miniprogram' },
 }
 
-export const repoScopedTriggers = new Set<string>([...Object.keys(prCommands), '/update-common', '/update-snapshot', '/update-coverage'])
+export const repoScopedTriggers = new Set<string>([
+  ...Object.keys(prCommands),
+  '/update-common',
+  '/update-snapshot',
+  '/update-coverage',
+])

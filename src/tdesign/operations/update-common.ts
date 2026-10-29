@@ -87,7 +87,9 @@ export async function updateCommonOnPr(context: TriggerContext, config: RepoComm
     await workspace.gitHelper.updateSubmodule()
   }
   if (await workspace.gitHelper.isNeedCommit()) {
-    await workspace.gitHelper.commitAll(commonPrNumber ? `chore: update common to PR ${commonPrNumber}` : 'chore: update common')
+    await workspace.gitHelper.commitAll(commonPrNumber
+      ? `chore: update common to PR ${commonPrNumber}`
+      : 'chore: update common')
   }
   await workspace.gitHelper.mergeWithStrategy('origin/develop', { submodule: 'ours' })
   await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch, { ignoreError: true })

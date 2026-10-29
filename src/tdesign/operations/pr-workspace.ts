@@ -43,7 +43,12 @@ export async function checkoutPr(context: TriggerContext, config: RepoCommandCon
   await gitHelper.clone()
   await gitHelper.fetchPullRequestHead(context.pr_number, `pr-${context.pr_number}`)
   await gitHelper.initSubmodule()
-  return { githubHelper, gitHelper, headRepo, headBranch }
+  return {
+    githubHelper,
+    gitHelper,
+    headRepo,
+    headBranch,
+  }
 }
 
 function getRunLink() {
