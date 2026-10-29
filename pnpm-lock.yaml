@@ -182,8 +182,8 @@ importers:
         specifier: ^1000.3.1
         version: 1000.3.1
       node-cnb:
-        specifier: ^1.30.0
-        version: 1.30.0
+        specifier: ^1.37.0
+        version: 1.37.0
     devDependencies:
       '@antfu/eslint-config':
         specifier: ^10.0.0
@@ -2425,8 +2425,8 @@ packages:
     resolution: {integrity: sha512-kKHJhxwpR/Okycz4HhQKKlhWe4ASEfPgkSWNmKFHd7+ezuQlxkA5cM3+XkBPvm1gmHen3w53qsYAv+8GwRrBlg==}
     engines: {node: '>=18'}
 
-  node-cnb@1.30.0:
-    resolution: {integrity: sha512-WpWRIXH1pScqgLR4QjVO8dqp8zUkDDl2MpsH+8IcMS105loD5K9O2BYZRFHuW0hApfPYTr244tEklObHopIMCg==}
+  node-cnb@1.37.0:
+    resolution: {integrity: sha512-nUdL/yECNJgEEKPibSgFQWBkmBfEOB7ZBpIlrQT4NowAKP4r4NhKZGgNTm45+tfD0vzf9h8WdSgTpP+FJzFzHg==}
 
   node-releases@2.0.54:
     resolution: {integrity: sha512-YHs7BmmcsdAI5Ozuf8JZo6PT0mv2GIWC9vMfvUC3dp65M8hn7Ux8CPL+2oBI7juNuj9d0ndhTcznq2ODBps9cQ==}
@@ -5136,7 +5136,7 @@ snapshots:
 
   natural-orderby@5.0.0: {}
 
-  node-cnb@1.30.0:
+  node-cnb@1.37.0:
     dependencies:
       ky: 1.14.2
 
