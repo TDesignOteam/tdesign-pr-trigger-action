@@ -4,6 +4,7 @@ import { handlers as miniprogramRepoHandlers } from '../tdesign/miniprogram'
 import { handlers as mobileReactRepoHandlers } from '../tdesign/mobile-react'
 import { handlers as mobileVueRepoHandlers } from '../tdesign/mobile-vue'
 import { handlers as reactRepoHandlers } from '../tdesign/react'
+import { handlers as siteRepoHandlers } from '../tdesign/site'
 import { handlers as vueRepoHandlers } from '../tdesign/vue'
 import { handlers as vueNextRepoHandlers } from '../tdesign/vue-next'
 import { deleteCnbBranch } from './generic/delete-cnb-branch'
@@ -11,6 +12,7 @@ import { updateSite } from './generic/update-site'
 import { upgradeDeps } from './generic/upgrade-deps'
 import useTrigger, { registerGlobalHandlers, registerRepoHandlers } from './registry'
 
+registerRepoHandlers('tdesign', siteRepoHandlers)
 registerRepoHandlers('tdesign-common', commonRepoHandlers)
 registerRepoHandlers('tdesign-icons', iconsRepoHandlers)
 registerRepoHandlers('tdesign-vue', vueRepoHandlers)

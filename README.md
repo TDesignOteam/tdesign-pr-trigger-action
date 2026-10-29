@@ -2,6 +2,17 @@
 
 通过评论 触发 CI 自动化, [使用小技巧](./docs/github_comment.md)
 
+## tdesign (主仓)
+
+- [x] /pr-vue
+- [x] /pr-vue-next
+- [x] /pr-react
+- [x] /pr-mobile-vue
+- [x] /pr-mobile-react
+- [x] /pr-miniprogram
+
+主仓 PR 合并后评论，到对应组件仓库新建 PR 升级 `@tdesign/site-components` / `@tdesign/theme-generator` 站点依赖。
+
 ## tdesign-icons
 
 - [x] /pr-vue
