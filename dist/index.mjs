@@ -16625,14 +16625,6 @@ function error(message, properties = {}) {
 	issueCommand("error", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
 }
 /**
-* Adds a warning issue
-* @param message warning issue message. Errors will be converted to string via toString()
-* @param properties optional properties to add to the annotation.
-*/
-function warning(message, properties = {}) {
-	issueCommand("warning", toCommandProperties(properties), message instanceof Error ? message.toString() : message);
-}
-/**
 * Writes info to log with console.log.
 * @param message info message
 */
@@ -36776,24 +36768,16 @@ var GitHelper = class {
 		], { cwd: this.repoPath });
 		await exec("git", ["checkout", branch], { cwd: this.repoPath });
 	}
-	async pushToRepo(ownerRepo, branch, options) {
+	async pushToRepo(ownerRepo, branch) {
 		if (this.dryRun) {
 			info("dry-run模式, 不运行git push");
 			return;
 		}
-		try {
-			await exec("git", [
-				"push",
-				`https://github.com/${ownerRepo}.git`,
-				`HEAD:${branch}`
-			], { cwd: this.repoPath });
-		} catch (err) {
-			if (options?.ignoreError) {
-				warning(`git push 失败(已忽略): ${err.message}`);
-				return;
-			}
-			throw err;
-		}
+		await exec("git", [
+			"push",
+			`https://github.com/${ownerRepo}.git`,
+			`HEAD:${branch}`
+		], { cwd: this.repoPath });
 	}
 	async checkoutSubmodulePr(submodulePath, prNumber) {
 		const subPath = `${this.repoPath}/${submodulePath}`;
@@ -37000,20 +36984,21 @@ async function runPrScript(context, config, options) {
 	if (options.merge) await workspace.gitHelper.mergeWithStrategy("origin/develop", options.merge);
 	const targetRepo = config.targetRepo;
 	const packageManager = targetRepoProfiles[targetRepo].packageManager;
+	const scripts = Array.isArray(options.script) ? options.script : [options.script];
 	if (packageManager === "pnpm") {
 		await corepackEnable();
 		await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
-		await exec(packageManager, [
-			"-r",
+		for (const script of scripts) await exec(packageManager, config.recursiveScripts === false ? ["run", script] : [
+			"--recursive",
 			"run",
-			options.script
+			script
 		], { cwd: `./${targetRepo}` });
 	} else {
 		await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
-		await exec(packageManager, ["run", options.script], { cwd: `./${targetRepo}` });
+		for (const script of scripts) await exec(packageManager, ["run", script], { cwd: `./${targetRepo}` });
 	}
 	if (await workspace.gitHelper.isNeedCommit()) await workspace.gitHelper.commitAll(options.commitMessage);
-	await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch, { ignoreError: true });
+	await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch);
 }
 //#endregion
 //#region src/tdesign/operations/update-common.ts
@@ -37088,7 +37073,7 @@ async function updateCommonOnPr(context, config) {
 	} else await workspace.gitHelper.updateSubmodule();
 	if (await workspace.gitHelper.isNeedCommit()) await workspace.gitHelper.commitAll(commonPrNumber ? `chore: update common to PR ${commonPrNumber}` : "chore: update common");
 	await workspace.gitHelper.mergeWithStrategy("origin/develop", { submodule: "ours" });
-	await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch, { ignoreError: true });
+	await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch);
 }
 //#endregion
 //#region src/tdesign/operations/update-coverage.ts
@@ -37254,7 +37239,9 @@ async function createSiteDepsUpdatePr(context, config) {
 const repoConfig$7 = {
 	targetRepo: "tdesign-miniprogram",
 	iconsPackage: "cdn-iconfont",
-	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
+	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
+	snapshotScript: "test:snap-update",
+	coverageScript: ["cover", "badge"]
 };
 const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$7);
 const updateIconsAndCreatePr$7 = (context) => createIconsUpdatePr(context, repoConfig$7);
@@ -37289,7 +37276,8 @@ const handlers$6 = createPrCommandHandlers(repoConfig$5);
 const repoConfig$4 = {
 	targetRepo: "tdesign-react",
 	iconsPackage: "tdesign-icons-react",
-	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
+	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
+	recursiveScripts: false
 };
 const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$4);
 const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$4);

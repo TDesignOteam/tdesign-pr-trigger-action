@@ -9,6 +9,8 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-miniprogram',
   iconsPackage: 'cdn-iconfont',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
+  snapshotScript: 'test:snap-update',
+  coverageScript: ['cover', 'badge'],
 }
 
 export const updateCommonAndCreatePr = (context: TriggerContext) => createCommonUpdatePr(context, repoConfig)

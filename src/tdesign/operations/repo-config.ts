@@ -9,6 +9,7 @@ export interface RepoCommandConfig {
   siteDeps?: string[]
   snapshotConflictFiles?: string[]
   snapshotScript?: string
-  coverageScript?: string
+  coverageScript?: string | string[]
+  recursiveScripts?: boolean
   runApiCss?: boolean
 }

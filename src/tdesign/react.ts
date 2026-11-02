@@ -9,6 +9,7 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-react',
   iconsPackage: 'tdesign-icons-react',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
+  recursiveScripts: false,
 }
 
 export const updateCommonAndCreatePr = (context: TriggerContext) => createCommonUpdatePr(context, repoConfig)

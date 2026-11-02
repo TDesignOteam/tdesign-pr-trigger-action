@@ -57,7 +57,7 @@ function getRunLink() {
 
 export interface RunPrScriptOptions {
   progressComment: string
-  script: string
+  script: string | string[]
   commitMessage: string
   merge?: MergeConflictStrategy
 }
@@ -75,18 +75,28 @@ export async function runPrScript(context: TriggerContext, config: RepoCommandCo
 
   const targetRepo = config.targetRepo
   const packageManager = targetRepoProfiles[targetRepo].packageManager
+  const scripts = Array.isArray(options.script)
+    ? options.script
+    : [options.script]
   if (packageManager === 'pnpm') {
     await corepackEnable()
     await exec(packageManager, ['install'], { cwd: `./${targetRepo}` })
-    await exec(packageManager, ['-r', 'run', options.script], { cwd: `./${targetRepo}` })
+    for (const script of scripts) {
+      const args = config.recursiveScripts === false
+        ? ['run', script]
+        : ['--recursive', 'run', script]
+      await exec(packageManager, args, { cwd: `./${targetRepo}` })
+    }
   }
   else {
     await exec(packageManager, ['install'], { cwd: `./${targetRepo}` })
-    await exec(packageManager, ['run', options.script], { cwd: `./${targetRepo}` })
+    for (const script of scripts) {
+      await exec(packageManager, ['run', script], { cwd: `./${targetRepo}` })
+    }
   }
 
   if (await workspace.gitHelper.isNeedCommit()) {
     await workspace.gitHelper.commitAll(options.commitMessage)
   }
-  await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch, { ignoreError: true })
+  await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch)
 }

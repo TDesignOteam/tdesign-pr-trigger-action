@@ -1,4 +1,4 @@
-import { info, warning } from '@actions/core'
+import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
 
 export interface GitContext {
@@ -126,21 +126,12 @@ export class GitHelper {
     await exec('git', ['checkout', branch], { cwd: this.repoPath })
   }
 
-  async pushToRepo(ownerRepo: string, branch: string, options?: { ignoreError?: boolean }) {
+  async pushToRepo(ownerRepo: string, branch: string) {
     if (this.dryRun) {
       info('dry-run模式, 不运行git push')
       return
     }
-    try {
-      await exec('git', ['push', `https://github.com/${ownerRepo}.git`, `HEAD:${branch}`], { cwd: this.repoPath })
-    }
-    catch (err: any) {
-      if (options?.ignoreError) {
-        warning(`git push 失败(已忽略): ${err.message}`)
-        return
-      }
-      throw err
-    }
+    await exec('git', ['push', `https://github.com/${ownerRepo}.git`, `HEAD:${branch}`], { cwd: this.repoPath })
   }
 
   async checkoutSubmodulePr(submodulePath: string, prNumber: number) {
