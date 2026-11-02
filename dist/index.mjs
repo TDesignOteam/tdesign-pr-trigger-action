@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
-import { readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import process$1 from "node:process";
 import { fileURLToPath } from "node:url";
 import * as os$1 from "os";
@@ -19758,6 +19758,10 @@ const targetRepoProfiles = {
 	"tdesign-miniprogram": {
 		owner: "Tencent",
 		packageManager: "pnpm"
+	},
+	"tdesign-flutter": {
+		owner: "Tencent",
+		packageManager: "pub"
 	}
 };
 const repoScopedTriggers = /* @__PURE__ */ new Set([
@@ -19768,7 +19772,8 @@ const repoScopedTriggers = /* @__PURE__ */ new Set([
 		"/pr-mobile-vue": { targetRepo: "tdesign-mobile-vue" },
 		"/pr-mobile-react": { targetRepo: "tdesign-mobile-react" },
 		"/pr-miniprogram": { targetRepo: "tdesign-miniprogram" },
-		"/pr-tdesign": { targetRepo: "tdesign" }
+		"/pr-tdesign": { targetRepo: "tdesign" },
+		"/pr-flutter": { targetRepo: "tdesign-flutter" }
 	}),
 	"/update-common",
 	"/update-snapshot",
@@ -36520,6 +36525,62 @@ async function getPkgLatestVersion(packageName) {
 	]);
 	return stdout.trim();
 }
+async function getPkgVersionFromRepo(owner, repo, filePath) {
+	const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`);
+	if (!res.ok) throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`);
+	const text = await res.text();
+	if (filePath.endsWith(".json")) return JSON.parse(text).version || "";
+	return text.match(/^version:\s*('?)([^'\s]+)\1/m)?.[2] || "";
+}
+function findPackageJsonFiles(dir) {
+	const results = [];
+	for (const entry of readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) {
+		if (entry.name === "node_modules" || entry.name === "dist" || entry.name.startsWith(".")) continue;
+		results.push(...findPackageJsonFiles(join(dir, entry.name)));
+	} else if (entry.name === "package.json") results.push(join(dir, entry.name));
+	return results;
+}
+function escapeRegExp(str) {
+	return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+async function bumpPackageDeps(repo, deps, versions = {}) {
+	const latestVersions = { ...versions };
+	for (const dep of deps) if (!latestVersions[dep]) latestVersions[dep] = await getPkgLatestVersion(dep);
+	for (const filePath of findPackageJsonFiles(`./${repo}`)) {
+		const content = readFileSync(filePath, "utf-8");
+		let updated = content;
+		for (const dep of deps) {
+			const latest = latestVersions[dep];
+			if (!latest) continue;
+			const reg = new RegExp(`("${escapeRegExp(dep)}":\\s*)"([^"]*)"`, "g");
+			updated = updated.replace(reg, (match, prefix, ver) => {
+				if (ver.includes(":")) return match;
+				if (ver.startsWith("^") || ver.startsWith("~")) return `${prefix}"${ver.slice(0, 1)}${latest}"`;
+				if (/^\d/.test(ver)) return `${prefix}"${latest}"`;
+				return match;
+			});
+		}
+		if (updated !== content) {
+			writeFileSync(filePath, updated);
+			info(`已更新 ${filePath}`);
+		}
+	}
+	await exec("pnpm", ["install"], {
+		cwd: `./${repo}`,
+		env: {
+			...process$1.env,
+			CI: "false"
+		}
+	});
+}
+async function bumpPubDependency(repo, packageName, version, pubspecPath) {
+	const filePath = `./${repo}/${pubspecPath}`;
+	const content = readFileSync(filePath, "utf-8");
+	const reg = new RegExp(`^(\\s*${packageName}:\\s*)\\S+`, "m");
+	if (!reg.test(content)) throw new Error(`${filePath} 中未找到 ${packageName} 依赖`);
+	writeFileSync(filePath, content.replace(reg, `$1^${version}`));
+	await exec("git", ["status"], { cwd: `./${repo}` });
+}
 async function bumpIconsVersion(packageManager, repo) {
 	if (packageManager === "pnpm") if (repo === "tdesign-vue-next" || repo === "tdesign-miniprogram") {
 		let workspaceManifest = await (0, import_lib$1.readWorkspaceManifest)(`./${repo}`);
@@ -36564,12 +36625,7 @@ async function bumpSiteDeps(packageManager, repo, deps) {
 					CI: "false"
 				}
 			});
-		} else await exec("pnpm", [
-			"--recursive",
-			"update",
-			...deps,
-			"--latest"
-		], { cwd: `./${repo}` });
+		} else await bumpPackageDeps(repo, deps);
 	} else await exec("npx", [
 		"npm-check-updates",
 		...deps,
@@ -37195,74 +37251,74 @@ async function createSiteDepsUpdatePr(context, config) {
 }
 //#endregion
 //#region src/tdesign/miniprogram.ts
-const repoConfig$6 = {
+const repoConfig$7 = {
 	targetRepo: "tdesign-miniprogram",
 	iconsPackage: "cdn-iconfont",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$6);
-const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$6);
-const updateSiteDepsAndCreatePr$6 = (context) => createSiteDepsUpdatePr(context, repoConfig$6);
-const handlers$8 = createPrCommandHandlers(repoConfig$6);
+const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$7);
+const updateIconsAndCreatePr$7 = (context) => createIconsUpdatePr(context, repoConfig$7);
+const updateSiteDepsAndCreatePr$5 = (context) => createSiteDepsUpdatePr(context, repoConfig$7);
+const handlers$8 = createPrCommandHandlers(repoConfig$7);
 //#endregion
 //#region src/tdesign/mobile-react.ts
-const repoConfig$5 = {
+const repoConfig$6 = {
 	targetRepo: "tdesign-mobile-react",
 	iconsPackage: "tdesign-icons-react",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
-const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$5);
-const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$5);
-const updateSiteDepsAndCreatePr$5 = (context) => createSiteDepsUpdatePr(context, repoConfig$5);
-const handlers$7 = createPrCommandHandlers(repoConfig$5);
+const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$6);
+const updateIconsAndCreatePr$6 = (context) => createIconsUpdatePr(context, repoConfig$6);
+const updateSiteDepsAndCreatePr$4 = (context) => createSiteDepsUpdatePr(context, repoConfig$6);
+const handlers$7 = createPrCommandHandlers(repoConfig$6);
 //#endregion
 //#region src/tdesign/mobile-vue.ts
-const repoConfig$4 = {
+const repoConfig$5 = {
 	targetRepo: "tdesign-mobile-vue",
 	iconsPackage: "tdesign-icons-vue-next",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
-const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$4);
-const updateIconsAndCreatePr$3 = (context) => createIconsUpdatePr(context, repoConfig$4);
-const updateSiteDepsAndCreatePr$4 = (context) => createSiteDepsUpdatePr(context, repoConfig$4);
-const handlers$6 = createPrCommandHandlers(repoConfig$4);
+const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$5);
+const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$5);
+const updateSiteDepsAndCreatePr$3 = (context) => createSiteDepsUpdatePr(context, repoConfig$5);
+const handlers$6 = createPrCommandHandlers(repoConfig$5);
 //#endregion
 //#region src/tdesign/react.ts
-const repoConfig$3 = {
+const repoConfig$4 = {
 	targetRepo: "tdesign-react",
 	iconsPackage: "tdesign-icons-react",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$3);
-const updateIconsAndCreatePr$2 = (context) => createIconsUpdatePr(context, repoConfig$3);
-const updateSiteDepsAndCreatePr$3 = (context) => createSiteDepsUpdatePr(context, repoConfig$3);
-const handlers$5 = createPrCommandHandlers(repoConfig$3);
+const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$4);
+const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$4);
+const updateSiteDepsAndCreatePr$2 = (context) => createSiteDepsUpdatePr(context, repoConfig$4);
+const handlers$5 = createPrCommandHandlers(repoConfig$4);
 //#endregion
 //#region src/tdesign/vue.ts
-const repoConfig$2 = {
+const repoConfig$3 = {
 	targetRepo: "tdesign-vue",
 	iconsPackage: "tdesign-icons-vue",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$2);
-const updateIconsAndCreatePr$1 = (context) => createIconsUpdatePr(context, repoConfig$2);
-const updateSiteDepsAndCreatePr$2 = (context) => createSiteDepsUpdatePr(context, repoConfig$2);
-const handlers$4 = createPrCommandHandlers(repoConfig$2);
+const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$3);
+const updateIconsAndCreatePr$3 = (context) => createIconsUpdatePr(context, repoConfig$3);
+const updateSiteDepsAndCreatePr$1 = (context) => createSiteDepsUpdatePr(context, repoConfig$3);
+const handlers$4 = createPrCommandHandlers(repoConfig$3);
 //#endregion
 //#region src/tdesign/vue-next.ts
-const repoConfig$1 = {
+const repoConfig$2 = {
 	targetRepo: "tdesign-vue-next",
 	commonSubmodule: "packages/common",
 	iconsPackage: "tdesign-icons-vue-next",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotConflictFiles: ["packages/tdesign-vue-next/test/src/snap/__snapshots__/csr.test.ts.snap", "packages/tdesign-vue-next/test/src/snap/__snapshots__/ssr.test.ts.snap"]
 };
-const updateCommonAndCreatePr = (context) => createCommonUpdatePr(context, repoConfig$1);
-const updateIconsAndCreatePr = (context) => createIconsUpdatePr(context, repoConfig$1);
-const updateSiteDepsAndCreatePr$1 = (context) => createSiteDepsUpdatePr(context, repoConfig$1);
-const handlers$3 = createPrCommandHandlers(repoConfig$1);
+const updateCommonAndCreatePr = (context) => createCommonUpdatePr(context, repoConfig$2);
+const updateIconsAndCreatePr$2 = (context) => createIconsUpdatePr(context, repoConfig$2);
+const updateSiteDepsAndCreatePr = (context) => createSiteDepsUpdatePr(context, repoConfig$2);
+const handlers$3 = createPrCommandHandlers(repoConfig$2);
 //#endregion
 //#region src/tdesign/common.ts
 const handlers$2 = {
@@ -37274,30 +37330,105 @@ const handlers$2 = {
 	"/pr-miniprogram": updateCommonAndCreatePr$5
 };
 //#endregion
+//#region src/tdesign/operations/update-icons-pkg.ts
+async function createIconsPkgUpdatePr(context, config) {
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const prData = await githubHelper.getPrData(context.pr_number);
+	if (!prData.merged) {
+		info("pr has been merged");
+		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
+		return;
+	}
+	const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
+	let body = addContributor(prData.body || "", prData.user.login, link);
+	const targetRepo = config.targetRepo;
+	const { owner, packageManager } = targetRepoProfiles[targetRepo];
+	body = adaptChangelogForRepo(body, targetRepo);
+	startGroup("body");
+	info(`${body}`);
+	endGroup();
+	const packageName = config.iconsPackage;
+	if (!packageName) throw new Error(`${targetRepo} 未配置 iconsPackage`);
+	const versionFile = config.iconsVersionFile;
+	if (!versionFile) throw new Error(`${targetRepo} 未配置 iconsVersionFile`);
+	startGroup(packageName);
+	const latestVersion = await getPkgVersionFromRepo(context.owner, context.repo, versionFile);
+	info(`latestVersion: ${latestVersion}`);
+	endGroup();
+	if (!latestVersion) throw new Error(`未从 ${versionFile} 获取到版本号`);
+	const gitHelper = new GitHelper({
+		repo: targetRepo,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const baseBranch = await gitHelper.clone();
+	const branchName = `chore/icon/${packageName}/${latestVersion}`;
+	await gitHelper.createBranch(branchName);
+	if (packageManager === "pub") {
+		const pubspecPath = config.pubspecPath;
+		if (!pubspecPath) throw new Error(`${targetRepo} 未配置 pubspecPath`);
+		await bumpPubDependency(targetRepo, packageName, latestVersion, pubspecPath);
+	} else {
+		await corepackEnable();
+		await bumpPackageDeps(targetRepo, [packageName], { [packageName]: latestVersion });
+	}
+	if (!await gitHelper.isNeedCommit()) {
+		githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n icons 已是最新版本，无需升级`);
+		return true;
+	}
+	const title = `feat(Icon): upgrade ${packageName} to ${latestVersion}`;
+	await gitHelper.commit(title);
+	await gitHelper.push(branchName);
+	const newPrData = await new GithubHelper({
+		repo: targetRepo,
+		owner,
+		token: context.token,
+		dryRun: context.dry_run
+	}).createPR(title, branchName, body, baseBranch);
+	if (newPrData) githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
+}
+//#endregion
+//#region src/tdesign/flutter.ts
+const repoConfig$1 = {
+	targetRepo: "tdesign-flutter",
+	iconsPackage: "tdesign_flutter_icons",
+	iconsVersionFile: "packages/flutter/pubspec.yaml",
+	pubspecPath: "tdesign-component/pubspec.yaml"
+};
+const updateIconsAndCreatePr$1 = (context) => createIconsPkgUpdatePr(context, repoConfig$1);
+//#endregion
 //#region src/tdesign/tdesign.ts
 const repoConfig = {
 	targetRepo: "tdesign",
-	siteDeps: ["tdesign-icons-view"]
+	iconsPackage: "tdesign-icons-view",
+	iconsVersionFile: "packages/view/package.json"
 };
-const updateSiteDepsAndCreatePr = (context) => createSiteDepsUpdatePr(context, repoConfig);
+const updateIconsAndCreatePr = (context) => createIconsPkgUpdatePr(context, repoConfig);
 const handlers$1 = {
-	"/pr-vue": updateSiteDepsAndCreatePr$2,
-	"/pr-vue-next": updateSiteDepsAndCreatePr$1,
-	"/pr-react": updateSiteDepsAndCreatePr$3,
-	"/pr-mobile-vue": updateSiteDepsAndCreatePr$4,
-	"/pr-mobile-react": updateSiteDepsAndCreatePr$5,
-	"/pr-miniprogram": updateSiteDepsAndCreatePr$6
+	"/pr-vue": updateSiteDepsAndCreatePr$1,
+	"/pr-vue-next": updateSiteDepsAndCreatePr,
+	"/pr-react": updateSiteDepsAndCreatePr$2,
+	"/pr-mobile-vue": updateSiteDepsAndCreatePr$3,
+	"/pr-mobile-react": updateSiteDepsAndCreatePr$4,
+	"/pr-miniprogram": updateSiteDepsAndCreatePr$5
 };
 //#endregion
 //#region src/tdesign/icons.ts
 const handlers = {
-	"/pr-vue": updateIconsAndCreatePr$1,
-	"/pr-vue-next": updateIconsAndCreatePr,
-	"/pr-react": updateIconsAndCreatePr$2,
-	"/pr-mobile-vue": updateIconsAndCreatePr$3,
-	"/pr-mobile-react": updateIconsAndCreatePr$4,
-	"/pr-miniprogram": updateIconsAndCreatePr$5,
-	"/pr-tdesign": updateSiteDepsAndCreatePr
+	"/pr-vue": updateIconsAndCreatePr$3,
+	"/pr-vue-next": updateIconsAndCreatePr$2,
+	"/pr-react": updateIconsAndCreatePr$4,
+	"/pr-mobile-vue": updateIconsAndCreatePr$5,
+	"/pr-mobile-react": updateIconsAndCreatePr$6,
+	"/pr-miniprogram": updateIconsAndCreatePr$7,
+	"/pr-tdesign": updateIconsAndCreatePr,
+	"/pr-flutter": updateIconsAndCreatePr$1
 };
 //#endregion
 //#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js

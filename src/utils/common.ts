@@ -1,5 +1,7 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
 import type { TdesignRepo } from '../commands/types'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
@@ -101,6 +103,94 @@ export async function getPkgLatestVersion(packageName: string) {
   return stdout.trim()
 }
 
+export async function getPkgVersionFromRepo(owner: string, repo: string, filePath: string) {
+  const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`)
+  if (!res.ok) {
+    throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`)
+  }
+  const text = await res.text()
+  if (filePath.endsWith('.json')) {
+    return (JSON.parse(text) as { version?: string }).version || ''
+  }
+  const match = text.match(/^version:\s*('?)([^'\s]+)\1/m)
+  return match?.[2] || ''
+}
+
+function findPackageJsonFiles(dir: string): string[] {
+  const results: string[] = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) {
+        continue
+      }
+      results.push(...findPackageJsonFiles(join(dir, entry.name)))
+    }
+    else if (entry.name === 'package.json') {
+      results.push(join(dir, entry.name))
+    }
+  }
+  return results
+}
+
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export async function bumpPackageDeps(repo: string, deps: string[], versions: Record<string, string> = {}) {
+  const latestVersions = { ...versions }
+  for (const dep of deps) {
+    if (!latestVersions[dep]) {
+      latestVersions[dep] = await getPkgLatestVersion(dep)
+    }
+  }
+
+  for (const filePath of findPackageJsonFiles(`./${repo}`)) {
+    const content = readFileSync(filePath, 'utf-8')
+    let updated = content
+    for (const dep of deps) {
+      const latest = latestVersions[dep]
+      if (!latest) {
+        continue
+      }
+      // 正则改写依赖版本，保留原文件格式与其他依赖不动
+      const reg = new RegExp(`("${escapeRegExp(dep)}":\\s*)"([^"]*)"`, 'g')
+      updated = updated.replace(reg, (match, prefix: string, ver: string) => {
+        // 跳过 workspace:/catalog:/file:/git 等协议依赖
+        if (ver.includes(':')) {
+          return match
+        }
+        if (ver.startsWith('^') || ver.startsWith('~')) {
+          return `${prefix}"${ver.slice(0, 1)}${latest}"`
+        }
+        if (/^\d/.test(ver)) {
+          return `${prefix}"${latest}"`
+        }
+        return match
+      })
+    }
+    if (updated !== content) {
+      writeFileSync(filePath, updated)
+      info(`已更新 ${filePath}`)
+    }
+  }
+
+  await exec('pnpm', ['install'], {
+    cwd: `./${repo}`,
+    env: { ...process.env, CI: 'false' }, // CI 下 pnpm install 走 frozen-lockfile，需关闭才能更新 lockfile
+  })
+}
+
+export async function bumpPubDependency(repo: string, packageName: string, version: string, pubspecPath: string) {
+  const filePath = `./${repo}/${pubspecPath}`
+  const content = readFileSync(filePath, 'utf-8')
+  const reg = new RegExp(`^(\\s*${packageName}:\\s*)\\S+`, 'm')
+  if (!reg.test(content)) {
+    throw new Error(`${filePath} 中未找到 ${packageName} 依赖`)
+  }
+  writeFileSync(filePath, content.replace(reg, `$1^${version}`))
+  await exec('git', ['status'], { cwd: `./${repo}` })
+}
+
 export async function bumpIconsVersion(packageManager: string, repo: string) {
   if (packageManager === 'pnpm') {
     if (repo === 'tdesign-vue-next' || repo === 'tdesign-miniprogram') {
@@ -148,12 +238,8 @@ export async function bumpSiteDeps(packageManager: string, repo: string, deps: s
       })
     }
     else {
-      await exec('pnpm', [
-        '--recursive',
-        'update',
-        ...deps,
-        '--latest',
-      ], { cwd: `./${repo}` })
+      // pnpm update --latest 会连带更新其他依赖，改为直接改写 package.json 后重新安装
+      await bumpPackageDeps(repo, deps)
     }
   }
   else {

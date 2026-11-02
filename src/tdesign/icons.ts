@@ -1,4 +1,5 @@
 import type { RepoHandlers } from '../commands/types'
+import * as flutterRepo from './flutter'
 import * as miniprogramRepo from './miniprogram'
 import * as mobileReactRepo from './mobile-react'
 import * as mobileVueRepo from './mobile-vue'
@@ -14,5 +15,6 @@ export const handlers: RepoHandlers = {
   '/pr-mobile-vue': mobileVueRepo.updateIconsAndCreatePr,
   '/pr-mobile-react': mobileReactRepo.updateIconsAndCreatePr,
   '/pr-miniprogram': miniprogramRepo.updateIconsAndCreatePr,
-  '/pr-tdesign': tdesignRepo.updateSiteDepsAndCreatePr,
+  '/pr-tdesign': tdesignRepo.updateIconsAndCreatePr,
+  '/pr-flutter': flutterRepo.updateIconsAndCreatePr,
 }

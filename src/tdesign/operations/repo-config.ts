@@ -4,6 +4,8 @@ export interface RepoCommandConfig {
   targetRepo: TdesignRepo
   commonSubmodule?: string
   iconsPackage?: string
+  iconsVersionFile?: string
+  pubspecPath?: string
   siteDeps?: string[]
   snapshotConflictFiles?: string[]
   snapshotScript?: string

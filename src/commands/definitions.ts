@@ -2,7 +2,7 @@ import type { AutoPrTrigger, TdesignRepo } from './types'
 
 export interface TargetRepoProfile {
   owner: string
-  packageManager: 'npm' | 'pnpm'
+  packageManager: 'npm' | 'pnpm' | 'pub'
 }
 
 export const targetRepoProfiles: Record<TdesignRepo, TargetRepoProfile> = {
@@ -34,6 +34,10 @@ export const targetRepoProfiles: Record<TdesignRepo, TargetRepoProfile> = {
     owner: 'Tencent',
     packageManager: 'pnpm',
   },
+  'tdesign-flutter': {
+    owner: 'Tencent',
+    packageManager: 'pub',
+  },
 }
 
 export const prCommands: Record<AutoPrTrigger, { targetRepo: TdesignRepo }> = {
@@ -44,6 +48,7 @@ export const prCommands: Record<AutoPrTrigger, { targetRepo: TdesignRepo }> = {
   '/pr-mobile-react': { targetRepo: 'tdesign-mobile-react' },
   '/pr-miniprogram': { targetRepo: 'tdesign-miniprogram' },
   '/pr-tdesign': { targetRepo: 'tdesign' },
+  '/pr-flutter': { targetRepo: 'tdesign-flutter' },
 }
 
 export const repoScopedTriggers = new Set<string>([
