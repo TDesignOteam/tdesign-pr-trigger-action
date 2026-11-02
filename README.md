@@ -21,6 +21,9 @@
 - [x] /pr-mobile-vue
 - [x] /pr-mobile-react
 - [x] /pr-miniprogram
+- [x] /pr-tdesign
+
+icons PR 合并后评论，到对应组件仓库新建 PR 升级 icons 依赖；/pr-tdesign 则到主站点新建 PR 升级 `tdesign-icons-view` 依赖。
 
 ## tdesign-common
 

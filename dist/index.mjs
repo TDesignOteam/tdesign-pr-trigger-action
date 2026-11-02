@@ -19731,6 +19731,10 @@ function getOctokit(token, options, ...additionalPlugins) {
 //#endregion
 //#region src/commands/definitions.ts
 const targetRepoProfiles = {
+	"tdesign": {
+		owner: "Tencent",
+		packageManager: "pnpm"
+	},
 	"tdesign-vue": {
 		owner: "Tencent",
 		packageManager: "npm"
@@ -19763,7 +19767,8 @@ const repoScopedTriggers = /* @__PURE__ */ new Set([
 		"/pr-react": { targetRepo: "tdesign-react" },
 		"/pr-mobile-vue": { targetRepo: "tdesign-mobile-vue" },
 		"/pr-mobile-react": { targetRepo: "tdesign-mobile-react" },
-		"/pr-miniprogram": { targetRepo: "tdesign-miniprogram" }
+		"/pr-miniprogram": { targetRepo: "tdesign-miniprogram" },
+		"/pr-tdesign": { targetRepo: "tdesign" }
 	}),
 	"/update-common",
 	"/update-snapshot",
@@ -37190,74 +37195,74 @@ async function createSiteDepsUpdatePr(context, config) {
 }
 //#endregion
 //#region src/tdesign/miniprogram.ts
-const repoConfig$5 = {
+const repoConfig$6 = {
 	targetRepo: "tdesign-miniprogram",
 	iconsPackage: "cdn-iconfont",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$5);
-const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$5);
-const updateSiteDepsAndCreatePr$5 = (context) => createSiteDepsUpdatePr(context, repoConfig$5);
-const handlers$8 = createPrCommandHandlers(repoConfig$5);
+const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$6);
+const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$6);
+const updateSiteDepsAndCreatePr$6 = (context) => createSiteDepsUpdatePr(context, repoConfig$6);
+const handlers$8 = createPrCommandHandlers(repoConfig$6);
 //#endregion
 //#region src/tdesign/mobile-react.ts
-const repoConfig$4 = {
+const repoConfig$5 = {
 	targetRepo: "tdesign-mobile-react",
 	iconsPackage: "tdesign-icons-react",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
-const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$4);
-const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$4);
-const updateSiteDepsAndCreatePr$4 = (context) => createSiteDepsUpdatePr(context, repoConfig$4);
-const handlers$7 = createPrCommandHandlers(repoConfig$4);
+const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$5);
+const updateIconsAndCreatePr$4 = (context) => createIconsUpdatePr(context, repoConfig$5);
+const updateSiteDepsAndCreatePr$5 = (context) => createSiteDepsUpdatePr(context, repoConfig$5);
+const handlers$7 = createPrCommandHandlers(repoConfig$5);
 //#endregion
 //#region src/tdesign/mobile-vue.ts
-const repoConfig$3 = {
+const repoConfig$4 = {
 	targetRepo: "tdesign-mobile-vue",
 	iconsPackage: "tdesign-icons-vue-next",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
-const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$3);
-const updateIconsAndCreatePr$3 = (context) => createIconsUpdatePr(context, repoConfig$3);
-const updateSiteDepsAndCreatePr$3 = (context) => createSiteDepsUpdatePr(context, repoConfig$3);
-const handlers$6 = createPrCommandHandlers(repoConfig$3);
+const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$4);
+const updateIconsAndCreatePr$3 = (context) => createIconsUpdatePr(context, repoConfig$4);
+const updateSiteDepsAndCreatePr$4 = (context) => createSiteDepsUpdatePr(context, repoConfig$4);
+const handlers$6 = createPrCommandHandlers(repoConfig$4);
 //#endregion
 //#region src/tdesign/react.ts
-const repoConfig$2 = {
+const repoConfig$3 = {
 	targetRepo: "tdesign-react",
 	iconsPackage: "tdesign-icons-react",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$2);
-const updateIconsAndCreatePr$2 = (context) => createIconsUpdatePr(context, repoConfig$2);
-const updateSiteDepsAndCreatePr$2 = (context) => createSiteDepsUpdatePr(context, repoConfig$2);
-const handlers$5 = createPrCommandHandlers(repoConfig$2);
+const updateCommonAndCreatePr$2 = (context) => createCommonUpdatePr(context, repoConfig$3);
+const updateIconsAndCreatePr$2 = (context) => createIconsUpdatePr(context, repoConfig$3);
+const updateSiteDepsAndCreatePr$3 = (context) => createSiteDepsUpdatePr(context, repoConfig$3);
+const handlers$5 = createPrCommandHandlers(repoConfig$3);
 //#endregion
 //#region src/tdesign/vue.ts
-const repoConfig$1 = {
+const repoConfig$2 = {
 	targetRepo: "tdesign-vue",
 	iconsPackage: "tdesign-icons-vue",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
-const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$1);
-const updateIconsAndCreatePr$1 = (context) => createIconsUpdatePr(context, repoConfig$1);
-const updateSiteDepsAndCreatePr$1 = (context) => createSiteDepsUpdatePr(context, repoConfig$1);
-const handlers$4 = createPrCommandHandlers(repoConfig$1);
+const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$2);
+const updateIconsAndCreatePr$1 = (context) => createIconsUpdatePr(context, repoConfig$2);
+const updateSiteDepsAndCreatePr$2 = (context) => createSiteDepsUpdatePr(context, repoConfig$2);
+const handlers$4 = createPrCommandHandlers(repoConfig$2);
 //#endregion
 //#region src/tdesign/vue-next.ts
-const repoConfig = {
+const repoConfig$1 = {
 	targetRepo: "tdesign-vue-next",
 	commonSubmodule: "packages/common",
 	iconsPackage: "tdesign-icons-vue-next",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotConflictFiles: ["packages/tdesign-vue-next/test/src/snap/__snapshots__/csr.test.ts.snap", "packages/tdesign-vue-next/test/src/snap/__snapshots__/ssr.test.ts.snap"]
 };
-const updateCommonAndCreatePr = (context) => createCommonUpdatePr(context, repoConfig);
-const updateIconsAndCreatePr = (context) => createIconsUpdatePr(context, repoConfig);
-const updateSiteDepsAndCreatePr = (context) => createSiteDepsUpdatePr(context, repoConfig);
-const handlers$3 = createPrCommandHandlers(repoConfig);
+const updateCommonAndCreatePr = (context) => createCommonUpdatePr(context, repoConfig$1);
+const updateIconsAndCreatePr = (context) => createIconsUpdatePr(context, repoConfig$1);
+const updateSiteDepsAndCreatePr$1 = (context) => createSiteDepsUpdatePr(context, repoConfig$1);
+const handlers$3 = createPrCommandHandlers(repoConfig$1);
 //#endregion
 //#region src/tdesign/common.ts
 const handlers$2 = {
@@ -37269,24 +37274,30 @@ const handlers$2 = {
 	"/pr-miniprogram": updateCommonAndCreatePr$5
 };
 //#endregion
-//#region src/tdesign/icons.ts
+//#region src/tdesign/tdesign.ts
+const repoConfig = {
+	targetRepo: "tdesign",
+	siteDeps: ["tdesign-icons-view"]
+};
+const updateSiteDepsAndCreatePr = (context) => createSiteDepsUpdatePr(context, repoConfig);
 const handlers$1 = {
+	"/pr-vue": updateSiteDepsAndCreatePr$2,
+	"/pr-vue-next": updateSiteDepsAndCreatePr$1,
+	"/pr-react": updateSiteDepsAndCreatePr$3,
+	"/pr-mobile-vue": updateSiteDepsAndCreatePr$4,
+	"/pr-mobile-react": updateSiteDepsAndCreatePr$5,
+	"/pr-miniprogram": updateSiteDepsAndCreatePr$6
+};
+//#endregion
+//#region src/tdesign/icons.ts
+const handlers = {
 	"/pr-vue": updateIconsAndCreatePr$1,
 	"/pr-vue-next": updateIconsAndCreatePr,
 	"/pr-react": updateIconsAndCreatePr$2,
 	"/pr-mobile-vue": updateIconsAndCreatePr$3,
 	"/pr-mobile-react": updateIconsAndCreatePr$4,
-	"/pr-miniprogram": updateIconsAndCreatePr$5
-};
-//#endregion
-//#region src/tdesign/site.ts
-const handlers = {
-	"/pr-vue": updateSiteDepsAndCreatePr$1,
-	"/pr-vue-next": updateSiteDepsAndCreatePr,
-	"/pr-react": updateSiteDepsAndCreatePr$2,
-	"/pr-mobile-vue": updateSiteDepsAndCreatePr$3,
-	"/pr-mobile-react": updateSiteDepsAndCreatePr$4,
-	"/pr-miniprogram": updateSiteDepsAndCreatePr$5
+	"/pr-miniprogram": updateIconsAndCreatePr$5,
+	"/pr-tdesign": updateSiteDepsAndCreatePr
 };
 //#endregion
 //#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js
@@ -47885,9 +47896,9 @@ async function useTrigger(context) {
 }
 //#endregion
 //#region src/commands/index.ts
-registerRepoHandlers("tdesign", handlers);
+registerRepoHandlers("tdesign", handlers$1);
 registerRepoHandlers("tdesign-common", handlers$2);
-registerRepoHandlers("tdesign-icons", handlers$1);
+registerRepoHandlers("tdesign-icons", handlers);
 registerRepoHandlers("tdesign-vue", handlers$4);
 registerRepoHandlers("tdesign-vue-next", handlers$3);
 registerRepoHandlers("tdesign-react", handlers$5);

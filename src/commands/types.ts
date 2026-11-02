@@ -1,6 +1,6 @@
-export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram'
+export type AutoPrTrigger = '/pr-vue' | '/pr-vue-next' | '/pr-react' | '/pr-mobile-vue' | '/pr-mobile-react' | '/pr-miniprogram' | '/pr-tdesign'
 export type Trigger = AutoPrTrigger | '/update-common' | '/update-snapshot' | '/update-coverage' | '/upgrade-deps' | '/delete-cnb-branch' | '/update-site'
-export type TdesignRepo = 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
+export type TdesignRepo = 'tdesign' | 'tdesign-vue' | 'tdesign-vue-next' | 'tdesign-react' | 'tdesign-mobile-vue' | 'tdesign-mobile-react' | 'tdesign-miniprogram'
 export type SourceRepo = 'tdesign-common' | 'tdesign-icons' | TdesignRepo
 
 export interface TriggerContext {

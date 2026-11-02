@@ -6,6 +6,10 @@ export interface TargetRepoProfile {
 }
 
 export const targetRepoProfiles: Record<TdesignRepo, TargetRepoProfile> = {
+  'tdesign': {
+    owner: 'Tencent',
+    packageManager: 'pnpm',
+  },
   'tdesign-vue': {
     owner: 'Tencent',
     packageManager: 'npm',
@@ -39,6 +43,7 @@ export const prCommands: Record<AutoPrTrigger, { targetRepo: TdesignRepo }> = {
   '/pr-mobile-vue': { targetRepo: 'tdesign-mobile-vue' },
   '/pr-mobile-react': { targetRepo: 'tdesign-mobile-react' },
   '/pr-miniprogram': { targetRepo: 'tdesign-miniprogram' },
+  '/pr-tdesign': { targetRepo: 'tdesign' },
 }
 
 export const repoScopedTriggers = new Set<string>([
