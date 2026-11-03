@@ -9,6 +9,7 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-vue-next',
   commonSubmodule: 'packages/common',
   iconsPackage: 'tdesign-icons-vue-next',
+  iconsChangelogFile: 'packages/vue-next/CHANGELOG.md',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
   snapshotConflictFiles: [
     'packages/tdesign-vue-next/test/src/snap/__snapshots__/csr.test.ts.snap',

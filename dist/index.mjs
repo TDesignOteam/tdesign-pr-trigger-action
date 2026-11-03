@@ -36524,6 +36524,19 @@ async function getPkgVersionFromRepo(owner, repo, filePath) {
 	if (filePath.endsWith(".json")) return JSON.parse(text).version || "";
 	return text.match(/^version:\s*('?)([^'\s]+)\1/m)?.[2] || "";
 }
+function extractChangelogSection(text, version) {
+	const startMatch = text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, "m"));
+	if (!startMatch || startMatch.index === void 0) return "";
+	const rest = text.slice(startMatch.index + startMatch[0].length);
+	const nextMatch = rest.match(/^## /m);
+	const section = nextMatch && nextMatch.index !== void 0 ? rest.slice(0, nextMatch.index) : rest;
+	return `${startMatch[0]}${section}`.trim();
+}
+async function getChangelogFromRepo(owner, repo, filePath, version) {
+	const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`);
+	if (!res.ok) throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`);
+	return extractChangelogSection(await res.text(), version);
+}
 function findPackageJsonFiles(dir) {
 	const results = [];
 	for (const entry of readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) {
@@ -37134,14 +37147,8 @@ async function createIconsUpdatePr(context, config) {
 		githubHelper.addComment(context.pr_number, "PR 还没合并，无法触发");
 		return;
 	}
-	const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
-	let body = addContributor(prData.body || "", prData.user.login, link);
 	const targetRepo = config.targetRepo;
 	const { owner, packageManager } = targetRepoProfiles[targetRepo];
-	body = adaptChangelogForRepo(body, targetRepo);
-	startGroup("body");
-	info(`${body}`);
-	endGroup();
 	const packageName = config.iconsPackage;
 	if (!packageName) throw new Error(`${targetRepo} 未配置 iconsPackage`);
 	startGroup(packageName);
@@ -37149,6 +37156,15 @@ async function createIconsUpdatePr(context, config) {
 	if (packageName === "cdn-iconfont") latestVersion = await getCdnIconfontVersion();
 	else latestVersion = await getPkgLatestVersion(packageName);
 	info(`latestVersion: ${latestVersion}`);
+	endGroup();
+	let body = "";
+	if (config.iconsChangelogFile && latestVersion) body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion);
+	if (!body) {
+		const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
+		body = adaptChangelogForRepo(addContributor(prData.body || "", prData.user.login, link), targetRepo);
+	}
+	startGroup("body");
+	info(`${body}`);
 	endGroup();
 	const gitHelper = new GitHelper({
 		repo: targetRepo,
@@ -37239,6 +37255,7 @@ async function createSiteDepsUpdatePr(context, config) {
 const repoConfig$7 = {
 	targetRepo: "tdesign-miniprogram",
 	iconsPackage: "cdn-iconfont",
+	iconsChangelogFile: "packages/vue/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotScript: "test:snap-update",
 	coverageScript: ["cover", "badge"]
@@ -37252,6 +37269,7 @@ const handlers$8 = createPrCommandHandlers(repoConfig$7);
 const repoConfig$6 = {
 	targetRepo: "tdesign-mobile-react",
 	iconsPackage: "tdesign-icons-react",
+	iconsChangelogFile: "packages/react/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
@@ -37264,6 +37282,7 @@ const handlers$7 = createPrCommandHandlers(repoConfig$6);
 const repoConfig$5 = {
 	targetRepo: "tdesign-mobile-vue",
 	iconsPackage: "tdesign-icons-vue-next",
+	iconsChangelogFile: "packages/vue-next/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	runApiCss: true
 };
@@ -37276,6 +37295,7 @@ const handlers$6 = createPrCommandHandlers(repoConfig$5);
 const repoConfig$4 = {
 	targetRepo: "tdesign-react",
 	iconsPackage: "tdesign-icons-react",
+	iconsChangelogFile: "packages/react/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	recursiveScripts: false
 };
@@ -37288,6 +37308,7 @@ const handlers$5 = createPrCommandHandlers(repoConfig$4);
 const repoConfig$3 = {
 	targetRepo: "tdesign-vue",
 	iconsPackage: "tdesign-icons-vue",
+	iconsChangelogFile: "packages/vue/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"]
 };
 const updateCommonAndCreatePr$1 = (context) => createCommonUpdatePr(context, repoConfig$3);
@@ -37300,6 +37321,7 @@ const repoConfig$2 = {
 	targetRepo: "tdesign-vue-next",
 	commonSubmodule: "packages/common",
 	iconsPackage: "tdesign-icons-vue-next",
+	iconsChangelogFile: "packages/vue-next/CHANGELOG.md",
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotConflictFiles: ["packages/tdesign-vue-next/test/src/snap/__snapshots__/csr.test.ts.snap", "packages/tdesign-vue-next/test/src/snap/__snapshots__/ssr.test.ts.snap"]
 };
@@ -37333,13 +37355,8 @@ async function createIconsPkgUpdatePr(context, config) {
 		return;
 	}
 	const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
-	let body = addContributor(prData.body || "", prData.user.login, link);
 	const targetRepo = config.targetRepo;
 	const { owner, packageManager } = targetRepoProfiles[targetRepo];
-	body = adaptChangelogForRepo(body, targetRepo);
-	startGroup("body");
-	info(`${body}`);
-	endGroup();
 	const packageName = config.iconsPackage;
 	if (!packageName) throw new Error(`${targetRepo} 未配置 iconsPackage`);
 	const versionFile = config.iconsVersionFile;
@@ -37349,6 +37366,12 @@ async function createIconsPkgUpdatePr(context, config) {
 	info(`latestVersion: ${latestVersion}`);
 	endGroup();
 	if (!latestVersion) throw new Error(`未从 ${versionFile} 获取到版本号`);
+	let body = "";
+	if (config.iconsChangelogFile) body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion);
+	if (!body) body = adaptChangelogForRepo(addContributor(prData.body || "", prData.user.login, link), targetRepo);
+	startGroup("body");
+	info(`${body}`);
+	endGroup();
 	const gitHelper = new GitHelper({
 		repo: targetRepo,
 		owner,
@@ -37387,6 +37410,7 @@ const repoConfig$1 = {
 	targetRepo: "tdesign-flutter",
 	iconsPackage: "tdesign_flutter_icons",
 	iconsVersionFile: "packages/flutter/pubspec.yaml",
+	iconsChangelogFile: "packages/flutter/CHANGELOG.md",
 	pubspecPath: "tdesign-component/pubspec.yaml"
 };
 const updateIconsAndCreatePr$1 = (context) => createIconsPkgUpdatePr(context, repoConfig$1);
@@ -37395,7 +37419,8 @@ const updateIconsAndCreatePr$1 = (context) => createIconsPkgUpdatePr(context, re
 const repoConfig = {
 	targetRepo: "tdesign",
 	iconsPackage: "tdesign-icons-view",
-	iconsVersionFile: "packages/view/package.json"
+	iconsVersionFile: "packages/view/package.json",
+	iconsChangelogFile: "packages/view/CHANGELOG.md"
 };
 const updateIconsAndCreatePr = (context) => createIconsPkgUpdatePr(context, repoConfig);
 const handlers$1 = {

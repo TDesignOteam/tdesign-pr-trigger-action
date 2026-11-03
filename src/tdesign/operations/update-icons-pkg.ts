@@ -2,7 +2,7 @@ import type { TriggerContext } from '../../commands/types'
 import type { RepoCommandConfig } from './repo-config'
 import { endGroup, info, startGroup } from '@actions/core'
 import { targetRepoProfiles } from '../../commands/definitions'
-import { adaptChangelogForRepo, addContributor, bumpPackageDeps, bumpPubDependency, corepackEnable, getPkgVersionFromRepo, GitHelper, GithubHelper } from '../../utils'
+import { adaptChangelogForRepo, addContributor, bumpPackageDeps, bumpPubDependency, corepackEnable, getChangelogFromRepo, getPkgVersionFromRepo, GitHelper, GithubHelper } from '../../utils'
 
 export async function createIconsPkgUpdatePr(context: TriggerContext, config: RepoCommandConfig) {
   const githubHelper = new GithubHelper({
@@ -18,14 +18,8 @@ export async function createIconsPkgUpdatePr(context: TriggerContext, config: Re
     return
   }
   const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`
-  let body = addContributor(prData.body || '', prData.user.login, link)
   const targetRepo = config.targetRepo
   const { owner, packageManager } = targetRepoProfiles[targetRepo]
-  body = adaptChangelogForRepo(body, targetRepo)
-  startGroup('body')
-  info(`${body}`)
-  endGroup()
-
   const packageName = config.iconsPackage
   if (!packageName) {
     throw new Error(`${targetRepo} 未配置 iconsPackage`)
@@ -42,6 +36,18 @@ export async function createIconsPkgUpdatePr(context: TriggerContext, config: Re
   if (!latestVersion) {
     throw new Error(`未从 ${versionFile} 获取到版本号`)
   }
+
+  // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取
+  let body = ''
+  if (config.iconsChangelogFile) {
+    body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion)
+  }
+  if (!body) {
+    body = adaptChangelogForRepo(addContributor(prData.body || '', prData.user.login, link), targetRepo)
+  }
+  startGroup('body')
+  info(`${body}`)
+  endGroup()
 
   const gitHelper = new GitHelper({
     repo: targetRepo,

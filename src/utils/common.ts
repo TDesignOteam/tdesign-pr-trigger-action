@@ -116,6 +116,28 @@ export async function getPkgVersionFromRepo(owner: string, repo: string, filePat
   return match?.[2] || ''
 }
 
+// 从 CHANGELOG.md 提取 "## 🌈 <version> `date`" 小节（到下一个 ## 标题前）
+export function extractChangelogSection(text: string, version: string) {
+  const startMatch = text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, 'm'))
+  if (!startMatch || startMatch.index === undefined) {
+    return ''
+  }
+  const rest = text.slice(startMatch.index + startMatch[0].length)
+  const nextMatch = rest.match(/^## /m)
+  const section = nextMatch && nextMatch.index !== undefined
+    ? rest.slice(0, nextMatch.index)
+    : rest
+  return `${startMatch[0]}${section}`.trim()
+}
+
+export async function getChangelogFromRepo(owner: string, repo: string, filePath: string, version: string) {
+  const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`)
+  if (!res.ok) {
+    throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`)
+  }
+  return extractChangelogSection(await res.text(), version)
+}
+
 function findPackageJsonFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

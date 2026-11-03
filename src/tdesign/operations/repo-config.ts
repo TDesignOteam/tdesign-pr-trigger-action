@@ -5,6 +5,7 @@ export interface RepoCommandConfig {
   commonSubmodule?: string
   iconsPackage?: string
   iconsVersionFile?: string
+  iconsChangelogFile?: string
   pubspecPath?: string
   siteDeps?: string[]
   snapshotConflictFiles?: string[]

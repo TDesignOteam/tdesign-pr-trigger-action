@@ -12,6 +12,7 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign',
   iconsPackage: 'tdesign-icons-view',
   iconsVersionFile: 'packages/view/package.json',
+  iconsChangelogFile: 'packages/view/CHANGELOG.md',
 }
 
 export const updateIconsAndCreatePr = (context: TriggerContext) => createIconsPkgUpdatePr(context, repoConfig)

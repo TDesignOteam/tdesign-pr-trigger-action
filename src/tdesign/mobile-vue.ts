@@ -8,6 +8,7 @@ import { createSiteDepsUpdatePr } from './operations/update-site-deps'
 export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-mobile-vue',
   iconsPackage: 'tdesign-icons-vue-next',
+  iconsChangelogFile: 'packages/vue-next/CHANGELOG.md',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
   runApiCss: true,
 }

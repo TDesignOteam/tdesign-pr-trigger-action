@@ -6,6 +6,7 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-flutter',
   iconsPackage: 'tdesign_flutter_icons',
   iconsVersionFile: 'packages/flutter/pubspec.yaml',
+  iconsChangelogFile: 'packages/flutter/CHANGELOG.md',
   pubspecPath: 'tdesign-component/pubspec.yaml',
 }
 

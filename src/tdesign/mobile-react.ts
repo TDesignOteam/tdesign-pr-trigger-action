@@ -8,6 +8,7 @@ import { createSiteDepsUpdatePr } from './operations/update-site-deps'
 export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-mobile-react',
   iconsPackage: 'tdesign-icons-react',
+  iconsChangelogFile: 'packages/react/CHANGELOG.md',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
   runApiCss: true,
 }

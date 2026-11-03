@@ -8,6 +8,7 @@ import { createSiteDepsUpdatePr } from './operations/update-site-deps'
 export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-vue',
   iconsPackage: 'tdesign-icons-vue',
+  iconsChangelogFile: 'packages/vue/CHANGELOG.md',
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
 }
 
