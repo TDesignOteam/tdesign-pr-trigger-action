@@ -2,6 +2,29 @@
 
 通过评论 触发 CI 自动化, [使用小技巧](./docs/github_comment.md)
 
+## 使用示例
+
+前提：仓库已接入本 Action 的评论触发 workflow，且评论者在 [评论触发白名单](./.comment-trigger-whitelist) 中。
+
+例如，需要将新发布的 icons 同步到 Vue Next 组件库：
+
+1. 等待 `Tencent/tdesign-icons` 的发布 PR 合并，并确认 npm 包已发布。
+2. 在该发布 PR 下评论：
+
+```text
+/pr-vue-next
+```
+
+3. Action 会在 `Tencent/tdesign-vue-next` 中升级 icons 依赖、更新快照并创建 PR，然后在源 PR 下回复新 PR 链接。
+
+如果只是更新某个组件库 PR 的测试快照，则在**该组件库尚未合并的 PR** 下评论：
+
+```text
+/update-snapshot
+```
+
+Action 会合并该仓库的 `develop` 分支、重新生成快照，并将变更提交到当前 PR 分支，无需新建 PR。
+
 ## tdesign (主仓)
 
 - [x] /pr-vue
