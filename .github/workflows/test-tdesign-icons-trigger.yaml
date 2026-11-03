@@ -21,7 +21,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-vue
           dry-run: true
 
@@ -40,7 +40,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-vue-next
           dry-run: true
 
@@ -59,7 +59,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-react
           dry-run: true
 
@@ -78,7 +78,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-mobile-vue
           dry-run: true
 
@@ -97,7 +97,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-mobile-react
           dry-run: true
 
@@ -116,7 +116,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-miniprogram
           dry-run: true
 
@@ -135,7 +135,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-tdesign
           dry-run: true
 
@@ -154,6 +154,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
           repo: tdesign-icons
-          pr_number: 130
+          pr_number: 319
           trigger: /pr-flutter
           dry-run: true
