@@ -50,6 +50,7 @@ jobs:
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
