@@ -116,9 +116,11 @@ export async function getPkgVersionFromRepo(owner: string, repo: string, filePat
   return match?.[2] || ''
 }
 
-// 从 CHANGELOG.md 提取 "## 🌈 <version> `date`" 小节（到下一个 ## 标题前）
-export function extractChangelogSection(text: string, version: string) {
-  const startMatch = text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, 'm'))
+// 从 CHANGELOG.md 提取 "## 🌈 <version> `date`" 小节（到下一个 ## 标题前），不传 version 时取最新小节
+export function extractChangelogSection(text: string, version?: string) {
+  const startMatch = version
+    ? text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, 'm'))
+    : text.match(/^## /m)
   if (!startMatch || startMatch.index === undefined) {
     return ''
   }
@@ -130,7 +132,7 @@ export function extractChangelogSection(text: string, version: string) {
   return `${startMatch[0]}${section}`.trim()
 }
 
-export async function getChangelogFromRepo(owner: string, repo: string, filePath: string, version: string) {
+export async function getChangelogFromRepo(owner: string, repo: string, filePath: string, version?: string) {
   const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`)
   if (!res.ok) {
     throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`)

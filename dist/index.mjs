@@ -36525,7 +36525,7 @@ async function getPkgVersionFromRepo(owner, repo, filePath) {
 	return text.match(/^version:\s*('?)([^'\s]+)\1/m)?.[2] || "";
 }
 function extractChangelogSection(text, version) {
-	const startMatch = text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, "m"));
+	const startMatch = version ? text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, "m")) : text.match(/^## /m);
 	if (!startMatch || startMatch.index === void 0) return "";
 	const rest = text.slice(startMatch.index + startMatch[0].length);
 	const nextMatch = rest.match(/^## /m);
@@ -37158,7 +37158,10 @@ async function createIconsUpdatePr(context, config) {
 	info(`latestVersion: ${latestVersion}`);
 	endGroup();
 	let body = "";
-	if (config.iconsChangelogFile && latestVersion) body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion);
+	if (config.iconsChangelogFile && (packageName === "cdn-iconfont" || latestVersion)) {
+		const changelogVersion = packageName === "cdn-iconfont" ? void 0 : latestVersion;
+		body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion);
+	}
 	if (!body) {
 		const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
 		body = adaptChangelogForRepo(addContributor(prData.body || "", prData.user.login, link), targetRepo);

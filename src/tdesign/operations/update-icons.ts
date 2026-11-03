@@ -52,8 +52,12 @@ export async function createIconsUpdatePr(context: TriggerContext, config: RepoC
 
   // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取
   let body = ''
-  if (config.iconsChangelogFile && latestVersion) {
-    body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion)
+  if (config.iconsChangelogFile && (packageName === 'cdn-iconfont' || latestVersion)) {
+    // cdn-iconfont 的 font 版本号与 vue 包版本号对不上，直接取 CHANGELOG 最新小节
+    const changelogVersion = packageName === 'cdn-iconfont'
+      ? undefined
+      : latestVersion
+    body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion)
   }
   if (!body) {
     const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`
