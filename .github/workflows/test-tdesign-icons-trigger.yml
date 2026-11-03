@@ -9,11 +9,12 @@ jobs:
   pr-vue:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -28,11 +29,12 @@ jobs:
   pr-vue-next:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -67,11 +69,12 @@ jobs:
   pr-mobile-vue:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -86,11 +89,12 @@ jobs:
   pr-mobile-react:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -105,11 +109,12 @@ jobs:
   pr-miniprogram:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -124,11 +129,12 @@ jobs:
   pr-tdesign:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
@@ -143,11 +149,12 @@ jobs:
   pr-flutter:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
       - uses: pnpm/setup@v3
         with:
           runtime: node@22
+          version: v12
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: test
         uses: ./
