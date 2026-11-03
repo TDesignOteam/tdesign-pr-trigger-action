@@ -158,8 +158,8 @@ const CHANGELOG_GROUP_TYPES: Record<string, string> = {
   '📝 Documentation': 'docs',
 }
 
-// 将 CHANGELOG.md 小节转为 conventional commits 条目，如 - feat(Icon): xxx
-export function changelogSectionToEntries(section: string, scope = 'Icon'): string[] {
+// 将 CHANGELOG.md 小节转为 conventional commits 条目，如 - feat(Icon): xxx @user ([icons #123](link))
+export function changelogSectionToEntries(section: string, scope = 'Icon', attribution = ''): string[] {
   const entries: string[] = []
   let type = ''
   for (const line of section.split('\n')) {
@@ -167,7 +167,7 @@ export function changelogSectionToEntries(section: string, scope = 'Icon'): stri
       type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? 'chore'
     }
     else if (line.startsWith('- ') && type) {
-      entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}`)
+      entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}${attribution}`)
     }
   }
   return entries

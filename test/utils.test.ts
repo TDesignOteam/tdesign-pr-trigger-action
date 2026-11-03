@@ -85,6 +85,13 @@ describe('changelogSectionToEntries', () => {
       '- fix(Icon): 修复 usb 图标深色模式渲染错误',
     ])
   })
+
+  it('支持追加贡献者与源 PR 链接', () => {
+    const attribution = ' @uyarn ([icons #319](https://github.com/Tencent/tdesign-icons/pull/319))'
+    expect(changelogSectionToEntries(section, 'Icon', attribution)[0]).toBe(
+      '- feat(Icon): 新增 `check-1` 图标 @uyarn ([icons #319](https://github.com/Tencent/tdesign-icons/pull/319))',
+    )
+  })
 })
 
 describe('buildPrBody', () => {

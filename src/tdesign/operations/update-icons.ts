@@ -58,7 +58,8 @@ export async function createIconsUpdatePr(context: TriggerContext, config: RepoC
       ? undefined
       : latestVersion
     const section = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion)
-    const entries = changelogSectionToEntries(section)
+    const attribution = ` @${prData.user.login} ([icons #${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`
+    const entries = changelogSectionToEntries(section, 'Icon', attribution)
     if (entries.length > 0) {
       const template = await getPrTemplateFromRepo(owner, targetRepo)
       body = buildPrBody(template, entries, config.iconsChangelogSections ?? [targetRepo])
