@@ -3,7 +3,7 @@ import type { RepoCommandConfig } from './repo-config'
 import { endGroup, info, startGroup } from '@actions/core'
 import { exec } from '@actions/exec'
 import { targetRepoProfiles } from '../../commands/definitions'
-import { adaptChangelogForRepo, addContributor, bumpIconsVersion, corepackEnable, getChangelogFromRepo, getPkgLatestVersion, GitHelper, GithubHelper } from '../../utils'
+import { adaptChangelogForRepo, addContributor, buildPrBody, bumpIconsVersion, changelogSectionToEntries, corepackEnable, getChangelogFromRepo, getPkgLatestVersion, getPrTemplateFromRepo, GitHelper, GithubHelper } from '../../utils'
 
 export const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/
 
@@ -50,14 +50,19 @@ export async function createIconsUpdatePr(context: TriggerContext, config: RepoC
   info(`latestVersion: ${latestVersion}`)
   endGroup()
 
-  // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取
+  // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取，填入目标仓库 PR 模板
   let body = ''
   if (config.iconsChangelogFile && (packageName === 'cdn-iconfont' || latestVersion)) {
     // cdn-iconfont 的 font 版本号与 vue 包版本号对不上，直接取 CHANGELOG 最新小节
     const changelogVersion = packageName === 'cdn-iconfont'
       ? undefined
       : latestVersion
-    body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion)
+    const section = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion)
+    const entries = changelogSectionToEntries(section)
+    if (entries.length > 0) {
+      const template = await getPrTemplateFromRepo(owner, targetRepo)
+      body = buildPrBody(template, entries, config.iconsChangelogSections ?? [targetRepo])
+    }
   }
   if (!body) {
     const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`

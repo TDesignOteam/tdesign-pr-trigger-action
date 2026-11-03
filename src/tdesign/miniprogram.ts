@@ -9,6 +9,7 @@ export const repoConfig: RepoCommandConfig = {
   targetRepo: 'tdesign-miniprogram',
   iconsPackage: 'cdn-iconfont',
   iconsChangelogFile: 'packages/vue/CHANGELOG.md',
+  iconsChangelogSections: ['tdesign-miniprogram', '@tdesign/uniapp'],
   siteDeps: ['@tdesign/site-components', '@tdesign/theme-generator'],
   snapshotScript: 'test:snap-update',
   coverageScript: ['cover', 'badge'],

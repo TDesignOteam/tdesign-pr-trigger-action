@@ -36537,6 +36537,44 @@ async function getChangelogFromRepo(owner, repo, filePath, version) {
 	if (!res.ok) throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`);
 	return extractChangelogSection(await res.text(), version);
 }
+async function getPrTemplateFromRepo(owner, repo) {
+	for (const p of [".github/PULL_REQUEST_TEMPLATE.md", ".github/pull_request_template.md"]) {
+		const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${p}`);
+		if (res.ok) return (await res.text()).replace(/\r?\n/g, "\r\n");
+	}
+	return "";
+}
+const CHANGELOG_GROUP_TYPES = {
+	"🚀 Features": "feat",
+	"🐞 Bug Fixes": "fix",
+	"📝 Documentation": "docs"
+};
+function changelogSectionToEntries(section, scope = "Icon") {
+	const entries = [];
+	let type = "";
+	for (const line of section.split("\n")) if (line.startsWith("### ")) type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? "chore";
+	else if (line.startsWith("- ") && type) entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}`);
+	return entries;
+}
+function buildPrBody(template, entries, sections) {
+	const entryText = entries.join("\r\n");
+	if (!template) return entryText;
+	let result = template;
+	let matched = false;
+	for (const section of sections) {
+		const sectionReg = new RegExp(`(####\\s+${escapeRegExp(section)}\\r\\n)(<!--[\\s\\S]*?-->[^\\r\\n]*\\r\\n)?`);
+		if (sectionReg.test(result)) {
+			matched = true;
+			result = result.replace(sectionReg, (match, p1, comment = "") => `${p1}${comment}\r\n${entryText}\r\n`);
+		}
+	}
+	if (matched) return result;
+	const skipReg = /- \[ \] 本条 PR 不需要纳入 Changelog/;
+	if (skipReg.test(result)) return result.replace(skipReg, () => `${entryText}\r\n\r\n- [ ] 本条 PR 不需要纳入 Changelog`);
+	const header = "### 📝 更新日志\r\n";
+	if (result.includes(header)) return result.replace(header, () => `${header}\r\n${entryText}\r\n`);
+	return `${result}\r\n${entryText}`;
+}
 function findPackageJsonFiles(dir) {
 	const results = [];
 	for (const entry of readdirSync(dir, { withFileTypes: true })) if (entry.isDirectory()) {
@@ -37160,7 +37198,8 @@ async function createIconsUpdatePr(context, config) {
 	let body = "";
 	if (config.iconsChangelogFile && (packageName === "cdn-iconfont" || latestVersion)) {
 		const changelogVersion = packageName === "cdn-iconfont" ? void 0 : latestVersion;
-		body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion);
+		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion));
+		if (entries.length > 0) body = buildPrBody(await getPrTemplateFromRepo(owner, targetRepo), entries, config.iconsChangelogSections ?? [targetRepo]);
 	}
 	if (!body) {
 		const link = `([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`;
@@ -37259,6 +37298,7 @@ const repoConfig$7 = {
 	targetRepo: "tdesign-miniprogram",
 	iconsPackage: "cdn-iconfont",
 	iconsChangelogFile: "packages/vue/CHANGELOG.md",
+	iconsChangelogSections: ["tdesign-miniprogram", "@tdesign/uniapp"],
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotScript: "test:snap-update",
 	coverageScript: ["cover", "badge"]
@@ -37370,7 +37410,10 @@ async function createIconsPkgUpdatePr(context, config) {
 	endGroup();
 	if (!latestVersion) throw new Error(`未从 ${versionFile} 获取到版本号`);
 	let body = "";
-	if (config.iconsChangelogFile) body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion);
+	if (config.iconsChangelogFile) {
+		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion));
+		if (entries.length > 0) body = buildPrBody(await getPrTemplateFromRepo(owner, targetRepo), entries, config.iconsChangelogSections ?? [targetRepo]);
+	}
 	if (!body) body = adaptChangelogForRepo(addContributor(prData.body || "", prData.user.login, link), targetRepo);
 	startGroup("body");
 	info(`${body}`);

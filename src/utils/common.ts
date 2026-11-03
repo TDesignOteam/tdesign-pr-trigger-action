@@ -140,6 +140,70 @@ export async function getChangelogFromRepo(owner: string, repo: string, filePath
   return extractChangelogSection(await res.text(), version)
 }
 
+export async function getPrTemplateFromRepo(owner: string, repo: string) {
+  const paths = ['.github/PULL_REQUEST_TEMPLATE.md', '.github/pull_request_template.md']
+  for (const p of paths) {
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${p}`)
+    if (res.ok) {
+      // 统一为 CRLF，与 PR body 及 changelog 相关正则保持一致
+      return (await res.text()).replace(/\r?\n/g, '\r\n')
+    }
+  }
+  return ''
+}
+
+const CHANGELOG_GROUP_TYPES: Record<string, string> = {
+  '🚀 Features': 'feat',
+  '🐞 Bug Fixes': 'fix',
+  '📝 Documentation': 'docs',
+}
+
+// 将 CHANGELOG.md 小节转为 conventional commits 条目，如 - feat(Icon): xxx
+export function changelogSectionToEntries(section: string, scope = 'Icon'): string[] {
+  const entries: string[] = []
+  let type = ''
+  for (const line of section.split('\n')) {
+    if (line.startsWith('### ')) {
+      type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? 'chore'
+    }
+    else if (line.startsWith('- ') && type) {
+      entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}`)
+    }
+  }
+  return entries
+}
+
+// 将变更日志填入目标仓库 PR 模板的「### 📝 更新日志」部分
+// sections 为需要填入的分组小节(如 tdesign-miniprogram 与 @tdesign/uniapp)，无匹配小节时回退普通模板插入
+export function buildPrBody(template: string, entries: string[], sections: string[]) {
+  const entryText = entries.join('\r\n')
+  if (!template) {
+    return entryText
+  }
+  let result = template
+  let matched = false
+  for (const section of sections) {
+    const sectionReg = new RegExp(`(####\\s+${escapeRegExp(section)}\\r\\n)(<!--[\\s\\S]*?-->[^\\r\\n]*\\r\\n)?`)
+    if (sectionReg.test(result)) {
+      matched = true
+      result = result.replace(sectionReg, (match, p1: string, comment = '') => `${p1}${comment}\r\n${entryText}\r\n`)
+    }
+  }
+  if (matched) {
+    return result
+  }
+  // 普通模板: 填入「本条 PR 不需要纳入 Changelog」勾选行之前
+  const skipReg = /- \[ \] 本条 PR 不需要纳入 Changelog/
+  if (skipReg.test(result)) {
+    return result.replace(skipReg, () => `${entryText}\r\n\r\n- [ ] 本条 PR 不需要纳入 Changelog`)
+  }
+  const header = '### 📝 更新日志\r\n'
+  if (result.includes(header)) {
+    return result.replace(header, () => `${header}\r\n${entryText}\r\n`)
+  }
+  return `${result}\r\n${entryText}`
+}
+
 function findPackageJsonFiles(dir: string): string[] {
   const results: string[] = []
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

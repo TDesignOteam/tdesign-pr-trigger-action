@@ -2,7 +2,7 @@ import type { TriggerContext } from '../../commands/types'
 import type { RepoCommandConfig } from './repo-config'
 import { endGroup, info, startGroup } from '@actions/core'
 import { targetRepoProfiles } from '../../commands/definitions'
-import { adaptChangelogForRepo, addContributor, bumpPackageDeps, bumpPubDependency, corepackEnable, getChangelogFromRepo, getPkgVersionFromRepo, GitHelper, GithubHelper } from '../../utils'
+import { adaptChangelogForRepo, addContributor, buildPrBody, bumpPackageDeps, bumpPubDependency, changelogSectionToEntries, corepackEnable, getChangelogFromRepo, getPkgVersionFromRepo, getPrTemplateFromRepo, GitHelper, GithubHelper } from '../../utils'
 
 export async function createIconsPkgUpdatePr(context: TriggerContext, config: RepoCommandConfig) {
   const githubHelper = new GithubHelper({
@@ -37,10 +37,15 @@ export async function createIconsPkgUpdatePr(context: TriggerContext, config: Re
     throw new Error(`未从 ${versionFile} 获取到版本号`)
   }
 
-  // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取
+  // 发布 PR 的描述不再携带日志，改从对应包的 CHANGELOG.md 按版本号提取，填入目标仓库 PR 模板
   let body = ''
   if (config.iconsChangelogFile) {
-    body = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion)
+    const section = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion)
+    const entries = changelogSectionToEntries(section)
+    if (entries.length > 0) {
+      const template = await getPrTemplateFromRepo(owner, targetRepo)
+      body = buildPrBody(template, entries, config.iconsChangelogSections ?? [targetRepo])
+    }
   }
   if (!body) {
     body = adaptChangelogForRepo(addContributor(prData.body || '', prData.user.login, link), targetRepo)
