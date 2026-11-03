@@ -1,5 +1,7 @@
 import type { WorkspaceManifest } from '@pnpm/workspace.read-manifest'
-import type { TdesignRepo } from './trigger'
+import type { TdesignRepo } from '../commands/types'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import process from 'node:process'
 import { info } from '@actions/core'
 import { exec, getExecOutput } from '@actions/exec'
@@ -101,6 +103,194 @@ export async function getPkgLatestVersion(packageName: string) {
   return stdout.trim()
 }
 
+export async function getPkgVersionFromRepo(owner: string, repo: string, filePath: string) {
+  const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`)
+  if (!res.ok) {
+    throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`)
+  }
+  const text = await res.text()
+  if (filePath.endsWith('.json')) {
+    return (JSON.parse(text) as { version?: string }).version || ''
+  }
+  const match = text.match(/^version:\s*('?)([^'\s]+)\1/m)
+  return match?.[2] || ''
+}
+
+// 从 CHANGELOG.md 提取 "## 🌈 <version> `date`" 小节（到下一个 ## 标题前），不传 version 时取最新小节
+export function extractChangelogSection(text: string, version?: string) {
+  const startMatch = version
+    ? text.match(new RegExp(`^##[^\\n]*\\s${escapeRegExp(version)}(?:\\s|$)`, 'm'))
+    : text.match(/^## /m)
+  if (!startMatch || startMatch.index === undefined) {
+    return ''
+  }
+  const rest = text.slice(startMatch.index + startMatch[0].length)
+  const nextMatch = rest.match(/^## /m)
+  const section = nextMatch && nextMatch.index !== undefined
+    ? rest.slice(0, nextMatch.index)
+    : rest
+  return `${startMatch[0]}${section}`.trim()
+}
+
+export async function getChangelogFromRepo(owner: string, repo: string, filePath: string, version?: string) {
+  const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/refs/heads/develop/${filePath}`)
+  if (!res.ok) {
+    throw new Error(`读取 ${owner}/${repo}@develop ${filePath} 失败: ${res.status}`)
+  }
+  return extractChangelogSection(await res.text(), version)
+}
+
+export async function getPrTemplateFromRepo(owner: string, repo: string) {
+  const paths = ['.github/PULL_REQUEST_TEMPLATE.md', '.github/pull_request_template.md']
+  for (const p of paths) {
+    const res = await fetch(`https://raw.githubusercontent.com/${owner}/${repo}/HEAD/${p}`)
+    if (res.ok) {
+      // 统一为 CRLF，与 PR body 及 changelog 相关正则保持一致
+      return (await res.text()).replace(/\r?\n/g, '\r\n')
+    }
+  }
+  return ''
+}
+
+const CHANGELOG_GROUP_TYPES: Record<string, string> = {
+  '🚀 Features': 'feat',
+  '🐞 Bug Fixes': 'fix',
+  '📝 Documentation': 'docs',
+}
+
+// 条目已带的贡献者署名，如 @uyarn ([#298](https://...)) 或 @uyarn ([icons #298](https://...))
+const ENTRY_ATTRIBUTED_REG = /@\S+\s*\(\[(?:icons\s*)?#/
+
+// 条目中的 PR 链接文本标注为 icons 仓库，如 [#298] → [icons#298]
+const ENTRY_PR_LINK_REG = /\(\[#(\d+)\]/g
+
+// 将 CHANGELOG.md 小节转为 conventional commits 条目，如 - feat(Icon): xxx @user ([icons #123](link))
+export function changelogSectionToEntries(section: string, scope = 'Icon', attribution = ''): string[] {
+  const entries: string[] = []
+  let type = ''
+  for (const line of section.split('\n')) {
+    if (line.startsWith('### ')) {
+      type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? 'chore'
+    }
+    else if (line.startsWith('- ') && type) {
+      const raw = line.slice(2).trim()
+      // 条目已带贡献者署名时不再追加，避免署名重叠；并将 PR 链接标注为 icons 仓库
+      const suffix = ENTRY_ATTRIBUTED_REG.test(raw)
+        ? ''
+        : attribution
+      const text = raw.replace(ENTRY_PR_LINK_REG, '([icons#$1]')
+      entries.push(`- ${type}(${scope}): ${text}${suffix}`)
+    }
+  }
+  return entries
+}
+
+// 将变更日志填入目标仓库 PR 模板的「### 📝 更新日志」部分
+// sections 为需要填入的分组小节(如 tdesign-miniprogram 与 @tdesign/uniapp)，无匹配小节时回退普通模板插入
+export function buildPrBody(template: string, entries: string[], sections: string[]) {
+  const entryText = entries.join('\r\n')
+  if (!template) {
+    return entryText
+  }
+  let result = template
+  let matched = false
+  for (const section of sections) {
+    const sectionReg = new RegExp(`(####\\s+${escapeRegExp(section)}\\r\\n)(<!--[\\s\\S]*?-->[^\\r\\n]*\\r\\n)?`)
+    if (sectionReg.test(result)) {
+      matched = true
+      result = result.replace(sectionReg, (match, p1: string, comment = '') => `${p1}${comment}\r\n${entryText}\r\n`)
+    }
+  }
+  if (matched) {
+    return result
+  }
+  // 普通模板: 填入「本条 PR 不需要纳入 Changelog」勾选行之前
+  const skipReg = /- \[ \] 本条 PR 不需要纳入 Changelog/
+  if (skipReg.test(result)) {
+    return result.replace(skipReg, () => `${entryText}\r\n\r\n- [ ] 本条 PR 不需要纳入 Changelog`)
+  }
+  const header = '### 📝 更新日志\r\n'
+  if (result.includes(header)) {
+    return result.replace(header, () => `${header}\r\n${entryText}\r\n`)
+  }
+  return `${result}\r\n${entryText}`
+}
+
+function findPackageJsonFiles(dir: string): string[] {
+  const results: string[] = []
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === 'dist' || entry.name.startsWith('.')) {
+        continue
+      }
+      results.push(...findPackageJsonFiles(join(dir, entry.name)))
+    }
+    else if (entry.name === 'package.json') {
+      results.push(join(dir, entry.name))
+    }
+  }
+  return results
+}
+
+function escapeRegExp(str: string) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+export async function bumpPackageDeps(repo: string, deps: string[], versions: Record<string, string> = {}) {
+  const latestVersions = { ...versions }
+  for (const dep of deps) {
+    if (!latestVersions[dep]) {
+      latestVersions[dep] = await getPkgLatestVersion(dep)
+    }
+  }
+
+  for (const filePath of findPackageJsonFiles(`./${repo}`)) {
+    const content = readFileSync(filePath, 'utf-8')
+    let updated = content
+    for (const dep of deps) {
+      const latest = latestVersions[dep]
+      if (!latest) {
+        continue
+      }
+      // 正则改写依赖版本，保留原文件格式与其他依赖不动
+      const reg = new RegExp(`("${escapeRegExp(dep)}":\\s*)"([^"]*)"`, 'g')
+      updated = updated.replace(reg, (match, prefix: string, ver: string) => {
+        // 跳过 workspace:/catalog:/file:/git 等协议依赖
+        if (ver.includes(':')) {
+          return match
+        }
+        if (ver.startsWith('^') || ver.startsWith('~')) {
+          return `${prefix}"${ver.slice(0, 1)}${latest}"`
+        }
+        if (/^\d/.test(ver)) {
+          return `${prefix}"${latest}"`
+        }
+        return match
+      })
+    }
+    if (updated !== content) {
+      writeFileSync(filePath, updated)
+      info(`已更新 ${filePath}`)
+    }
+  }
+
+  await exec('pnpm', ['install'], {
+    cwd: `./${repo}`,
+    env: { ...process.env, CI: 'false' }, // CI 下 pnpm install 走 frozen-lockfile，需关闭才能更新 lockfile
+  })
+}
+
+export async function bumpPubDependency(repo: string, packageName: string, version: string, pubspecPath: string) {
+  const filePath = `./${repo}/${pubspecPath}`
+  const content = readFileSync(filePath, 'utf-8')
+  const reg = new RegExp(`^(\\s*${packageName}:\\s*)\\S+`, 'm')
+  if (!reg.test(content)) {
+    throw new Error(`${filePath} 中未找到 ${packageName} 依赖`)
+  }
+  writeFileSync(filePath, content.replace(reg, `$1^${version}`))
+  await exec('git', ['status'], { cwd: `./${repo}` })
+}
+
 export async function bumpIconsVersion(packageManager: string, repo: string) {
   if (packageManager === 'pnpm') {
     if (repo === 'tdesign-vue-next' || repo === 'tdesign-miniprogram') {
@@ -133,10 +323,36 @@ export async function bumpIconsVersion(packageManager: string, repo: string) {
 
   await exec('git', ['status'], { cwd: `./${repo}` })
 }
+export async function bumpSiteDeps(packageManager: string, repo: string, deps: string[]) {
+  if (packageManager === 'pnpm') {
+    const workspaceManifest = await readWorkspaceManifest(`./${repo}`)
+    if (workspaceManifest && (workspaceManifest.catalog || workspaceManifest.catalogs)) {
+      let updated = workspaceManifest
+      for (const dep of deps) {
+        updated = updateCatalogs(updated, dep, await getPkgLatestVersion(dep))
+      }
+      await updateWorkspaceManifest(`./${repo}`, { updatedFields: updated })
+      await exec('pnpm', ['install', '--force'], {
+        cwd: `./${repo}`,
+        env: { ...process.env, CI: 'false' },
+      })
+    }
+    else {
+      // pnpm update --latest 会连带更新其他依赖，改为直接改写 package.json 后重新安装
+      await bumpPackageDeps(repo, deps)
+    }
+  }
+  else {
+    await exec('npx', ['npm-check-updates', ...deps, '-u'], { cwd: `./${repo}` })
+  }
+
+  await exec('git', ['status'], { cwd: `./${repo}` })
+}
+
 export async function corepackEnable() {
   await exec('corepack', ['enable'])
 }
-function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
+export function updateCatalogs(workspaceManifest: WorkspaceManifest, packageName: string, version: string) {
   if (workspaceManifest.catalog) {
     for (const [name, ver] of Object.entries(workspaceManifest.catalog)) {
       if (name === packageName) {
