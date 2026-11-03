@@ -73,7 +73,7 @@ export async function createCommonUpdatePr(context: TriggerContext, config: Repo
 }
 
 export async function updateCommonOnPr(context: TriggerContext, config: RepoCommandConfig) {
-  const workspace = await checkoutPr(context, config)
+  const workspace = await checkoutPr(context)
   if (!workspace) {
     return
   }

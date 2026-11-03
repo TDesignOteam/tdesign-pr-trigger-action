@@ -36878,7 +36878,13 @@ var GitHelper = class {
 			} else throw new Error(`git merge ${branch} 存在无法自动处理的冲突: ${path}`);
 			info(`合并冲突已按策略解决: ${conflictedPaths.join(", ")}`);
 		}
-		if (await this.isNeedCommit()) await this.commitAll("chore: merge develop");
+		await this.initSubmodule();
+		if (await this.isNeedCommit()) await exec("git", [
+			"commit",
+			"-m",
+			"chore: merge develop",
+			"--no-verify"
+		], { cwd: this.repoPath });
 	}
 	async getConflictedPaths() {
 		const { stdout } = await getExecOutput("git", [
@@ -36999,7 +37005,7 @@ var GithubHelper = class {
 };
 //#endregion
 //#region src/tdesign/operations/pr-workspace.ts
-async function checkoutPr(context, config) {
+async function checkoutPr(context) {
 	const githubHelper = new GithubHelper({
 		repo: context.repo,
 		owner: context.owner,
@@ -37015,10 +37021,9 @@ async function checkoutPr(context, config) {
 	const headRepo = prData.head.repo.full_name;
 	const headBranch = prData.head.ref;
 	info(`pr head: ${headRepo}:${headBranch}`);
-	const targetRepo = config.targetRepo;
 	const gitHelper = new GitHelper({
-		repo: targetRepo,
-		owner: targetRepoProfiles[targetRepo].owner,
+		repo: context.repo,
+		owner: context.owner,
 		token: context.token,
 		dryRun: context.dry_run
 	});
@@ -37036,7 +37041,7 @@ function getRunLink() {
 	return `${process$1.env.GITHUB_SERVER_URL}/${process$1.env.GITHUB_REPOSITORY}/actions/runs/${process$1.env.GITHUB_RUN_ID}`;
 }
 async function runPrScript(context, config, options) {
-	const workspace = await checkoutPr(context, config);
+	const workspace = await checkoutPr(context);
 	if (!workspace) return;
 	await workspace.githubHelper.addComment(context.pr_number, `⏳ ${options.progressComment}。。。 CI: ${getRunLink()}`);
 	if (options.merge) await workspace.gitHelper.mergeWithStrategy("origin/develop", options.merge);
@@ -37121,7 +37126,7 @@ async function createCommonUpdatePr(context, config) {
 	if (newPrData) githubHelper.addComment(context.pr_number, `> ${context.trigger}\r\n \r\n 创建 PR 成功， 请查看 ${newPrData.html_url}`);
 }
 async function updateCommonOnPr(context, config) {
-	const workspace = await checkoutPr(context, config);
+	const workspace = await checkoutPr(context);
 	if (!workspace) return;
 	const commonPrNumber = Number(context.args) || 0;
 	const submodulePath = config.commonSubmodule || (await workspace.gitHelper.getSubmodulePaths())[0];

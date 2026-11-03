@@ -182,8 +182,16 @@ export class GitHelper {
       }
       info(`合并冲突已按策略解决: ${conflictedPaths.join(', ')}`)
     }
+    // 同步工作目录到合并后的 gitlink，后续脚本也必须使用选中的子模块版本。
+    await this.initSubmodule()
     if (await this.isNeedCommit()) {
-      await this.commitAll('chore: merge develop')
+      // 合并结果和冲突解决均已暂存，不再 git add，避免覆盖索引中的子模块指针。
+      await exec('git', [
+        'commit',
+        '-m',
+        'chore: merge develop',
+        '--no-verify',
+      ], { cwd: this.repoPath })
     }
   }
 

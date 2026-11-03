@@ -14,7 +14,7 @@ export interface PrWorkspace {
   headBranch: string
 }
 
-export async function checkoutPr(context: TriggerContext, config: RepoCommandConfig): Promise<PrWorkspace | undefined> {
+export async function checkoutPr(context: TriggerContext): Promise<PrWorkspace | undefined> {
   const githubHelper = new GithubHelper({
     repo: context.repo,
     owner: context.owner,
@@ -33,10 +33,9 @@ export async function checkoutPr(context: TriggerContext, config: RepoCommandCon
   const headBranch = prData.head.ref
   info(`pr head: ${headRepo}:${headBranch}`)
 
-  const targetRepo = config.targetRepo
   const gitHelper = new GitHelper({
-    repo: targetRepo,
-    owner: targetRepoProfiles[targetRepo].owner,
+    repo: context.repo,
+    owner: context.owner,
     token: context.token,
     dryRun: context.dry_run,
   })
@@ -63,7 +62,7 @@ export interface RunPrScriptOptions {
 }
 
 export async function runPrScript(context: TriggerContext, config: RepoCommandConfig, options: RunPrScriptOptions) {
-  const workspace = await checkoutPr(context, config)
+  const workspace = await checkoutPr(context)
   if (!workspace) {
     return
   }
