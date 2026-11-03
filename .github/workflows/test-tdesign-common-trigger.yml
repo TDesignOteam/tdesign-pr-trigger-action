@@ -1,7 +1,7 @@
-name: test-tdesign-icons-trigger
+name: test-tdesign-common-trigger
 on:
   pull_request:
-    branches: [develop]
+    branches: [main]
     paths:
       - dist/*
 
@@ -10,18 +10,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2006
           trigger: /pr-vue
           dry-run: true
 
@@ -29,18 +24,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2006
           trigger: /pr-vue-next
           dry-run: true
 
@@ -48,18 +38,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2006
           trigger: /pr-react
           dry-run: true
 
@@ -67,18 +52,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2018
           trigger: /pr-mobile-vue
           dry-run: true
 
@@ -86,18 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN}}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2018
           trigger: /pr-mobile-react
           dry-run: true
 
@@ -105,17 +80,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version: 18
-
       - name: test
         uses: ./
         with:
-          token: ${{ secrets.TDESIGN_BOT_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           owner: Tencent
-          repo: tdesign-icons
-          pr_number: 130
+          repo: tdesign-common
+          pr_number: 2018
           trigger: /pr-miniprogram
           dry-run: true

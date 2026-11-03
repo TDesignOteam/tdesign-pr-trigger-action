@@ -20,13 +20,6 @@ inputs:
   dry-run:
     description: dry run
     required: false
-  deps:
-    description: deps
-    required: false
-  package-manager:
-    description: package manager
-    required: false
-    default: npm
   branch:
     description: branch name
     required: false

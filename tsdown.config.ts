@@ -4,7 +4,9 @@ import packageJson from './package.json' with { type: 'json' }
 export default defineConfig({
   entry: ['src/index.ts'],
   deps: {
-    alwaysBundle: [...Object.keys(packageJson.dependencies)],
+    alwaysBundle: [
+      ...Object.keys(packageJson.dependencies),
+    ],
     onlyBundle: [
       '@actions/core',
       '@actions/exec',
@@ -38,7 +40,6 @@ export default defineConfig({
       'signal-exit',
       'sort-keys',
       'strip-bom',
-      'tsdown',
       'tunnel',
       'undici',
       'universal-user-agent',
