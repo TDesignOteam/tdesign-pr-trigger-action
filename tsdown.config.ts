@@ -7,7 +7,7 @@ export default defineConfig({
     alwaysBundle: [
       ...Object.keys(packageJson.dependencies),
     ],
-    onlyAllowBundle: [
+    onlyBundle: [
       '@actions/core',
       '@actions/exec',
       '@actions/github',
@@ -40,7 +40,6 @@ export default defineConfig({
       'signal-exit',
       'sort-keys',
       'strip-bom',
-      'tsdown',
       'tunnel',
       'undici',
       'universal-user-agent',

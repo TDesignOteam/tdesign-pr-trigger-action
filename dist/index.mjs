@@ -19769,7 +19769,8 @@ const repoScopedTriggers = /* @__PURE__ */ new Set([
 	}),
 	"/update-common",
 	"/update-snapshot",
-	"/update-coverage"
+	"/update-coverage",
+	"/update-site"
 ]);
 //#endregion
 //#region node_modules/.pnpm/@pnpm+constants@1001.3.1/node_modules/@pnpm/constants/lib/index.js
@@ -37148,6 +37149,39 @@ async function updateCoverageOnPr(context, config) {
 	});
 }
 //#endregion
+//#region src/tdesign/operations/update-site.ts
+const updateSite = async (context) => {
+	const gitHelper = new GitHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const githubHelper = new GithubHelper({
+		repo: context.repo,
+		owner: context.owner,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	try {
+		await gitHelper.clone();
+		await gitHelper.checkout("main");
+		await gitHelper.fetch();
+		const { stdout } = await getExecOutput("git", ["rev-parse", "HEAD"], { cwd: `./${context.repo}` });
+		const baseSha = stdout.trim();
+		if ((await gitHelper.merge("origin/develop")).includes("Already up to date")) {
+			info("develop 无新提交");
+			await githubHelper.addComment(context.pr_number, "> /update-site\r\n \r\n develop 无新提交，官网已是最新");
+			return;
+		}
+		await gitHelper.push("main");
+		await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新成功，请查看 https://github.com/${context.owner}/${context.repo}/compare/${baseSha}...main`);
+	} catch (err) {
+		await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新失败: ${err.message}`);
+		throw err;
+	}
+};
+//#endregion
 //#region src/tdesign/operations/update-snapshot.ts
 async function updateSnapshotOnPr(context, config) {
 	await runPrScript(context, config, {
@@ -37167,7 +37201,8 @@ function createPrCommandHandlers(config) {
 	return {
 		"/update-common": (context) => updateCommonOnPr(context, config),
 		"/update-snapshot": (context) => updateSnapshotOnPr(context, config),
-		"/update-coverage": (context) => updateCoverageOnPr(context, config)
+		"/update-coverage": (context) => updateCoverageOnPr(context, config),
+		"/update-site": updateSite
 	};
 }
 //#endregion
@@ -47999,80 +48034,6 @@ const deleteCnbBranch = async (context) => {
 	}
 };
 //#endregion
-//#region src/commands/generic/update-site.ts
-const updateSite = async (context) => {
-	const gitHelper = new GitHelper({
-		repo: context.repo,
-		owner: context.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	const githubHelper = new GithubHelper({
-		repo: context.repo,
-		owner: context.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	try {
-		await gitHelper.clone();
-		await gitHelper.checkout("main");
-		await gitHelper.fetch();
-		const { stdout } = await getExecOutput("git", ["rev-parse", "HEAD"], { cwd: `./${context.repo}` });
-		const baseSha = stdout.trim();
-		if ((await gitHelper.merge("origin/develop")).includes("Already up to date")) {
-			info("develop 无新提交");
-			await githubHelper.addComment(context.pr_number, "> /update-site\r\n \r\n develop 无新提交，官网已是最新");
-			return;
-		}
-		await gitHelper.push("main");
-		await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新成功，请查看 https://github.com/${context.owner}/${context.repo}/compare/${baseSha}...main`);
-	} catch (err) {
-		await githubHelper.addComment(context.pr_number, `> /update-site\r\n \r\n 官网更新失败: ${err.message}`);
-		throw err;
-	}
-};
-//#endregion
-//#region src/commands/generic/upgrade-deps.ts
-const upgradeDeps = async (context) => {
-	const deps = getInput("deps");
-	const packageManager = getInput("package-manager") || "npm";
-	if (!deps) throw new Error("请指定需要升级的依赖");
-	const latestVersion = await getPkgLatestVersion(deps);
-	if (packageManager !== "npm") await corepackEnable();
-	const gitHelper = new GitHelper({
-		repo: context.repo,
-		owner: context.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	const baseBranch = await gitHelper.clone();
-	const branchName = `chore/deps/${deps}/${latestVersion}`;
-	await gitHelper.createBranch(branchName);
-	if (packageManager === "pnpm") await exec("pnpm", [
-		"--recursive",
-		"update",
-		deps,
-		"--latest"
-	], { cwd: `./${context.repo}` });
-	else await exec("npx", [
-		"npm-check-updates",
-		deps,
-		"-u"
-	], { cwd: `./${context.repo}` });
-	if (!await gitHelper.isNeedCommit()) return true;
-	const title = `chore(deps): upgrade ${deps} to ${latestVersion}`;
-	await gitHelper.commit(title);
-	await gitHelper.push(branchName);
-	const githubHelper = new GithubHelper({
-		repo: context.repo,
-		owner: context.owner,
-		token: context.token,
-		dryRun: context.dry_run
-	});
-	const prData = await githubHelper.createPR(title, branchName, title, baseBranch);
-	if (prData) await githubHelper.addLabels(prData.number, ["skip-changelog"]);
-};
-//#endregion
 //#region src/commands/registry.ts
 const repoRegistry = /* @__PURE__ */ new Map();
 const globalHandlers = {};
@@ -48107,11 +48068,7 @@ registerRepoHandlers("tdesign-react", handlers$5);
 registerRepoHandlers("tdesign-mobile-vue", handlers$6);
 registerRepoHandlers("tdesign-mobile-react", handlers$7);
 registerRepoHandlers("tdesign-miniprogram", handlers$8);
-registerGlobalHandlers({
-	"/upgrade-deps": upgradeDeps,
-	"/delete-cnb-branch": deleteCnbBranch,
-	"/update-site": updateSite
-});
+registerGlobalHandlers({ "/delete-cnb-branch": deleteCnbBranch });
 var commands_default = useTrigger;
 //#endregion
 //#region src/index.ts
