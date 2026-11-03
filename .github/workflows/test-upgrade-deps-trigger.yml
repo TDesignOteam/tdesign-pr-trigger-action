@@ -1,7 +1,7 @@
 name: test-upgrade-deps-trigger
 on:
   pull_request:
-    branches: [develop]
+    branches: [main]
     paths:
       - dist/*
 
