@@ -8,8 +8,6 @@ import { handlers as tdesignRepoHandlers } from '../tdesign/tdesign'
 import { handlers as vueRepoHandlers } from '../tdesign/vue'
 import { handlers as vueNextRepoHandlers } from '../tdesign/vue-next'
 import { deleteCnbBranch } from './generic/delete-cnb-branch'
-import { updateSite } from './generic/update-site'
-import { upgradeDeps } from './generic/upgrade-deps'
 import useTrigger, { registerGlobalHandlers, registerRepoHandlers } from './registry'
 
 registerRepoHandlers('tdesign', tdesignRepoHandlers)
@@ -23,9 +21,7 @@ registerRepoHandlers('tdesign-mobile-react', mobileReactRepoHandlers)
 registerRepoHandlers('tdesign-miniprogram', miniprogramRepoHandlers)
 
 registerGlobalHandlers({
-  '/upgrade-deps': upgradeDeps,
   '/delete-cnb-branch': deleteCnbBranch,
-  '/update-site': updateSite,
 })
 
 export default useTrigger

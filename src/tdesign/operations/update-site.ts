@@ -1,4 +1,4 @@
-import type { CommandHandler } from '../types'
+import type { CommandHandler } from '../../commands/types'
 import { info } from '@actions/core'
 import { getExecOutput } from '@actions/exec'
 import { GitHelper, GithubHelper } from '../../utils'

@@ -80,7 +80,8 @@ icons 发布 PR 合并后评论，到对应仓库新建 PR 升级 icons 依赖�
 - [x] /update-common [pr_number]: 更新当前 PR 的 common 子模块到最新，带编号时指向对应 common PR 的 head
 - [x] /update-snapshot: 合并 develop 并更新测试快照
 - [x] /update-coverage: 更新 coverage badge
+- [x] /update-site: 合并 develop 到 main，触发官网更新（仅限上述组件仓库）
 
 ## 通用指令
 
-- [x] /update-site: 合并 develop 到 main，触发官网更新
+- [x] /delete-cnb-branch: 删除指定 CNB 分支
