@@ -81,16 +81,19 @@ describe('changelogSectionToEntries', () => {
   it('按分组转为 conventional commits 条目', () => {
     expect(changelogSectionToEntries(section)).toEqual([
       '- feat(Icon): 新增 `check-1` 图标',
-      '- feat(Icon): 新增 `remove-1` 图标 @uyarn ([#319](https://github.com/Tencent/tdesign-icons/pull/319))',
+      '- feat(Icon): 新增 `remove-1` 图标 @uyarn ([icons#319](https://github.com/Tencent/tdesign-icons/pull/319))',
       '- fix(Icon): 修复 usb 图标深色模式渲染错误',
     ])
   })
 
-  it('支持追加贡献者与源 PR 链接', () => {
-    const attribution = ' @uyarn ([icons #319](https://github.com/Tencent/tdesign-icons/pull/319))'
-    expect(changelogSectionToEntries(section, 'Icon', attribution)[0]).toBe(
-      '- feat(Icon): 新增 `check-1` 图标 @uyarn ([icons #319](https://github.com/Tencent/tdesign-icons/pull/319))',
+  it('支持追加贡献者与源 PR 链接，已带署名的条目不重复追加', () => {
+    const attribution = ' @uyarn ([icons#319](https://github.com/Tencent/tdesign-icons/pull/319))'
+    const entries = changelogSectionToEntries(section, 'Icon', attribution)
+    expect(entries[0]).toBe(
+      '- feat(Icon): 新增 `check-1` 图标 @uyarn ([icons#319](https://github.com/Tencent/tdesign-icons/pull/319))',
     )
+    // 已有 @uyarn ([#319](...)) 署名的条目仅标注 icons 仓库前缀，不重复追加署名
+    expect(entries[1]).toBe('- feat(Icon): 新增 `remove-1` 图标 @uyarn ([icons#319](https://github.com/Tencent/tdesign-icons/pull/319))')
   })
 })
 

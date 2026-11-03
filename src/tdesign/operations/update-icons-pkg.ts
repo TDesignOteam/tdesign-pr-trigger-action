@@ -41,7 +41,7 @@ export async function createIconsPkgUpdatePr(context: TriggerContext, config: Re
   let body = ''
   if (config.iconsChangelogFile) {
     const section = await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion)
-    const attribution = ` @${prData.user.login} ([icons #${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`
+    const attribution = ` @${prData.user.login} ([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`
     const entries = changelogSectionToEntries(section, 'Icon', attribution)
     if (entries.length > 0) {
       const template = await getPrTemplateFromRepo(owner, targetRepo)

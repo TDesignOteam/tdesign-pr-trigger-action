@@ -36549,11 +36549,18 @@ const CHANGELOG_GROUP_TYPES = {
 	"🐞 Bug Fixes": "fix",
 	"📝 Documentation": "docs"
 };
+const ENTRY_ATTRIBUTED_REG = /@\S+\s*\(\[(?:icons\s*)?#/;
+const ENTRY_PR_LINK_REG = /\(\[#(\d+)\]/g;
 function changelogSectionToEntries(section, scope = "Icon", attribution = "") {
 	const entries = [];
 	let type = "";
 	for (const line of section.split("\n")) if (line.startsWith("### ")) type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? "chore";
-	else if (line.startsWith("- ") && type) entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}${attribution}`);
+	else if (line.startsWith("- ") && type) {
+		const raw = line.slice(2).trim();
+		const suffix = ENTRY_ATTRIBUTED_REG.test(raw) ? "" : attribution;
+		const text = raw.replace(ENTRY_PR_LINK_REG, "([icons#$1]");
+		entries.push(`- ${type}(${scope}): ${text}${suffix}`);
+	}
 	return entries;
 }
 function buildPrBody(template, entries, sections) {
@@ -37198,7 +37205,7 @@ async function createIconsUpdatePr(context, config) {
 	let body = "";
 	if (config.iconsChangelogFile && (packageName === "cdn-iconfont" || latestVersion)) {
 		const changelogVersion = packageName === "cdn-iconfont" ? void 0 : latestVersion;
-		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion), "Icon", ` @${prData.user.login} ([icons #${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`);
+		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, changelogVersion), "Icon", ` @${prData.user.login} ([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`);
 		if (entries.length > 0) body = buildPrBody(await getPrTemplateFromRepo(owner, targetRepo), entries, config.iconsChangelogSections ?? [targetRepo]);
 	}
 	if (!body) {
@@ -37411,7 +37418,7 @@ async function createIconsPkgUpdatePr(context, config) {
 	if (!latestVersion) throw new Error(`未从 ${versionFile} 获取到版本号`);
 	let body = "";
 	if (config.iconsChangelogFile) {
-		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion), "Icon", ` @${prData.user.login} ([icons #${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`);
+		const entries = changelogSectionToEntries(await getChangelogFromRepo(context.owner, context.repo, config.iconsChangelogFile, latestVersion), "Icon", ` @${prData.user.login} ([icons#${context.pr_number}](https://github.com/Tencent/tdesign-icons/pull/${context.pr_number}))`);
 		if (entries.length > 0) body = buildPrBody(await getPrTemplateFromRepo(owner, targetRepo), entries, config.iconsChangelogSections ?? [targetRepo]);
 	}
 	if (!body) body = adaptChangelogForRepo(addContributor(prData.body || "", prData.user.login, link), targetRepo);

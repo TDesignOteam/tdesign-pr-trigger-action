@@ -158,6 +158,12 @@ const CHANGELOG_GROUP_TYPES: Record<string, string> = {
   '📝 Documentation': 'docs',
 }
 
+// 条目已带的贡献者署名，如 @uyarn ([#298](https://...)) 或 @uyarn ([icons #298](https://...))
+const ENTRY_ATTRIBUTED_REG = /@\S+\s*\(\[(?:icons\s*)?#/
+
+// 条目中的 PR 链接文本标注为 icons 仓库，如 [#298] → [icons#298]
+const ENTRY_PR_LINK_REG = /\(\[#(\d+)\]/g
+
 // 将 CHANGELOG.md 小节转为 conventional commits 条目，如 - feat(Icon): xxx @user ([icons #123](link))
 export function changelogSectionToEntries(section: string, scope = 'Icon', attribution = ''): string[] {
   const entries: string[] = []
@@ -167,7 +173,13 @@ export function changelogSectionToEntries(section: string, scope = 'Icon', attri
       type = CHANGELOG_GROUP_TYPES[line.slice(4).trim()] ?? 'chore'
     }
     else if (line.startsWith('- ') && type) {
-      entries.push(`- ${type}(${scope}): ${line.slice(2).trim()}${attribution}`)
+      const raw = line.slice(2).trim()
+      // 条目已带贡献者署名时不再追加，避免署名重叠；并将 PR 链接标注为 icons 仓库
+      const suffix = ENTRY_ATTRIBUTED_REG.test(raw)
+        ? ''
+        : attribution
+      const text = raw.replace(ENTRY_PR_LINK_REG, '([icons#$1]')
+      entries.push(`- ${type}(${scope}): ${text}${suffix}`)
     }
   }
   return entries
