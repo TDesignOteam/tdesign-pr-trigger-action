@@ -38,6 +38,7 @@ Action 会合并该仓库的 `develop` 分支、重新生成快照，并将变�
 
 ## tdesign-icons
 
+- [x] /pr-all: 在当前 PR 下逐条评论全部支持的 /pr-* 指令，由评论 workflow 分别触发更新
 - [x] /pr-vue
 - [x] /pr-vue-next
 - [x] /pr-react
@@ -46,6 +47,10 @@ Action 会合并该仓库的 `develop` 分支、重新生成快照，并将变�
 - [x] /pr-miniprogram
 - [x] /pr-tdesign
 - [x] /pr-flutter
+
+批量触发时，在 icons 发布 PR 合并且相关包发布就绪后评论 `/pr-all`。Action 会按上面的顺序分别发送 8 条指令评论，不直接执行更新，也不包含 `/pr-all` 自身。发送失败会停止并报告已发送的指令；请仅手动补发未成功的指令，避免重复触发。`dry-run` 只输出待发送的评论，不实际发布。
+
+要让这些评论触发后续 workflow，Action 的 `token` 必须使用 PAT 或 GitHub App installation token，不能使用默认 `GITHUB_TOKEN`。发出评论的账号还须在评论触发白名单中，且目标仓库 workflow 不能过滤掉该账号的评论；无需全局放开机器人权限。
 
 icons 发布 PR 合并后评论，到对应仓库新建 PR 升级 icons 依赖（路径均相对 tdesign-icons 仓库）：
 

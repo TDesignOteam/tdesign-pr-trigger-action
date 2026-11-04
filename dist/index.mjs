@@ -19767,6 +19767,7 @@ const repoScopedTriggers = /* @__PURE__ */ new Set([
 		"/pr-tdesign": { targetRepo: "tdesign" },
 		"/pr-flutter": { targetRepo: "tdesign-flutter" }
 	}),
+	"/pr-all",
 	"/update-common",
 	"/update-snapshot",
 	"/update-coverage",
@@ -37526,7 +37527,7 @@ const handlers$1 = {
 };
 //#endregion
 //#region src/tdesign/icons.ts
-const handlers = {
+const prHandlers = {
 	"/pr-vue": updateIconsAndCreatePr$3,
 	"/pr-vue-next": updateIconsAndCreatePr$2,
 	"/pr-react": updateIconsAndCreatePr$4,
@@ -37535,6 +37536,25 @@ const handlers = {
 	"/pr-miniprogram": updateIconsAndCreatePr$7,
 	"/pr-tdesign": updateIconsAndCreatePr,
 	"/pr-flutter": updateIconsAndCreatePr$1
+};
+async function commentAllPrCommands(context) {
+	const githubHelper = new GithubHelper({
+		owner: context.owner,
+		repo: context.repo,
+		token: context.token,
+		dryRun: context.dry_run
+	});
+	const sent = [];
+	for (const command of Object.keys(prHandlers)) try {
+		await githubHelper.addComment(context.pr_number, command);
+		sent.push(command);
+	} catch (cause) {
+		throw new Error(`发送 ${command} 评论失败，已发送: ${sent.join(", ") || "无"}；请勿重复发送已成功的指令`, { cause });
+	}
+}
+const handlers = {
+	...prHandlers,
+	"/pr-all": commentAllPrCommands
 };
 //#endregion
 //#region node_modules/.pnpm/ky@1.14.2/node_modules/ky/distribution/errors/HTTPError.js

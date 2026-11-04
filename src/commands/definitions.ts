@@ -53,6 +53,7 @@ export const prCommands: Record<AutoPrTrigger, { targetRepo: TdesignRepo }> = {
 
 export const repoScopedTriggers = new Set<string>([
   ...Object.keys(prCommands),
+  '/pr-all',
   '/update-common',
   '/update-snapshot',
   '/update-coverage',
