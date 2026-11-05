@@ -90,5 +90,7 @@ it('不再支持已移除的 /upgrade-deps 指令', async () => {
     ...createContext('tdesign-react'),
     trigger: '/upgrade-deps' as Trigger,
   }
-  await expect(useTrigger(context)).rejects.toThrow('未支持的触发器: /upgrade-deps')
+  await expect(useTrigger(context)).resolves.toBeUndefined()
+  expect(updateSite).not.toHaveBeenCalled()
+  expect(updateCssvarsOnPr).not.toHaveBeenCalled()
 })

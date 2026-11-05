@@ -48081,7 +48081,8 @@ async function useTrigger(context) {
 	const handler = repoRegistry.get(context.repo)?.[context.trigger] ?? globalHandlers[context.trigger];
 	if (!handler) {
 		if (isRepoScopedTrigger(context.trigger)) throw new Error(`该仓库未适配: ${context.repo}`);
-		throw new Error(`未支持的触发器: ${context.trigger}`);
+		info(`未支持的触发器: ${context.trigger}，跳过执行`);
+		return;
 	}
 	await handler(context);
 }
