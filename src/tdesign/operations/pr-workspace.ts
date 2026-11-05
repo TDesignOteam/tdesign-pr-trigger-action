@@ -57,6 +57,7 @@ function getRunLink() {
 export interface RunPrScriptOptions {
   progressComment: string
   script: string | string[]
+  scriptArgs?: string[]
   commitMessage: string
   merge?: MergeConflictStrategy
 }
@@ -84,13 +85,20 @@ export async function runPrScript(context: TriggerContext, config: RepoCommandCo
       const args = config.recursiveScripts === false
         ? ['run', script]
         : ['--recursive', 'run', script]
-      await exec(packageManager, args, { cwd: `./${targetRepo}` })
+      await exec(packageManager, [
+        ...args,
+        ...options.scriptArgs ?? [],
+      ], { cwd: `./${targetRepo}` })
     }
   }
   else {
     await exec(packageManager, ['install'], { cwd: `./${targetRepo}` })
     for (const script of scripts) {
-      await exec(packageManager, ['run', script], { cwd: `./${targetRepo}` })
+      await exec(packageManager, [
+        'run',
+        script,
+        ...options.scriptArgs ?? [],
+      ], { cwd: `./${targetRepo}` })
     }
   }
 

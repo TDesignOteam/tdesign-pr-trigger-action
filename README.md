@@ -82,6 +82,10 @@ icons 发布 PR 合并后评论，到对应仓库新建 PR 升级 icons 依赖�
 - [x] /update-coverage: 更新 coverage badge
 - [x] /update-site: 合并 develop 到 main，触发官网更新（仅限上述组件仓库）
 
+## 移动端与小程序仓库 (tdesign-mobile-vue / tdesign-mobile-react / tdesign-miniprogram)
+
+- [x] /update-cssvars: 在尚未合并的 PR 下评论，更新 CSS 变量文档，并将变更提交到当前 PR 分支。移动端运行 `npm run api:css all`；小程序运行 `pnpm run api:css all` 和 `pnpm run api:css:uni all`，同时更新小程序与 UniApp 文档
+
 ## 通用指令
 
 - [x] /delete-cnb-branch: 删除指定 CNB 分支

@@ -32,6 +32,16 @@
 5. 运行快照更新 `test:update`
 6. 提交变更，推送到 PR
 
+### /update-cssvars
+
+支持 `tdesign-mobile-vue`、`tdesign-mobile-react` 和 `tdesign-miniprogram`，在尚未合并的 PR 下评论以更新 CSS 变量文档。
+
+#### 自动运行了哪些
+
+1. 检出当前 PR 分支，初始化 common 子仓
+2. 安装依赖：移动端运行 `npm run api:css all`；小程序在仓库根目录运行 `pnpm run api:css all` 和 `pnpm run api:css:uni all`，同时更新小程序与 UniApp 文档
+3. 有变更时提交 `docs: update css vars`，推送到当前 PR
+
 ### /resolve-conflict
 
 这个评论指令是在 `tdesign-api` 仓库使用，解决 `TDesign.db` 冲突问题

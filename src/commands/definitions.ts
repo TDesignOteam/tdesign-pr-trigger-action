@@ -56,5 +56,6 @@ export const repoScopedTriggers = new Set<string>([
   '/update-common',
   '/update-snapshot',
   '/update-coverage',
+  '/update-cssvars',
   '/update-site',
 ])

@@ -19770,6 +19770,7 @@ const repoScopedTriggers = /* @__PURE__ */ new Set([
 	"/update-common",
 	"/update-snapshot",
 	"/update-coverage",
+	"/update-cssvars",
 	"/update-site"
 ]);
 //#endregion
@@ -37052,14 +37053,18 @@ async function runPrScript(context, config, options) {
 	if (packageManager === "pnpm") {
 		await corepackEnable();
 		await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
-		for (const script of scripts) await exec(packageManager, config.recursiveScripts === false ? ["run", script] : [
+		for (const script of scripts) await exec(packageManager, [...config.recursiveScripts === false ? ["run", script] : [
 			"--recursive",
 			"run",
 			script
-		], { cwd: `./${targetRepo}` });
+		], ...options.scriptArgs ?? []], { cwd: `./${targetRepo}` });
 	} else {
 		await exec(packageManager, ["install"], { cwd: `./${targetRepo}` });
-		for (const script of scripts) await exec(packageManager, ["run", script], { cwd: `./${targetRepo}` });
+		for (const script of scripts) await exec(packageManager, [
+			"run",
+			script,
+			...options.scriptArgs ?? []
+		], { cwd: `./${targetRepo}` });
 	}
 	if (await workspace.gitHelper.isNeedCommit()) await workspace.gitHelper.commitAll(options.commitMessage);
 	await workspace.gitHelper.pushToRepo(workspace.headRepo, workspace.headBranch);
@@ -37206,6 +37211,19 @@ function createPrCommandHandlers(config) {
 	};
 }
 //#endregion
+//#region src/tdesign/operations/update-cssvars.ts
+async function updateCssvarsOnPr(context, config) {
+	await runPrScript(context, {
+		...config,
+		recursiveScripts: false
+	}, {
+		progressComment: "正在运行 CSS 变量文档更新",
+		script: config.cssvarsScript ?? "api:css",
+		scriptArgs: ["all"],
+		commitMessage: "docs: update css vars"
+	});
+}
+//#endregion
 //#region src/tdesign/operations/update-icons.ts
 const CND_ICONFONT_VERSION_REG = /https:\/\/tdesign\.gtimg\.com\/icon\/(\d+\.\d+\.\d+)\/fonts\/index\.css/;
 async function getCdnIconfontVersion() {
@@ -37348,12 +37366,16 @@ const repoConfig$7 = {
 	iconsChangelogSections: ["tdesign-miniprogram", "@tdesign/uniapp"],
 	siteDeps: ["@tdesign/site-components", "@tdesign/theme-generator"],
 	snapshotScript: "test:snap-update",
-	coverageScript: ["cover", "badge"]
+	coverageScript: ["cover", "badge"],
+	cssvarsScript: ["api:css", "api:css:uni"]
 };
 const updateCommonAndCreatePr$5 = (context) => createCommonUpdatePr(context, repoConfig$7);
 const updateIconsAndCreatePr$7 = (context) => createIconsUpdatePr(context, repoConfig$7);
 const updateSiteDepsAndCreatePr$5 = (context) => createSiteDepsUpdatePr(context, repoConfig$7);
-const handlers$8 = createPrCommandHandlers(repoConfig$7);
+const handlers$8 = {
+	...createPrCommandHandlers(repoConfig$7),
+	"/update-cssvars": (context) => updateCssvarsOnPr(context, repoConfig$7)
+};
 //#endregion
 //#region src/tdesign/mobile-react.ts
 const repoConfig$6 = {
@@ -37366,7 +37388,10 @@ const repoConfig$6 = {
 const updateCommonAndCreatePr$4 = (context) => createCommonUpdatePr(context, repoConfig$6);
 const updateIconsAndCreatePr$6 = (context) => createIconsUpdatePr(context, repoConfig$6);
 const updateSiteDepsAndCreatePr$4 = (context) => createSiteDepsUpdatePr(context, repoConfig$6);
-const handlers$7 = createPrCommandHandlers(repoConfig$6);
+const handlers$7 = {
+	...createPrCommandHandlers(repoConfig$6),
+	"/update-cssvars": (context) => updateCssvarsOnPr(context, repoConfig$6)
+};
 //#endregion
 //#region src/tdesign/mobile-vue.ts
 const repoConfig$5 = {
@@ -37379,7 +37404,10 @@ const repoConfig$5 = {
 const updateCommonAndCreatePr$3 = (context) => createCommonUpdatePr(context, repoConfig$5);
 const updateIconsAndCreatePr$5 = (context) => createIconsUpdatePr(context, repoConfig$5);
 const updateSiteDepsAndCreatePr$3 = (context) => createSiteDepsUpdatePr(context, repoConfig$5);
-const handlers$6 = createPrCommandHandlers(repoConfig$5);
+const handlers$6 = {
+	...createPrCommandHandlers(repoConfig$5),
+	"/update-cssvars": (context) => updateCssvarsOnPr(context, repoConfig$5)
+};
 //#endregion
 //#region src/tdesign/react.ts
 const repoConfig$4 = {
